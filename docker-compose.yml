@@ -1,0 +1,137 @@
+# AI4SWENG Observability Stack (local dev)
+# Central Platform side: OTel Collector -> VictoriaMetrics (metrics) + VictoriaLogs (unstructured/string logs) -> Grafana
+# Plus 3 KIO simulators pushing contract-compliant dummy telemetry over OTLP/gRPC.
+#
+# Bring up:   docker compose up -d --build
+# Grafana:    http://localhost:3000  (admin / admin)
+# Tear down:  docker compose down -v
+
+services:
+  # ---------------------------------------------------------------------------
+  # Ingestion gateway: single OTLP entrypoint for every KIO.
+  # ---------------------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.109.0
+    container_name: ai4sweng-otel-collector
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - victoriametrics
+      - victorialogs
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Metrics store (Prometheus-compatible, remote_write ingest).
+  # ---------------------------------------------------------------------------
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.102.1
+    container_name: ai4sweng-victoriametrics
+    command:
+      - "--storageDataPath=/vmdata"
+      - "--retentionPeriod=30d"
+      - "--httpListenAddr=:8428"
+    volumes:
+      - vmdata:/vmdata
+    ports:
+      - "8428:8428"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Log store for unstructured / string telemetry (OTLP logs ingest).
+  # ---------------------------------------------------------------------------
+  victorialogs:
+    image: victoriametrics/victoria-logs:v0.28.0-victorialogs
+    container_name: ai4sweng-victorialogs
+    command:
+      - "--storageDataPath=/vldata"
+      - "--retentionPeriod=30d"
+      - "--httpListenAddr=:9428"
+    volumes:
+      - vldata:/vldata
+    ports:
+      - "9428:9428"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Visualization. Datasources + dashboards provisioned from disk.
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: ai4sweng-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - victoriametrics
+      - victorialogs
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # KIO simulators. Each is an independent module pushing dummy telemetry.
+  # kio2 = code-analysis (emits real repo line/dir metrics), kio3/kio4 = random.
+  # ---------------------------------------------------------------------------
+  kio2:
+    build: ./kio-simulator
+    container_name: ai4sweng-kio2
+    environment:
+      KIO_ID: kio2
+      KIO_LLM: "qwen2.5:3b"
+      KIO_TASK_TYPE: code-analysis
+      SERVICE_VERSION: "1.2.0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      EXPORT_INTERVAL_MS: "5000"
+      HEARTBEAT_INTERVAL_S: "60"
+      REQUEST_INTERVAL_S: "3"
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
+
+  kio3:
+    build: ./kio-simulator
+    container_name: ai4sweng-kio3
+    environment:
+      KIO_ID: kio3
+      KIO_LLM: "llama3.1:8b"
+      KIO_TASK_TYPE: test-generation
+      SERVICE_VERSION: "0.9.1"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      EXPORT_INTERVAL_MS: "5000"
+      HEARTBEAT_INTERVAL_S: "60"
+      REQUEST_INTERVAL_S: "2"
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
+
+  kio4:
+    build: ./kio-simulator
+    container_name: ai4sweng-kio4
+    environment:
+      KIO_ID: kio4
+      KIO_LLM: "gpt-4o-mini"
+      KIO_TASK_TYPE: debug
+      SERVICE_VERSION: "2.0.0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      EXPORT_INTERVAL_MS: "5000"
+      HEARTBEAT_INTERVAL_S: "60"
+      REQUEST_INTERVAL_S: "4"
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
+
+volumes:
+  vmdata:
+  vldata:
+  grafana-data:

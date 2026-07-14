@@ -1,0 +1,22 @@
+apiVersion: 1
+
+datasources:
+  # Metrics — VictoriaMetrics speaks the Prometheus query API.
+  - name: VictoriaMetrics
+    uid: victoriametrics
+    type: prometheus
+    access: proxy
+    url: http://victoriametrics:8428
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 5s
+
+  # Unstructured / string telemetry — VictoriaLogs datasource plugin.
+  - name: VictoriaLogs
+    uid: victorialogs
+    type: victoriametrics-logs-datasource
+    access: proxy
+    url: http://victorialogs:9428
+    jsonData:
+      maxLines: 1000
