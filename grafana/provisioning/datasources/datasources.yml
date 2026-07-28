@@ -20,3 +20,19 @@ datasources:
     url: http://victorialogs:9428
     jsonData:
       maxLines: 1000
+
+  # Traces — Tempo, built into Grafana (no extra plugin needed).
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: victorialogs
+        filterByTraceID: false
+        filterBySpanID: false
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false

@@ -1,9 +1,12 @@
 # AI4SWENG Observability Stack (local dev)
-# Central Platform side: OTel Collector -> VictoriaMetrics (metrics) + VictoriaLogs (unstructured/string logs) -> Grafana
-# Plus 3 KIO simulators pushing contract-compliant dummy telemetry over OTLP/gRPC.
+# Central Platform side: OTel Collector -> VictoriaMetrics (metrics) + VictoriaLogs (unstructured/string logs)
+#                                        + Tempo (traces) -> Grafana
+# Plus Langfuse (self-hosted, LLM-specific prompt/cost tracing, parallel to the OTel stream)
+# Plus 3 KIO simulators pushing contract-compliant dummy telemetry over OTLP/gRPC + Langfuse.
 #
 # Bring up:   docker compose up -d --build
 # Grafana:    http://localhost:3000  (admin / admin)
+# Langfuse:   http://localhost:3001  (see LANGFUSE_INIT_USER_EMAIL / _PASSWORD below)
 # Tear down:  docker compose down -v
 
 services:
@@ -22,6 +25,7 @@ services:
     depends_on:
       - victoriametrics
       - victorialogs
+      - tempo
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
@@ -44,7 +48,7 @@ services:
   # Log store for unstructured / string telemetry (OTLP logs ingest).
   # ---------------------------------------------------------------------------
   victorialogs:
-    image: victoriametrics/victoria-logs:v0.28.0-victorialogs
+    image: victoriametrics/victoria-logs:v1.52.0
     container_name: ai4sweng-victorialogs
     command:
       - "--storageDataPath=/vldata"
@@ -54,6 +58,22 @@ services:
       - vldata:/vldata
     ports:
       - "9428:9428"
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Trace store. Receives spans forwarded by the collector's traces pipeline.
+  # Monolithic mode, local-disk backend — local/dev use only (see tempo/tempo.yaml).
+  # ---------------------------------------------------------------------------
+  tempo:
+    image: grafana/tempo:2.10.5
+    container_name: ai4sweng-tempo
+    user: "0"   # simplest local-dev fix for local-disk volume permissions
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempodata:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo query API (used by Grafana's Tempo datasource)
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
@@ -77,11 +97,160 @@ services:
     depends_on:
       - victoriametrics
       - victorialogs
+      - tempo
     restart: unless-stopped
+
+  # ===========================================================================
+  # Langfuse — second, parallel telemetry stream dedicated to LLM prompts/
+  # completions/cost (per senior's request, evaluated against v2 guideline).
+  # Self-hosted v3/v4-compatible stack: web + worker + postgres + clickhouse +
+  # redis + minio. This is heavier than the rest of the stack on purpose — it's
+  # Langfuse's own required footprint, not something we chose to add ourselves.
+  # Host port 3000 is already taken by Grafana, so the Langfuse UI is published
+  # on 3001 instead (container still listens on 3000 internally).
+  # ===========================================================================
+  postgres:
+    image: docker.io/postgres:17
+    container_name: ai4sweng-langfuse-postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "8uFM7CaLqvYIH5pkutgnLPtm"   # local-dev only, see README before real use
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server
+    container_name: ai4sweng-langfuse-clickhouse
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: "BxK0EmwznkyJ4lSkEXAMpt8D"   # local-dev only
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+
+  minio:
+    image: cgr.dev/chainguard/minio
+    container_name: ai4sweng-langfuse-minio
+    restart: unless-stopped
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: "b5jzlZ-NNeSu7q5Ix7-PtD6m"   # local-dev only
+    ports:
+      - "9090:9000"
+    volumes:
+      - langfuse_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+  redis:
+    image: docker.io/redis:7
+    container_name: ai4sweng-langfuse-redis
+    restart: unless-stopped
+    command: >
+      --requirepass EQ_2-5L9BKy-rwiX96RsSwg8
+      --maxmemory-policy noeviction
+    volumes:
+      - langfuse_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+  langfuse-worker:
+    image: docker.io/langfuse/langfuse-worker:3
+    container_name: ai4sweng-langfuse-worker
+    restart: unless-stopped
+    depends_on: &langfuse-depends-on
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment: &langfuse-worker-env
+      NEXTAUTH_URL: http://localhost:3001
+      DATABASE_URL: postgresql://postgres:8uFM7CaLqvYIH5pkutgnLPtm@postgres:5432/postgres
+      SALT: c0882796a7b780c36201e7464099181f
+      ENCRYPTION_KEY: 175f2c3e3adbb5d0b0a22a13d8be6cc2e855332cdc5f4001a42dfb7a9b81a1b6
+      TELEMETRY_ENABLED: "true"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: BxK0EmwznkyJ4lSkEXAMpt8D
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: b5jzlZ-NNeSu7q5Ix7-PtD6m
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: b5jzlZ-NNeSu7q5Ix7-PtD6m
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:9090
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: EQ_2-5L9BKy-rwiX96RsSwg8
+      REDIS_TLS_ENABLED: "false"
+
+  langfuse-web:
+    image: docker.io/langfuse/langfuse:3
+    container_name: ai4sweng-langfuse-web
+    restart: unless-stopped
+    depends_on: *langfuse-depends-on
+    ports:
+      - "3001:3000"
+    environment:
+      <<: *langfuse-worker-env
+      NEXTAUTH_SECRET: 6a79d40fac2f5d085d8116cf720d2b3e5e4c1ce9043adbc2
+      # Headless init: creates org/project/user/API-keys on first boot so the
+      # KIO containers below can start pushing traces with no manual UI step.
+      LANGFUSE_INIT_ORG_ID: ai4sweng
+      LANGFUSE_INIT_ORG_NAME: AI4SWENG
+      LANGFUSE_INIT_PROJECT_ID: ai4sweng-kio
+      LANGFUSE_INIT_PROJECT_NAME: AI4SWENG KIO Telemetry
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
+      LANGFUSE_INIT_USER_EMAIL: admin@ai4sweng.local
+      LANGFUSE_INIT_USER_NAME: AI4SWENG Admin
+      LANGFUSE_INIT_USER_PASSWORD: ai4sweng-admin
 
   # ---------------------------------------------------------------------------
   # KIO simulators. Each is an independent module pushing dummy telemetry.
   # kio2 = code-analysis (emits real repo line/dir metrics), kio3/kio4 = random.
+  # Each now dual-writes: OTel (metrics/traces/logs) + Langfuse (LLM-specific).
   # ---------------------------------------------------------------------------
   kio2:
     build: ./kio-simulator
@@ -95,6 +264,13 @@ services:
       EXPORT_INTERVAL_MS: "5000"
       HEARTBEAT_INTERVAL_S: "60"
       REQUEST_INTERVAL_S: "3"
+      # D1.1 handbook maps KIO2 to "Bug Locate & Fix / LLM Debugger" — enables
+      # the real-KPI metrics (kio.bugfix.*, kio.issue.*, kio.slicing.*).
+      # See docs/AI4SWENG_KPI_Metrik_Referansi.docx.
+      KIO_REAL_KPI_ROLE: "bugfix"
+      LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
+      LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
+      LANGFUSE_BASE_URL: "http://langfuse-web:3000"
     depends_on:
       - otel-collector
     restart: unless-stopped
@@ -111,6 +287,9 @@ services:
       EXPORT_INTERVAL_MS: "5000"
       HEARTBEAT_INTERVAL_S: "60"
       REQUEST_INTERVAL_S: "2"
+      LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
+      LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
+      LANGFUSE_BASE_URL: "http://langfuse-web:3000"
     depends_on:
       - otel-collector
     restart: unless-stopped
@@ -127,6 +306,9 @@ services:
       EXPORT_INTERVAL_MS: "5000"
       HEARTBEAT_INTERVAL_S: "60"
       REQUEST_INTERVAL_S: "4"
+      LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
+      LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
+      LANGFUSE_BASE_URL: "http://langfuse-web:3000"
     depends_on:
       - otel-collector
     restart: unless-stopped
@@ -134,4 +316,10 @@ services:
 volumes:
   vmdata:
   vldata:
+  tempodata:
   grafana-data:
+  langfuse_postgres_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_minio_data:
+  langfuse_redis_data:

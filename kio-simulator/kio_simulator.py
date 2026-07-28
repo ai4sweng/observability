@@ -6,7 +6,11 @@ Emits contract-compliant dummy telemetry over OTLP/gRPC for a single KIO:
   * the mandatory metric set (Integration Contract §2.1),
   * optional self-service metrics (tokens/sec, GPU energy, accuracy, repo stats),
   * a 60s heartbeat (§2.3),
-  * an unstructured/string log stream (extension beyond the contract minimum).
+  * an unstructured/string log stream (extension beyond the contract minimum),
+  * a trace per request: a root "kio.request" span with nested child spans
+    (prepare_prompt -> llm_call -> postprocess; code-analysis KIOs additionally
+    emit a leading repo_scan span) so Grafana/Tempo can show the step-by-step
+    sequence of an operation ("işlem sırası").
 
 Real LLMs are NOT invoked; values are randomly generated. One KIO of type
 "code-analysis" additionally reports real line/directory counts of a scanned
@@ -33,6 +37,19 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 import logging
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.trace import Status, StatusCode
+
+# Langfuse — second, parallel telemetry stream (LLM prompts/completions/cost),
+# independent of the OTel pipeline above. Reads LANGFUSE_PUBLIC_KEY /
+# LANGFUSE_SECRET_KEY / LANGFUSE_BASE_URL from the environment automatically.
+# The SDK swallows connection errors internally (never raises into caller
+# code), so this is safe even before the Langfuse stack finishes booting.
+from langfuse import get_client, propagate_attributes
+
 # --------------------------------------------------------------------------- #
 # Configuration
 # --------------------------------------------------------------------------- #
@@ -46,6 +63,13 @@ EXPORT_INTERVAL_MS = int(os.environ.get("EXPORT_INTERVAL_MS", "5000"))
 HEARTBEAT_INTERVAL_S = int(os.environ.get("HEARTBEAT_INTERVAL_S", "60"))
 REQUEST_INTERVAL_S = float(os.environ.get("REQUEST_INTERVAL_S", "3"))
 REPO_SCAN_PATH = os.environ.get("REPO_SCAN_PATH", "/app")
+
+# Real-project KPI role (D1.1 Project Management Handbook). Empty by default;
+# set to "bugfix" only for the KIO(s) mapped to KIO2 (Bug Locate & Fix / LLM
+# Debugger) in D1.1's traceability matrix. Other real-KPI roles (e.g. for
+# KIO3/KIO4/KIO7) can be added the same way later without touching this file's
+# core logic — see docs/AI4SWENG_KPI_Metrik_Referansi.docx.
+KIO_REAL_KPI_ROLE = os.environ.get("KIO_REAL_KPI_ROLE", "")
 
 # LLM pricing per 1K tokens (dummy) so cost varies believably by model.
 LLM_COST_PER_1K = {
@@ -77,11 +101,12 @@ resource = Resource.create({
     "llm": KIO_LLM,
     "task_type": TASK_TYPE,
 })
+_INSECURE = ENDPOINT.startswith("http://")
 
 # --------------------------------------------------------------------------- #
 # Metrics pipeline
 # --------------------------------------------------------------------------- #
-metric_exporter = OTLPMetricExporter(endpoint=ENDPOINT, insecure=ENDPOINT.startswith("http://"))
+metric_exporter = OTLPMetricExporter(endpoint=ENDPOINT, insecure=_INSECURE)
 reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=EXPORT_INTERVAL_MS)
 metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[reader]))
 meter = metrics.get_meter("kio.instrumentation")
@@ -143,12 +168,27 @@ if TASK_TYPE == "code-analysis":
     meter.create_observable_gauge("kio.repo.directory_count", callbacks=[_obs_dirs], unit="1")
     meter.create_observable_gauge("kio.repo.file_count", callbacks=[_obs_files], unit="1")
 
+# --- Real project KPIs (D1.1) — only for KIOs mapped to a "bugfix" role ---
+# KIO2 in D1.1 = "Bug Locate & Fix / LLM Debugger" (T3.2 Reverse Execution /
+# Dynamic Slicing, T3.3 Fault Localization) — the same job FocusTracer does.
+# Names/units/targets are taken directly from D1.1 Table 8/9, not invented;
+# see docs/AI4SWENG_KPI_Metrik_Referansi.docx for the full mapping. Values
+# below are still simulated (calibrated to D1.1's baseline/target ranges),
+# not yet wired to real FocusTracer runs — that's a separate future step.
+if KIO_REAL_KPI_ROLE == "bugfix":
+    bugfix_duration_hist = meter.create_histogram("kio.bugfix.duration_hours", unit="h")       # KPI 6.1
+    issue_resolution_hist = meter.create_histogram("kio.issue.resolution_hours", unit="h")     # KPI 1.2
+    slicing_success_hist = meter.create_histogram("kio.slicing.success_rate", unit="1")        # WP3 task metric
+    customer_reported_counter = meter.create_counter("kio.issue.customer_reported_count", unit="1")  # KPI 6.2
+else:
+    bugfix_duration_hist = issue_resolution_hist = slicing_success_hist = customer_reported_counter = None
+
 # --------------------------------------------------------------------------- #
 # Logs pipeline — unstructured / string telemetry
 # --------------------------------------------------------------------------- #
 log_provider = LoggerProvider(resource=resource)
 log_provider.add_log_record_processor(
-    BatchLogRecordProcessor(OTLPLogExporter(endpoint=ENDPOINT, insecure=ENDPOINT.startswith("http://")))
+    BatchLogRecordProcessor(OTLPLogExporter(endpoint=ENDPOINT, insecure=_INSECURE))
 )
 _logs.set_logger_provider(log_provider)
 
@@ -157,6 +197,30 @@ logger.setLevel(logging.INFO)
 logger.addHandler(LoggingHandler(level=logging.INFO, logger_provider=log_provider))
 # Also echo to stdout for `docker logs`.
 logger.addHandler(logging.StreamHandler())
+
+# --------------------------------------------------------------------------- #
+# Traces pipeline — one trace per simulated request, nested spans show the
+# step-by-step sequence of the operation ("işlem sırası" in the KIO Detail
+# dashboard, via Tempo).
+# --------------------------------------------------------------------------- #
+trace_provider = TracerProvider(resource=resource)
+trace_provider.add_span_processor(
+    BatchSpanProcessor(OTLPSpanExporter(endpoint=ENDPOINT, insecure=_INSECURE))
+)
+trace.set_tracer_provider(trace_provider)
+tracer = trace.get_tracer("kio.instrumentation")
+
+# --------------------------------------------------------------------------- #
+# Langfuse client — separate from the OTel tracer above. Deliberately its own
+# HTTPS stream to a dedicated Langfuse server, per senior's request.
+# Construction itself can throw (bad key format, unreachable host at client-
+# init time, etc.); never let that take down metrics/logs/traces/heartbeat.
+# --------------------------------------------------------------------------- #
+try:
+    langfuse_client = get_client()
+except Exception:
+    logging.getLogger(KIO_ID).warning("Langfuse client init failed; continuing without it", exc_info=True)
+    langfuse_client = None
 
 # Sample unstructured payloads a KIO might emit as free-form strings.
 SUMMARY_TEMPLATES = [
@@ -180,6 +244,112 @@ def emit_unstructured(session_id, tokens):
     # Attributes stay bounded (G3); the message body carries the free string.
     logger.info(msg, extra={"kio.id": KIO_ID, "session.id": session_id,
                             "llm": KIO_LLM, "task_type": TASK_TYPE})
+    return msg
+
+
+def emit_trace(session_id, work_s, in_tokens, out_tokens, is_error, error_type=None):
+    """Build one root span + sequential child spans mirroring the request's
+    real timeline (explicit start/end timestamps, no extra wall-clock sleep)."""
+    total_ns = max(int(work_s * 1e9), 1_000_000)
+    t0 = time.time_ns()
+
+    root = tracer.start_span(
+        "kio.request",
+        start_time=t0,
+        attributes={
+            "kio.id": KIO_ID, "session.id": session_id, "llm": KIO_LLM,
+            "task_type": TASK_TYPE, "kio.status": "error" if is_error else "ok",
+        },
+    )
+    ctx = trace.set_span_in_context(root)
+    cursor = t0
+    remaining = total_ns
+
+    def child(name, share, attributes=None, status_error=False):
+        nonlocal cursor, remaining
+        dur = max(int(total_ns * share), 200_000)  # floor 0.2ms so spans stay visible
+        dur = min(dur, remaining)
+        span = tracer.start_span(name, context=ctx, start_time=cursor, attributes=attributes or {})
+        if status_error:
+            span.set_status(Status(StatusCode.ERROR, error_type or "error"))
+        span.end(end_time=cursor + dur)
+        cursor += dur
+        remaining -= dur
+
+    if TASK_TYPE == "code-analysis":
+        child("repo_scan", 0.15, {
+            "repo.lines": _repo_stats["lines"],
+            "repo.directories": _repo_stats["directories"],
+            "repo.files": _repo_stats["files"],
+        })
+
+    child("prepare_prompt", 0.08)
+
+    if is_error:
+        child("llm_call", 0.77, {"llm.model": KIO_LLM, "llm.tokens.input": in_tokens},
+              status_error=True)
+        root.set_status(Status(StatusCode.ERROR, error_type or "error"))
+    else:
+        child("llm_call", 0.77, {
+            "llm.model": KIO_LLM,
+            "llm.tokens.input": in_tokens,
+            "llm.tokens.output": out_tokens,
+        })
+        child("postprocess", max(remaining / total_ns, 0.01))
+        root.set_status(Status(StatusCode.OK))
+
+    root.end(end_time=t0 + total_ns)
+
+
+def emit_langfuse_trace(session_id, in_tokens, out_tokens, cost, is_error, error_type, summary_text):
+    """Langfuse counterpart to emit_trace(): same session_id, but carries the
+    LLM-specific payload (prompt/completion summary, token usage, cost) that
+    Tempo's generic spans don't. Kept as a small, isolated function so a
+    Langfuse outage/misconfig can never affect the OTel pipeline above."""
+    if langfuse_client is None:
+        return
+    try:
+        with langfuse_client.start_as_current_observation(
+            as_type="span", name="kio.request",
+            input={"task_type": TASK_TYPE},
+        ) as root_span:
+            with propagate_attributes(
+                session_id=session_id,
+                metadata={"kioid": KIO_ID, "tasktype": TASK_TYPE},
+                tags=[KIO_ID, TASK_TYPE],
+            ):
+                with langfuse_client.start_as_current_observation(
+                    as_type="generation", name="llm_call", model=KIO_LLM,
+                ) as gen:
+                    gen.update(
+                        output=summary_text,
+                        usage_details={"input": in_tokens, "output": out_tokens},
+                        cost_details={"total": cost} if cost else None,
+                        level="ERROR" if is_error else "DEFAULT",
+                        status_message=error_type if is_error else None,
+                    )
+            root_span.update(output={"status": "error" if is_error else "ok"})
+    except Exception:
+        # Never let a Langfuse hiccup break the simulated request itself.
+        logger.debug("Langfuse emit failed (server may still be starting up)", exc_info=True)
+
+
+def emit_real_kpi_metrics(labels, is_error):
+    """D1.1-aligned KPIs for KIOs with a "bugfix" real-KPI role (KIO2 today).
+    Simulated values, deliberately kept inside D1.1's baseline/target bands so
+    the dashboard reads like plausible pilot-sprint progress, not noise."""
+    if KIO_REAL_KPI_ROLE != "bugfix":
+        return
+    # KPI 6.1 — Bug-fix time: baseline ~8-12h, target <=20% reduction.
+    bugfix_duration_hist.record(round(random.uniform(6.0, 10.0), 2), labels)
+    # KPI 1.2 — Issue resolution speed: baseline ~8-12h, target <=30% reduction.
+    issue_resolution_hist.record(round(random.uniform(5.0, 9.0), 2), labels)
+    # WP3 task metric — Dynamic slicing success rate: target >=85%, realistic
+    # variance means it dips below target sometimes rather than always "passing".
+    slicing_success_hist.record(round(random.uniform(0.75, 0.97), 3), labels)
+    # KPI 6.2 — Customer-reported issues: rare event, not one per request.
+    if is_error and random.random() < 0.05:
+        customer_reported_counter.add(random.randint(1, 2), labels)
 
 
 # --------------------------------------------------------------------------- #
@@ -198,7 +368,6 @@ def simulate_request():
     session_id = str(uuid.uuid4())
     labels = {"kio.id": KIO_ID, "llm": KIO_LLM, "task_type": TASK_TYPE}
     active_sessions.add(1, labels)
-    start = time.monotonic()
     try:
         # ~ dummy work
         work_s = random.uniform(0.2, 2.5)
@@ -208,6 +377,7 @@ def simulate_request():
         out_tokens = random.randint(80, 2000)
         tps = out_tokens / max(work_s, 0.05)
         is_error = random.random() < 0.07  # ~7% error rate
+        error_type = random.choice(["timeout", "internal", "rate_limit"]) if is_error else None
 
         llm_token_counter.add(in_tokens, {**labels, "direction": "input"})
         llm_token_counter.add(out_tokens, {**labels, "direction": "output"})
@@ -221,20 +391,29 @@ def simulate_request():
             llm_cost_counter.add(round(cost, 6), labels)
 
         latency_ms = work_s * 1000.0
+        emit_trace(session_id, work_s, in_tokens, out_tokens, is_error, error_type)
 
         if is_error:
-            error_counter.add(1, {**labels, "error_type": random.choice(["timeout", "internal", "rate_limit"])})
+            error_counter.add(1, {**labels, "error_type": error_type})
             request_counter.add(1, {**labels, "status": "error"})
             request_duration.record(latency_ms, labels)
+            summary_text = f"Request failed on session {session_id}: simulated {error_type}"
             logger.warning(
-                f"Request failed on session {session_id}: simulated {random.choice(['timeout', 'internal', 'rate_limit'])}",
+                summary_text,
                 extra={"kio.id": KIO_ID, "session.id": session_id, "llm": KIO_LLM, "task_type": TASK_TYPE},
             )
         else:
             request_counter.add(1, {**labels, "status": "ok"})
             request_duration.record(latency_ms, labels)
             accuracy_hist.record(round(random.uniform(0.6, 0.99), 3), labels)
-            emit_unstructured(session_id, out_tokens)
+            summary_text = emit_unstructured(session_id, out_tokens)
+
+        # Langfuse: parallel LLM-specific stream, same session_id as the OTel
+        # trace above so both systems can be correlated by a human.
+        emit_langfuse_trace(session_id, in_tokens, out_tokens, cost, is_error, error_type, summary_text)
+
+        # Real-project KPIs (D1.1) — only emits anything for "bugfix"-role KIOs.
+        emit_real_kpi_metrics(labels, is_error)
     finally:
         active_sessions.add(-1, labels)
 
@@ -257,6 +436,9 @@ def main():
         _stop.wait(REQUEST_INTERVAL_S * random.uniform(0.5, 1.5))
 
     log_provider.shutdown()
+    trace_provider.shutdown()
+    if langfuse_client is not None:
+        langfuse_client.shutdown()
     print(f"{KIO_ID} shutting down.")
 
 

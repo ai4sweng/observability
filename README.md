@@ -14,20 +14,25 @@ visualizes it. Everything runs locally via Docker Compose.
 ```
                  OTLP/gRPC (:4317)
   KIO2 ┐                              ┌─ metrics ─► VictoriaMetrics (:8428) ─┐
-  KIO3 ├──►  OpenTelemetry Collector ─┤                                      ├─► Grafana (:3000)
-  KIO4 ┘                              └─ logs ────► VictoriaLogs    (:9428) ─┘
-       (dummy telemetry)                 (traces pipeline wired but deferred — see below)
+  KIO3 ├──►  OpenTelemetry Collector ─┤─ logs ────► VictoriaLogs    (:9428) ─┼─► Grafana (:3000)
+  KIO4 ┘                              └─ traces ───► Tempo           (:3200) ─┘
+       │
+       └──────────────────────────────► Langfuse (:3001, HTTPS, parallel stream)
+       (dummy telemetry)
 ```
 
 ## What's inside
 
 | Component | Role | Port |
 |-----------|------|------|
-| `otel-collector` | Single OTLP ingestion gateway; fans metrics → VictoriaMetrics, logs → VictoriaLogs | 4317 (gRPC), 4318 (HTTP) |
+| `otel-collector` | Single OTLP ingestion gateway; fans metrics → VictoriaMetrics, logs → VictoriaLogs, traces → Tempo | 4317 (gRPC), 4318 (HTTP) |
 | `victoriametrics` | Metrics store (Prometheus-compatible, no Prometheus needed) | 8428 |
 | `victorialogs` | Store for unstructured / string telemetry | 9428 |
+| `tempo` | Trace store (monolithic mode, local disk) — powers the "işlem sırası" waterfall view | 3200 |
 | `grafana` | Dashboards (auto-provisioned) | 3000 |
-| `kio2` / `kio3` / `kio4` | KIO simulators pushing contract-compliant dummy telemetry | — |
+| `langfuse-web` / `langfuse-worker` | Self-hosted Langfuse — LLM-specific prompt/completion/cost tracing, a stream parallel to and independent of OTel | 3001 (UI+API), internal 3030 (worker) |
+| `postgres` / `clickhouse` / `redis` / `minio` | Langfuse's own required backing stores (relational DB, trace analytics, queue, blob storage) — not something we chose, this is Langfuse's mandated self-host footprint | internal only (127.0.0.1-bound except minio :9090) |
+| `kio2` / `kio3` / `kio4` | KIO simulators pushing contract-compliant dummy telemetry, dual-written to OTel + Langfuse | — |
 
 The KIOs never run their own collector, never expose a scrape endpoint, and never
 touch a database directly — exactly as the contract requires.
@@ -44,10 +49,19 @@ also on). Two dashboards appear under the **AI4SWENG** folder:
 
 - **AI4SWENG — Overview (All KIOs)**: aggregate stats across every KIO — request &
   error rates, latency p95, token throughput, tokens/sec, GPU energy, cost, accuracy.
-- **AI4SWENG — KIO Detail**: pick a KIO from the `KIO` dropdown; per-KIO metrics plus
-  a live panel of that KIO's unstructured string logs.
+- **AI4SWENG — KIO Detail**: pick a KIO from the `KIO` dropdown; per-KIO metrics, a
+  live panel of that KIO's unstructured string logs, and a **traces** section — a
+  table of recent traces plus a waterfall view of the selected one (copy a Trace ID
+  from the table into the `trace_id` box above it).
 
-Give it ~30–60 seconds after startup for the first metrics to land.
+Give it ~30–60 seconds after startup for the first metrics and traces to land.
+
+Separately, **http://localhost:3001** opens the Langfuse UI (login
+`admin@ai4sweng.local` / `ai4sweng-admin`, auto-created on first boot — see
+Headless Initialization below). Langfuse takes noticeably longer to become ready
+than the rest of the stack (~2–3 minutes: it's booting Postgres + ClickHouse +
+Redis + MinIO underneath it) — the KIOs will log harmless connection-refused
+retries against it until it's up, then start landing traces automatically.
 
 Tear down (and wipe data): `docker compose down -v`
 
@@ -55,12 +69,26 @@ Tear down (and wipe data): `docker compose down -v`
 
 | KIO | LLM | Task type | Notes |
 |-----|-----|-----------|-------|
-| kio2 | `qwen2.5:3b` | code-analysis | also reports **real** repo line / directory / file counts of its own source |
+| kio2 | `qwen2.5:3b` | code-analysis | also reports **real** repo line / directory / file counts of its own source; its trace has an extra `repo_scan` span |
 | kio3 | `llama3.1:8b` | test-generation | random dummy telemetry |
 | kio4 | `gpt-4o-mini` | debug | random dummy telemetry (non-zero cost) |
 
 All values are randomly generated — no real LLM is invoked. Adjust LLMs, task types,
 and rates in `docker-compose.yml`, or edit `kio-simulator/kio_simulator.py`.
+
+Each simulated request also emits a **trace**: a root `kio.request` span with
+sequential child spans — `prepare_prompt` → `llm_call` → `postprocess` (code-analysis
+KIOs add a leading `repo_scan` span). Timestamps are set explicitly to mirror the
+request's real latency breakdown, so the waterfall in Grafana reflects the actual
+timing split, not a fixed mock.
+
+## Running a KIO on a different machine
+
+See **[`remote-kio/README.md`](remote-kio/README.md)** for a copy-paste-ready package
+that runs a single KIO on a separate machine while the rest of the stack (collector,
+databases, Grafana) keeps running wherever it already is. The architecture is push-based
+by design, so this needs no code change — only pointing `OTEL_EXPORTER_OTLP_ENDPOINT`
+at the central machine.
 
 ## Metrics (Integration Contract §2.1 + optional extras)
 
@@ -92,21 +120,105 @@ Free-form strings (LLM output snippets, analysis notes, failure summaries) are s
 numeric series. They show up in the log panel on the KIO Detail dashboard. Query them
 directly with LogsQL, e.g. `kio.id:kio2` or `_msg:~"coverage"`.
 
+## Traces ("işlem sırası")
+
+Each request's `kio.request` trace (with its `prepare_prompt` / `repo_scan` /
+`llm_call` / `postprocess` children) is exported to **Tempo**. The KIO Detail
+dashboard exposes it two ways: a TraceQL-backed table of recent traces for the
+selected KIO, and a waterfall panel that renders the full span sequence once you
+paste a Trace ID from that table into the `trace_id` variable. If the waterfall
+panel ever comes up empty, the same Trace ID can always be opened via
+**Explore → Tempo** in Grafana as a fallback.
+
+## Gerçek proje KPI'ları (D1.1)
+
+`docs/AI4SWENG_KPI_Metrik_Referansi.docx` — projenin resmi Proje Yönetim El Kitabı'ndan (D1.1)
+alınan tüm KPI'ların (1.1–9.2) ve iş-paketi/görev seviyesi metriklerin tam kataloğu, ve
+hangi KIO'ya hangi KPI'nın bağlı olduğunun haritası.
+
+Bu sürümde yalnızca **KIO2** (D1.1'de "Bug Locate & Fix / LLM Debugger" — FocusTracer'ın
+yaptığı işin ta kendisi) gerçek KPI'larla entegre edildi. `docker-compose.yml`'de kio2'ye
+`KIO_REAL_KPI_ROLE=bugfix` env değişkeni set edilince, `kio_simulator.py` şu dört ek metriği
+yayınlıyor (isim/birim doğrudan D1.1'den, değerler henüz simüle):
+
+- `kio_bugfix_duration_hours` — KPI 6.1 (Bug-fix time)
+- `kio_issue_resolution_hours` — KPI 1.2 (Issue resolution speed)
+- `kio_slicing_success_rate` — WP3 görev metriği (Dynamic slicing success rate, hedef ≥%85)
+- `kio_issue_customer_reported_count` — KPI 6.2 (Customer-reported issues)
+
+KIO Detail dashboard'unda yeni bir "D1.1 Gerçek Proje KPI'ları" bölümü bu dört metriği
+gösterir (yalnızca kio2 seçiliyken veri dolu gelir). Diğer KIO'lar (KIO3, KIO4, KIO7...)
+için aynı yöntem — gerçek isim/birim, KIO'ya özel env-var ile etkinleştirme — ileride
+sırayla uygulanacak; bkz. referans dokümanının "Diğer KIO'lar" bölümü.
+
+## Langfuse (LLM-specific tracing)
+
+A second, parallel telemetry stream — independent of the OTel pipeline — dedicated
+to prompt/completion/cost tracking. Each KIO wraps its simulated LLM call in a
+Langfuse span+generation (same `session_id` as the OTel trace, so a human can
+correlate the two), while metrics/logs/traces above keep flowing through OTel
+exactly as before. If Langfuse is unreachable or misconfigured, the KIO logs a
+warning and keeps running unaffected — this stream can never take down the rest
+of the stack (see `kio_simulator.py`'s `emit_langfuse_trace()`).
+
+Self-hosted via `LANGFUSE_INIT_*` "headless initialization" env vars on
+`langfuse-web`, so the org/project/API-keys exist automatically on first boot —
+no manual UI setup step, no copy-pasting keys before the KIOs can connect.
+
+## V2 Guideline Değerlendirmesi (2026-07-23)
+
+A candidate engineer's proposed **v2 Observability Integration Guide** was reviewed
+against this implementation. It is a candidate's proposal, not a finalized
+contract — the decisions below are ours, made after comparing the two documents:
+
+- **Log collection: kept our design (active OTLP push → VictoriaLogs), rejected
+  v2's passive stdout-scrape → Loki model.** v2 assumes the collector can reach
+  every KIO's container filesystem/stdout directly (e.g. via a mounted Docker log
+  directory). That assumption breaks for a KIO running on a separate machine —
+  exactly the `remote-kio/` scenario already implemented and tested in this repo
+  (KIO5 over Tailscale). An OTLP-push model works uniformly regardless of where a
+  KIO physically runs; a scrape-based model does not. Decision: OTLP push stays.
+- **Langfuse: added**, per direct request (senior). Self-hosted stack (Postgres +
+  ClickHouse + Redis + MinIO + langfuse-web/-worker) — see "Langfuse" section
+  above. This is a materially heavier addition than everything else in this repo
+  combined (6 extra containers vs. our previous 8 total), so it's worth being
+  explicit about the trade-off for the report: it buys prompt/completion-level
+  replay and LLM cost analytics that Tempo's generic spans don't provide. If the
+  team ultimately doesn't need prompt-level debugging, this whole sub-stack (and
+  its 4 backing services) can be removed without touching the OTel pipeline at
+  all — it was deliberately kept as an isolated, independently-failing addition.
+- **NATS JetStream / Session Manager / PostgreSQL lineage / Workflow API:
+  deferred, not implemented.** These describe how KIOs get *triggered* (an
+  orchestration layer), not how they're *observed* — arguably a different team's
+  concern, out of scope for this observability workstream. Open question worth
+  discussing further: does the team need this orchestration layer modeled here at
+  all, or is it assumed to exist elsewhere and out of scope by design? Revisit
+  once that's clarified.
+- **Confirmed already-compliant, no change needed:** the 7 mandatory metrics
+  (names/types/units), resource attributes, the low-cardinality rule (session IDs
+  never used as metric labels — only in trace/log metadata, exactly as v2 also
+  specifies), and the metrics+traces-over-OTLP/gRPC transport.
+- **Minor, cheap-to-adopt items not yet applied:** v2's 15s metric export interval
+  (we currently use 5s — fine for this KIO count, worth revisiting at higher
+  scale) and a `session_id` Grafana dashboard filter variable (we currently only
+  filter by `kio_id`).
+
 ## Design notes & decisions
 
 - **Prometheus is intentionally absent** — VictoriaMetrics ingests via remote_write
   (push), which fits the contract's "KIOs never expose a scrape endpoint" rule.
-- **Tempo/Jaeger (traces) deferred to phase 2.** The collector already has a traces
-  pipeline wired (currently debug-only). With dummy data there are no real sub-span
-  timings to show; when needed, add a Tempo service and point the traces pipeline at it.
-- **Langfuse** (the second stream in the contract) is out of scope here — a separate,
-  small integration owned separately. This stack covers metrics + logs.
+- **Tempo** stores traces in monolithic mode with local-disk storage — sufficient for
+  local dev; a production deployment would move to object storage (S3/GCS) and
+  split Tempo's components.
+- **Langfuse** is now integrated (see "Langfuse" section above) as a second stream
+  parallel to metrics + logs + traces, added per direct request and evaluated
+  against v2 in the section above.
 - **Auth/TLS**: the contract uses Bearer token + TLS on `:4317`. For local dev the
   collector listens insecure. To exercise the real path, add a `bearertokenauth`
-  extension to the collector and set `OTEL_EXPORTER_OTLP_HEADERS` on the KIOs.
-- **Remote KIOs**: when KIOs run on other machines later, expose the collector's
-  `:4317` (with TLS + Bearer) and point their `OTEL_EXPORTER_OTLP_ENDPOINT` at it —
-  no other change needed.
+  extension to the collector and set `OTEL_EXPORTER_OTLP_HEADERS` on the KIOs (the
+  OTel SDK picks this env var up automatically — no code change needed).
+- **Remote KIOs**: fully supported today via the push architecture — see
+  `remote-kio/README.md`. No code change is required, only environment variables.
 
 ## Layout
 
@@ -114,9 +226,12 @@ directly with LogsQL, e.g. `kio.id:kio2` or `_msg:~"coverage"`.
 observability/
 ├── docker-compose.yml
 ├── otel-collector/config.yaml
+├── tempo/tempo.yaml
 ├── grafana/
 │   ├── provisioning/datasources/datasources.yml
 │   ├── provisioning/dashboards/dashboards.yml
 │   └── dashboards/{ai4sweng-overview,ai4sweng-kio}.json
-└── kio-simulator/{kio_simulator.py,requirements.txt,Dockerfile}
+├── kio-simulator/{kio_simulator.py,requirements.txt,Dockerfile}
+├── remote-kio/{docker-compose.yml,.env.example,README.md}
+└── docs/AI4SWENG_Observability_Teknik_Rapor.docx
 ```

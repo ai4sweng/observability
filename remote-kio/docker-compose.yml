@@ -1,0 +1,22 @@
+# Standalone package for running ONE KIO on a different machine than the
+# central platform (collector + databases + Grafana), which keeps running
+# wherever it already is (e.g. your laptop).
+#
+# This file intentionally builds from ../kio-simulator — the exact same
+# source used by the local stack. Copy BOTH folders together:
+#   observability/kio-simulator/
+#   observability/remote-kio/
+# (same relative layout) to the remote machine. Do not duplicate the code;
+# keep this one build context as the single source of truth.
+#
+# Usage on the remote machine:
+#   cp .env.example .env   # then edit .env — see README.md
+#   docker compose up -d --build
+
+services:
+  kio-remote:
+    build: ../kio-simulator
+    container_name: ai4sweng-${KIO_ID:-kio5}
+    env_file:
+      - .env
+    restart: unless-stopped

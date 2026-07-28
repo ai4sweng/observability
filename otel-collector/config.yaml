@@ -1,6 +1,5 @@
 # OpenTelemetry Collector - AI4SWENG central ingestion gateway
-# Receives OTLP from every KIO, fans out: metrics -> VictoriaMetrics, logs -> VictoriaLogs.
-# Traces pipeline is wired but only debug-exported for now (Tempo/Jaeger deferred to phase 2).
+# Receives OTLP from every KIO, fans out: metrics -> VictoriaMetrics, logs -> VictoriaLogs, traces -> Tempo.
 
 receivers:
   otlp:
@@ -39,6 +38,12 @@ exporters:
     tls:
       insecure: true
 
+  # Traces -> Tempo (native OTLP gRPC ingest on Tempo's distributor).
+  otlp/tempo:
+    endpoint: "tempo:4317"
+    tls:
+      insecure: true
+
   # Visibility into what flows through the collector (docker logs otel-collector).
   debug:
     verbosity: basic
@@ -59,4 +64,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [otlp/tempo, debug]
