@@ -6,3 +6,11 @@ opentelemetry-api==1.44.0
 opentelemetry-sdk==1.44.0
 opentelemetry-exporter-otlp-proto-grpc==1.44.0
 langfuse>=4.0.0,<5.0.0
+
+# Optional real-LLM path (KIO2 only, KIO2_REAL_LLM_ENABLED=true): calling a
+# real Ollama server and, if available, reading real GPU power draw.
+# nvidia-ml-py is NVIDIA's current official package; it still provides
+# `import pynvml` (the old "pynvml" PyPI package is now a deprecated stub
+# pointing at this one — installing it directly just prints a warning).
+requests>=2.31.0
+nvidia-ml-py>=12.535.0
