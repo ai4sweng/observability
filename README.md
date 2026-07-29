@@ -151,6 +151,44 @@ gösterir (yalnızca kio2 seçiliyken veri dolu gelir). Diğer KIO'lar (KIO3, KI
 için aynı yöntem — gerçek isim/birim, KIO'ya özel env-var ile etkinleştirme — ileride
 sırayla uygulanacak; bkz. referans dokümanının "Diğer KIO'lar" bölümü.
 
+## Gerçek LLM entegrasyonu (KIO2, opsiyonel — NVIDIA GPU gerekir)
+
+KIO2'nin gerçek modülü (FocusTracer) henüz hazır olmadığı için, o hazırlanana kadar en
+azından **gerçek bir LLM'i gerçekten çalıştırıp** tokens/sec ve GPU enerjisini gerçek
+ölçmek istersen bu yol kapalı-varsayılan (`KIO2_REAL_LLM_ENABLED: "false"`) olarak
+hazır. Açtığında değişen şey:
+
+- **Gerçek olan:** tokens/sec, input/output token sayısı ve latency (Ollama'nın kendi
+  `eval_count`/`eval_duration`'ından), GPU enerjisi (gerçek NVML güç okumasının çağrı
+  süresi boyunca integrali), **ve artık error rate de** — Ollama çağrısı gerçekten
+  başarısız olursa (unreachable/timeout/HTTP hatası) bu, rastgele bir zar değil,
+  `kio.request.error_count`'a gerçek `error_type` ile yazılan gerçek bir hata olarak
+  sayılıyor. Eskiden gerçek yol açıkken bile hata oranı hâlâ `%7` rastgele zardan
+  geliyordu ve gerçek bir Ollama kopması, arkasından sanki hiçbir şey olmamış gibi
+  taze bir sahte "başarılı" istekle örtbas ediliyordu — bu düzeltildi
+  (`_call_ollama_real()` artık başarı/başarısızlığı açıkça ayırt eden bir sözlük
+  döndürüyor, `simulate_request()`'te üç yollu dallanma: gerçek-başarı / gerçek-hata /
+  yol-tamamen-kapalı).
+- **Hâlâ simüle olan:** fix@1 (`kio.fix.attempt_count`, `outcome=success|failure`) —
+  çünkü "doğru düzeltme" için gerçek bir hata + gerçek bir test çalıştırması gerekiyor,
+  bu da FocusTracer'ın işi. FocusTracer hazır olunca `kio_simulator.py`'daki
+  `_evaluate_fix_success()` fonksiyonunun içini değiştirmek yeterli olacak — metrik adı/şekli aynı kalır.
+  Ayrıca `kio.request.accuracy` (genel Contract metriği, D1.1/fix@1'den bağımsız) da aynı
+  sebeple simüle kalıyor — bir LLM cevabının "doğruluğunu" otomatik ölçecek bir referans/test
+  seti yok.
+
+Kurulum:
+1. Bu bilgisayarda (container içinde değil) Ollama kurulu olsun ve model çekilmiş olsun: `ollama pull qwen2.5:3b`
+2. (Opsiyonel, gerçek enerji için) `pip install nvidia-ml-py` sonra `python tools/power_exporter.py` çalıştır — Windows host'ta NVML'den okuyup `http://localhost:9400/power` üzerinden JSON servis eder (`{"watts": 87.3}`). Bunu çalıştırmazsan enerji eski tahmini formüle döner, sistem yine de çalışır.
+3. `docker-compose.yml`'de kio2'nin `KIO2_REAL_LLM_ENABLED` değerini `"true"` yap, `docker compose up -d --build kio2` ile yeniden başlat.
+
+Neden bu yol (container'a GPU passthrough değil, host'ta native Ollama + ayrı bir
+power-exporter script'i)? Çünkü Linux container'ların Windows host'un GPU'suna
+görünürlüğü yok (passthrough ayrıca kurulmadıkça); Ollama zaten native Windows'ta GPU'yu
+doğrudan kullanabiliyor, bu yüzden en az sürtünmeli yol bu. `_read_gpu_power_watts()`
+önce `GPU_POWER_EXPORTER_URL`'i, sonra (varsa) container'ın kendi NVML'ini dener, ikisi
+de yoksa sessizce eski tahmini değere düşer — hiçbir durumda simülatör çökmez.
+
 ## Langfuse (LLM-specific tracing)
 
 A second, parallel telemetry stream — independent of the OTel pipeline — dedicated
