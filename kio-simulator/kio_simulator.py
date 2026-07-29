@@ -12,9 +12,16 @@ Emits contract-compliant dummy telemetry over OTLP/gRPC for a single KIO:
     emit a leading repo_scan span) so Grafana/Tempo can show the step-by-step
     sequence of an operation ("işlem sırası").
 
-Real LLMs are NOT invoked; values are randomly generated. One KIO of type
-"code-analysis" additionally reports real line/directory counts of a scanned
-repo path so at least one KIO carries genuine structured extra data.
+Real LLMs are NOT invoked by default; values are randomly generated. One KIO
+of type "code-analysis" additionally reports real line/directory counts of a
+scanned repo path so at least one KIO carries genuine structured extra data.
+
+Optionally (KIO2_REAL_LLM_ENABLED=true), a KIO can call a real Ollama server
+for its llm_call step instead of faking token counts — see
+_call_ollama_real(). Tokens/sec then comes from Ollama's own eval_count /
+eval_duration. GPU energy is read from a real source if one is reachable
+(local NVML, or an external power-exporter HTTP endpoint); otherwise it
+silently falls back to the old estimated formula — see _read_gpu_power_watts().
 
 Config comes from environment variables (see docker-compose.yml).
 """
@@ -71,6 +78,20 @@ REPO_SCAN_PATH = os.environ.get("REPO_SCAN_PATH", "/app")
 # core logic — see docs/AI4SWENG_KPI_Metrik_Referansi.docx.
 KIO_REAL_KPI_ROLE = os.environ.get("KIO_REAL_KPI_ROLE", "")
 
+# --- Optional real-LLM path (KIO2 today) ---
+# Off by default so the base demo never requires Ollama to be running.
+KIO2_REAL_LLM_ENABLED = os.environ.get("KIO2_REAL_LLM_ENABLED", "false").lower() == "true"
+OLLAMA_ENDPOINT = os.environ.get("OLLAMA_ENDPOINT", "http://host.docker.internal:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", KIO_LLM)
+OLLAMA_TIMEOUT_S = float(os.environ.get("OLLAMA_TIMEOUT_S", "30"))
+# Real GPU power, read from whichever source is available (in this order):
+# 1) an external "power exporter" HTTP endpoint (see tools/power_exporter.py,
+#    meant to run natively on the Windows host next to Ollama, since NVML
+#    inside a Linux container can't see a GPU it hasn't been passed through);
+# 2) local NVML, if the container *does* have GPU passthrough configured.
+# If neither works, energy silently falls back to the old estimated formula.
+GPU_POWER_EXPORTER_URL = os.environ.get("GPU_POWER_EXPORTER_URL", "")
+
 # LLM pricing per 1K tokens (dummy) so cost varies believably by model.
 LLM_COST_PER_1K = {
     "qwen2.5:3b": 0.0,
@@ -81,6 +102,7 @@ LLM_COST_PER_1K = {
 }
 
 # Approx. GPU joules per output token (dummy), bigger models cost more energy.
+# Used as the fallback whenever a real power reading isn't available.
 LLM_JOULES_PER_TOKEN = {
     "qwen2.5:3b": 0.8,
     "llama3.1:8b": 2.1,
@@ -88,6 +110,159 @@ LLM_JOULES_PER_TOKEN = {
     "gpt-4o": 9.0,
     "claude-sonnet": 6.0,
 }
+
+# --------------------------------------------------------------------------- #
+# Optional real-LLM path (KIO2_REAL_LLM_ENABLED=true) — real Ollama call +
+# real GPU power sampling. Every function here is defensive: any failure
+# (Ollama unreachable, no power source, pynvml missing) falls back cleanly
+# rather than crashing the simulator — this path is additive, never required.
+# --------------------------------------------------------------------------- #
+_nvml_handle = None
+_nvml_ready = False
+
+
+def _nvml_init_once():
+    """Best-effort NVML init; only meaningful if this process's container
+    actually has GPU passthrough. Safe to call repeatedly."""
+    global _nvml_handle, _nvml_ready
+    if _nvml_ready or _nvml_handle is not None:
+        return
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        _nvml_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        _nvml_ready = True
+        logging.getLogger(KIO_ID).info("NVML initialised — local GPU power reading available.")
+    except Exception:
+        _nvml_ready = False
+
+
+def _read_gpu_power_watts():
+    """Real GPU power draw in watts, or None if no real source is reachable.
+    Tries the external power-exporter HTTP endpoint first (works when Ollama
+    runs natively on the Windows host, which is the common case — a Linux
+    container has no visibility into that GPU otherwise), then local NVML."""
+    if GPU_POWER_EXPORTER_URL:
+        try:
+            import requests
+            resp = requests.get(GPU_POWER_EXPORTER_URL, timeout=1.5)
+            resp.raise_for_status()
+            watts = float(resp.json()["watts"])
+            return watts
+        except Exception:
+            pass  # fall through to NVML / caller's fallback
+    _nvml_init_once()
+    if _nvml_ready:
+        try:
+            import pynvml
+            return pynvml.nvmlDeviceGetPowerUsage(_nvml_handle) / 1000.0  # mW -> W
+        except Exception:
+            return None
+    return None
+
+
+def _measure_energy_during(call_fn):
+    """Runs call_fn() while sampling real GPU power ~5x/second in a background
+    thread, integrating power*dt to get real joules. Returns (result, joules)
+    where joules is None if no real power source was ever readable — caller
+    should fall back to the estimated formula in that case."""
+    samples = []
+    stop = threading.Event()
+
+    def _sampler():
+        last_t = time.monotonic()
+        while not stop.is_set():
+            w = _read_gpu_power_watts()
+            now = time.monotonic()
+            if w is not None:
+                samples.append((now - last_t, w))
+            last_t = now
+            stop.wait(0.2)
+
+    t = threading.Thread(target=_sampler, daemon=True)
+    t.start()
+    try:
+        result = call_fn()
+    finally:
+        stop.set()
+        t.join(timeout=1.0)
+    if not samples:
+        return result, None
+    joules = sum(dt * w for dt, w in samples)
+    return result, joules
+
+
+def _call_ollama_real(prompt, model=None):
+    """Calls a real Ollama server's /api/generate. Always returns a dict —
+    never None — so the caller can tell a REAL SUCCESS apart from a REAL
+    FAILURE (as opposed to the real path being disabled entirely):
+      success: {"ok": True, "text", "input_tokens", "output_tokens",
+                "duration_s", "tokens_per_second"} — every field measured.
+      failure: {"ok": False, "error_type", "duration_s"} — the call was
+                genuinely attempted and genuinely failed (Ollama down, wrong
+                model, network error, timeout). The caller must record this
+                as a real kio.request.error_count, not silently swap in a
+                fresh simulated "successful" request — doing that would hide
+                real Ollama unavailability from the error-rate metric."""
+    import requests
+    t0 = time.monotonic()
+    try:
+        resp = requests.post(
+            f"{OLLAMA_ENDPOINT}/api/generate",
+            json={"model": model or OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            timeout=OLLAMA_TIMEOUT_S,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        wall_s = time.monotonic() - t0
+        eval_count = data.get("eval_count", 0)
+        eval_duration_s = data.get("eval_duration", 0) / 1e9  # ns -> s
+        prompt_eval_count = data.get("prompt_eval_count", 0)
+        tps = eval_count / eval_duration_s if eval_duration_s > 0 else (eval_count / wall_s if wall_s > 0 else 0.0)
+        return {
+            "ok": True,
+            "text": data.get("response", ""),
+            "input_tokens": prompt_eval_count,
+            "output_tokens": eval_count,
+            "duration_s": wall_s,
+            "tokens_per_second": tps,
+        }
+    except requests.exceptions.Timeout:
+        error_type = "ollama_timeout"
+    except requests.exceptions.ConnectionError:
+        error_type = "ollama_unreachable"
+    except requests.exceptions.HTTPError:
+        error_type = "ollama_http_error"
+    except Exception:
+        error_type = "ollama_call_failed"
+    wall_s = time.monotonic() - t0
+    logging.getLogger(KIO_ID).warning(
+        f"Real Ollama call failed ({OLLAMA_ENDPOINT}, model={model or OLLAMA_MODEL}, "
+        f"reason={error_type}) — recording this as a REAL request error.",
+    )
+    return {"ok": False, "error_type": error_type, "duration_s": wall_s}
+
+
+def _build_debug_prompt():
+    """A small, real prompt for KIO2's real-LLM path: ask the model about a
+    short snippet of KIO2's own scanned source. Not a real bug corpus (that's
+    FocusTracer's job, not ready yet) — just enough to make the real Ollama
+    call meaningful rather than an empty no-op prompt."""
+    snippet = "def divide(a, b):\n    return a / b  # ZeroDivisionError if b == 0"
+    return (
+        "You are a bug-fix assistant. In one short sentence, identify the "
+        f"most likely runtime bug in this function and suggest a one-line fix:\n\n{snippet}"
+    )
+
+
+def _evaluate_fix_success():
+    """Placeholder outcome for the fix@1 metric (KIO2's 'accuracy' KPI, method
+    left to us per the meeting). Real success requires a real bug + a real
+    test run — that's FocusTracer's job once it's ready. Until then this
+    returns a plausible pass rate; swap this function's body only, once
+    FocusTracer can report whether its first suggested patch actually passed."""
+    return random.random() < 0.72
+
 
 # --------------------------------------------------------------------------- #
 # Resource — mandatory correlation attributes (Contract §1.2)
@@ -180,8 +355,16 @@ if KIO_REAL_KPI_ROLE == "bugfix":
     issue_resolution_hist = meter.create_histogram("kio.issue.resolution_hours", unit="h")     # KPI 1.2
     slicing_success_hist = meter.create_histogram("kio.slicing.success_rate", unit="1")        # WP3 task metric
     customer_reported_counter = meter.create_counter("kio.issue.customer_reported_count", unit="1")  # KPI 6.2
+    # "Accuracy" metric requested in the meeting, method left to us: fix@1 —
+    # the bug-fix equivalent of pass@1 — did the LLM's *first* suggested patch
+    # actually pass? Real outcome determination needs a real bug + real test
+    # run (FocusTracer, not ready yet); until then _evaluate_fix_success()
+    # below is a clearly-marked placeholder, swappable for the real result
+    # without changing this metric's name/shape.
+    fix_attempt_counter = meter.create_counter("kio.fix.attempt_count", unit="1")  # outcome=success|failure
 else:
     bugfix_duration_hist = issue_resolution_hist = slicing_success_hist = customer_reported_counter = None
+    fix_attempt_counter = None
 
 # --------------------------------------------------------------------------- #
 # Logs pipeline — unstructured / string telemetry
@@ -350,6 +533,10 @@ def emit_real_kpi_metrics(labels, is_error):
     # KPI 6.2 — Customer-reported issues: rare event, not one per request.
     if is_error and random.random() < 0.05:
         customer_reported_counter.add(random.randint(1, 2), labels)
+    # "Accuracy" KPI (fix@1) — see _evaluate_fix_success()'s docstring for
+    # why this is a placeholder, not yet a real test-suite result.
+    outcome = "success" if _evaluate_fix_success() else "failure"
+    fix_attempt_counter.add(1, {**labels, "outcome": outcome})
 
 
 # --------------------------------------------------------------------------- #
@@ -369,44 +556,90 @@ def simulate_request():
     labels = {"kio.id": KIO_ID, "llm": KIO_LLM, "task_type": TASK_TYPE}
     active_sessions.add(1, labels)
     try:
-        # ~ dummy work
-        work_s = random.uniform(0.2, 2.5)
-        time.sleep(min(work_s, 0.4))  # keep loop responsive; report full latency below
+        real_result = None
+        real_joules = None
+        if KIO2_REAL_LLM_ENABLED:
+            real_result, real_joules = _measure_energy_during(
+                lambda: _call_ollama_real(_build_debug_prompt())
+            )
 
-        in_tokens = random.randint(150, 1200)
-        out_tokens = random.randint(80, 2000)
-        tps = out_tokens / max(work_s, 0.05)
-        is_error = random.random() < 0.07  # ~7% error rate
-        error_type = random.choice(["timeout", "internal", "rate_limit"]) if is_error else None
+        # "source" reflects which MODE this KIO is running in (real Ollama
+        # attempted vs fully simulated) — not whether this one call happened
+        # to succeed. See KIO Detail's "Veri Kaynağı" panel.
+        data_source = "real" if KIO2_REAL_LLM_ENABLED else "simulated"
+        labels_src = {**labels, "source": data_source}
 
-        llm_token_counter.add(in_tokens, {**labels, "direction": "input"})
-        llm_token_counter.add(out_tokens, {**labels, "direction": "output"})
-        tokens_per_second.record(round(tps, 2), labels)
+        if real_result is not None and real_result["ok"]:
+            # REAL SUCCESS — every number below is measured from the actual
+            # Ollama response, nothing fabricated.
+            work_s = max(real_result["duration_s"], 0.01)
+            in_tokens = real_result["input_tokens"] or 0
+            out_tokens = real_result["output_tokens"] or 0
+            tps = real_result["tokens_per_second"]
+            is_error = False
+            error_type = None
+        elif real_result is not None and not real_result["ok"]:
+            # REAL FAILURE — the Ollama call was genuinely attempted and
+            # genuinely failed (unreachable / timeout / bad model / HTTP
+            # error). This IS the request's real outcome: record it as a real
+            # error with the real reason, instead of quietly generating a
+            # fresh simulated "successful" request on top of it — that used
+            # to hide real Ollama downtime from the error-rate metric.
+            work_s = max(real_result["duration_s"], 0.01)
+            in_tokens = 0
+            out_tokens = 0
+            tps = 0.0
+            is_error = True
+            error_type = real_result["error_type"]
+        else:
+            # Real path fully disabled (KIO2_REAL_LLM_ENABLED=false) -> the
+            # original dummy simulation, unchanged.
+            work_s = random.uniform(0.2, 2.5)
+            time.sleep(min(work_s, 0.4))  # keep loop responsive; report full latency below
 
-        joules = out_tokens * LLM_JOULES_PER_TOKEN.get(KIO_LLM, 2.0) * random.uniform(0.85, 1.15)
-        energy_counter.add(round(joules, 2), labels)
+            in_tokens = random.randint(150, 1200)
+            out_tokens = random.randint(80, 2000)
+            tps = out_tokens / max(work_s, 0.05)
+            is_error = random.random() < 0.07  # ~7% simulated error rate
+            error_type = random.choice(["timeout", "internal", "rate_limit"]) if is_error else None
+
+        llm_token_counter.add(in_tokens, {**labels_src, "direction": "input"})
+        llm_token_counter.add(out_tokens, {**labels_src, "direction": "output"})
+        tokens_per_second.record(round(tps, 2), labels_src)
+
+        if real_joules is not None:
+            joules = real_joules  # real, integrated GPU power draw over the real call
+        else:
+            joules = out_tokens * LLM_JOULES_PER_TOKEN.get(KIO_LLM, 2.0) * random.uniform(0.85, 1.15)
+        energy_counter.add(round(joules, 2), labels_src)
 
         cost = (in_tokens + out_tokens) / 1000.0 * LLM_COST_PER_1K.get(KIO_LLM, 0.0)
         if cost:
-            llm_cost_counter.add(round(cost, 6), labels)
+            llm_cost_counter.add(round(cost, 6), labels_src)
 
         latency_ms = work_s * 1000.0
         emit_trace(session_id, work_s, in_tokens, out_tokens, is_error, error_type)
 
         if is_error:
-            error_counter.add(1, {**labels, "error_type": error_type})
-            request_counter.add(1, {**labels, "status": "error"})
-            request_duration.record(latency_ms, labels)
-            summary_text = f"Request failed on session {session_id}: simulated {error_type}"
+            error_counter.add(1, {**labels_src, "error_type": error_type})
+            request_counter.add(1, {**labels_src, "status": "error"})
+            request_duration.record(latency_ms, labels_src)
+            reason = "REAL Ollama error" if data_source == "real" else "simulated"
+            summary_text = f"Request failed on session {session_id}: {reason} ({error_type})"
             logger.warning(
                 summary_text,
                 extra={"kio.id": KIO_ID, "session.id": session_id, "llm": KIO_LLM, "task_type": TASK_TYPE},
             )
         else:
-            request_counter.add(1, {**labels, "status": "ok"})
-            request_duration.record(latency_ms, labels)
-            accuracy_hist.record(round(random.uniform(0.6, 0.99), 3), labels)
-            summary_text = emit_unstructured(session_id, out_tokens)
+            request_counter.add(1, {**labels_src, "status": "ok"})
+            request_duration.record(latency_ms, labels_src)
+            accuracy_hist.record(round(random.uniform(0.6, 0.99), 3), labels_src)
+            if real_result is not None and real_result.get("ok") and real_result.get("text"):
+                summary_text = f"[real qwen2.5:3b via Ollama] {real_result['text'].strip()[:400]}"
+                logger.info(summary_text, extra={"kio.id": KIO_ID, "session.id": session_id,
+                                                  "llm": KIO_LLM, "task_type": TASK_TYPE})
+            else:
+                summary_text = emit_unstructured(session_id, out_tokens)
 
         # Langfuse: parallel LLM-specific stream, same session_id as the OTel
         # trace above so both systems can be correlated by a human.

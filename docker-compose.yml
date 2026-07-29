@@ -243,9 +243,9 @@ services:
       LANGFUSE_INIT_PROJECT_NAME: AI4SWENG KIO Telemetry
       LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
       LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
-      LANGFUSE_INIT_USER_EMAIL: admin@ai4sweng.local
-      LANGFUSE_INIT_USER_NAME: AI4SWENG Admin
-      LANGFUSE_INIT_USER_PASSWORD: ai4sweng-admin
+      LANGFUSE_INIT_USER_EMAIL: admin@bitnet.com.tr
+      LANGFUSE_INIT_USER_NAME: admin
+      LANGFUSE_INIT_USER_PASSWORD: admin1453
 
   # ---------------------------------------------------------------------------
   # KIO simulators. Each is an independent module pushing dummy telemetry.
@@ -268,6 +268,15 @@ services:
       # the real-KPI metrics (kio.bugfix.*, kio.issue.*, kio.slicing.*).
       # See docs/AI4SWENG_KPI_Metrik_Referansi.docx.
       KIO_REAL_KPI_ROLE: "bugfix"
+      # Optional real-LLM path — OFF by default so `docker compose up` never
+      # requires Ollama to be running. Flip to "true" once Ollama is up
+      # natively on this machine (`ollama pull qwen2.5:3b`) with an NVIDIA
+      # GPU. GPU_POWER_EXPORTER_URL is optional too — see tools/power_exporter.py;
+      # without it, energy silently falls back to the estimated formula.
+      KIO2_REAL_LLM_ENABLED: "true"
+      OLLAMA_ENDPOINT: "http://host.docker.internal:11434"
+      OLLAMA_MODEL: "qwen2.5:3b"
+      GPU_POWER_EXPORTER_URL: "http://host.docker.internal:9400/power"
       LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
       LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"

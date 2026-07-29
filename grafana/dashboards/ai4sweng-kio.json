@@ -90,7 +90,7 @@
       },
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -98,7 +98,7 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "textMode": "name"
       }
     },
     {
@@ -1404,6 +1404,255 @@
         },
         "tooltip": {
           "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Model Karşılaştırması & Veri Kaynağı (idt4gdc-grafana-demo tarzından uyarlandı)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "panels": []
+    },
+    {
+      "id": 32,
+      "title": "Veri kaynağı (tok/s) — REAL vs SIMULATED",
+      "type": "stat",
+      "description": "KIO2_REAL_LLM_ENABLED açıkken gerçek Ollama çağrısı başarılıysa 'real', Ollama'ya ulaşılamayıp simülasyona düşüldüyse 'simulated' sayılır. Son 30 dakikada hangi kaynaktan kaç istek geldiğini gösterir.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (source) (increase(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[30m]))",
+          "legendFormat": "{{source}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*real.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*simulated.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 33,
+      "title": "Energy Consumption by Model",
+      "description": "idt4gdc-grafana-demo'daki aynı isimli panelden esinlenildi. Postgres+rawSql yerine bizim PromQL/VictoriaMetrics verimizle: tüm KIO'ların (llm etiketine göre) enerji tüketim oranı karşılaştırması ($kio_id filtresi yok, kasıtlı — model bazlı kıyaslama).",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (llm) (rate(kio_llm_energy_joules[10m]))",
+          "legendFormat": "{{llm}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "title": "Accuracy (fix@1) vs Energy Trade-off — by model",
+      "description": "idt4gdc-grafana-demo'daki 'Accuracy vs Energy Trade-off' panelinden uyarlandı. KIO2 (bugfix rolü) için fix@1 başarı oranı ile enerji tüketim oranını yan yana gösterir. fix@1 henüz FocusTracer'a bağlı değil, yer tutucu değer — bkz. docs/AI4SWENG_KPI_Metrik_Referansi. Sadece bugfix rolündeki KIO'larda (şu an KIO2) veri olur.",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (llm) (rate(kio_fix_attempt_count{outcome=\"success\"}[30m])) / clamp_min(sum by (llm) (rate(kio_fix_attempt_count[30m])),0.001)",
+          "legendFormat": "fix@1 success rate",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (llm) (rate(kio_llm_energy_joules[30m]))",
+          "legendFormat": "energy rate (J/s)",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "watt"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
         }
       }
     }
