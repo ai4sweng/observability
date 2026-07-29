@@ -1,8 +1,13 @@
 # AI4SWENG Observability Stack
 
+
+**Notion Documentation: [AI4SWENG Observability - Grafana Metrik Sistemi](https://app.notion.com/p/dawn-squash-710/Observability-Grafana-Metrik-Sistemi-3a619cd5a4d88093a1fdebd6ada75f5a)**
+
 Local implementation of the **AI4SWENG Observability Integration Contract v1.0**.
 KIO modules push telemetry over OTLP; the central platform stores it and Grafana
 visualizes it. Everything runs locally via Docker Compose.
+
+
 
 
 <div align="center">
@@ -10,6 +15,7 @@ visualizes it. Everything runs locally via Docker Compose.
   <img src="assets/architecture.png" width="600" alt="Architecture diagram" />
 
 </div>
+
 
 ```
                  OTLP/gRPC (:4317)
