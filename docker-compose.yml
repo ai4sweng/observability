@@ -252,11 +252,20 @@ services:
   # kio2 = code-analysis (emits real repo line/dir metrics), kio3/kio4 = random.
   # Each now dual-writes: OTel (metrics/traces/logs) + Langfuse (LLM-specific).
   # ---------------------------------------------------------------------------
-  kio2:
+  # kio2-sim: the ORIGINAL simulator, kept running in parallel as a contract
+  # baseline / comparison reference now that the real FocusTracer module will
+  # eventually take over kio_id=kio2 (see kio2-integration/README.md).
+  # KIO2_REAL_LLM_ENABLED is back ON here (2026-08) for demo purposes — the
+  # real-Ollama/real-GPU-energy path works independently of whether FocusTracer
+  # has connected yet, so there's no need to wait for that handoff just to show
+  # a manager real tok/s and energy numbers. KIO_REAL_KPI_ROLE stays empty:
+  # the D1.1 bugfix-role KPIs (fix@1, slicing success, etc.) are FocusTracer's
+  # signals to own for real, not something to fake again here.
+  kio2-sim:
     build: ./kio-simulator
-    container_name: ai4sweng-kio2
+    container_name: ai4sweng-kio2-sim
     environment:
-      KIO_ID: kio2
+      KIO_ID: kio2-sim
       KIO_LLM: "qwen2.5:3b"
       KIO_TASK_TYPE: code-analysis
       SERVICE_VERSION: "1.2.0"
@@ -264,15 +273,7 @@ services:
       EXPORT_INTERVAL_MS: "5000"
       HEARTBEAT_INTERVAL_S: "60"
       REQUEST_INTERVAL_S: "3"
-      # D1.1 handbook maps KIO2 to "Bug Locate & Fix / LLM Debugger" — enables
-      # the real-KPI metrics (kio.bugfix.*, kio.issue.*, kio.slicing.*).
-      # See docs/AI4SWENG_KPI_Metrik_Referansi.docx.
-      KIO_REAL_KPI_ROLE: "bugfix"
-      # Optional real-LLM path — OFF by default so `docker compose up` never
-      # requires Ollama to be running. Flip to "true" once Ollama is up
-      # natively on this machine (`ollama pull qwen2.5:3b`) with an NVIDIA
-      # GPU. GPU_POWER_EXPORTER_URL is optional too — see tools/power_exporter.py;
-      # without it, energy silently falls back to the estimated formula.
+      KIO_REAL_KPI_ROLE: ""
       KIO2_REAL_LLM_ENABLED: "true"
       OLLAMA_ENDPOINT: "http://host.docker.internal:11434"
       OLLAMA_MODEL: "qwen2.5:3b"
@@ -283,6 +284,12 @@ services:
     depends_on:
       - otel-collector
     restart: unless-stopped
+
+  # kio2: reserved for the REAL FocusTracer module. Not started from here —
+  # FocusTracer runs as its own process/container per kio2-integration/README.md
+  # (same docker-compose network, or a separate machine via remote-kio-style
+  # OTEL_EXPORTER_OTLP_ENDPOINT). Nothing to bring up on this side; this
+  # comment just documents the reserved kio_id so it isn't reused elsewhere.
 
   kio3:
     build: ./kio-simulator

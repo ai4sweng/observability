@@ -96,6 +96,16 @@ databases, Grafana) keeps running wherever it already is. The architecture is pu
 by design, so this needs no code change — only pointing `OTEL_EXPORTER_OTLP_ENDPOINT`
 at the central machine.
 
+## KIO2 gerçek modül entegrasyonu (FocusTracer)
+
+FocusTracer ekibi kendi modülünü tamamladığında bu sisteme nasıl bağlanacağının rehberi
+**[`kio2-integration/README.md`](kio2-integration/README.md)** içinde — FocusTracer'ın
+kendi koduna özel, satır referanslı talimatlar (nereye hangi OTel çağrısı eklenecek,
+`explain`/`slice` komutlarından hangi metriklerin gerçek olarak alınabileceği, fix@1'in
+neden FocusTracer'ın kapsamı dışında kaldığı). `kio2` kimliği artık gerçek modül için
+ayrıldı; eski simülatör `kio2-sim` olarak yeniden adlandırılıp karşılaştırma amacıyla
+paralel çalışmaya devam ediyor (`docker-compose.yml`).
+
 ## Metrics (Integration Contract §2.1 + optional extras)
 
 Mandatory set, all carrying `kio_id`:
