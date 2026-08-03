@@ -14,3 +14,8 @@ langfuse>=4.0.0,<5.0.0
 # pointing at this one — installing it directly just prints a warning).
 requests>=2.31.0
 nvidia-ml-py>=12.535.0
+
+# Optional NATS-driven trigger mode (NATS_ENABLED=true) — orchestration layer,
+# see ../orchestrator/. Always installed (small dep), only connected to if
+# the env var is on.
+nats-py>=2.6.0

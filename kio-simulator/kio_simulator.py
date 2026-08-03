@@ -25,12 +25,15 @@ silently falls back to the old estimated formula — see _read_gpu_power_watts()
 
 Config comes from environment variables (see docker-compose.yml).
 """
+import asyncio
 import os
 import random
 import signal
 import threading
 import time
 import uuid
+
+from envelope import KIOEnvelope, KIOResult, result_subject, task_subject
 
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
@@ -69,6 +72,16 @@ ENDPOINT = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
 EXPORT_INTERVAL_MS = int(os.environ.get("EXPORT_INTERVAL_MS", "5000"))
 HEARTBEAT_INTERVAL_S = int(os.environ.get("HEARTBEAT_INTERVAL_S", "60"))
 REQUEST_INTERVAL_S = float(os.environ.get("REQUEST_INTERVAL_S", "3"))
+
+# --- Optional NATS-driven trigger mode (orchestration layer) ---
+# Off by default: this KIO fires requests on its own internal timer, exactly
+# as before. When on, tasks instead arrive as KIOEnvelope messages on
+# kio.tasks.<KIO_ID> (published by orchestrator/planner.py), and this KIO
+# publishes a KIOResult back on kio.results.<KIO_ID> for lineage registration.
+# The two modes are mutually exclusive but touch nothing else — simulate_request()
+# itself doesn't know or care which one is driving it.
+NATS_ENABLED = os.environ.get("NATS_ENABLED", "false").lower() == "true"
+NATS_URL = os.environ.get("NATS_URL", "nats://nats:4222")
 REPO_SCAN_PATH = os.environ.get("REPO_SCAN_PATH", "/app")
 
 # Real-project KPI role (D1.1 Project Management Handbook). Empty by default;
@@ -551,8 +564,14 @@ def heartbeat_loop():
 # --------------------------------------------------------------------------- #
 # Simulated request workload
 # --------------------------------------------------------------------------- #
-def simulate_request():
-    session_id = str(uuid.uuid4())
+def simulate_request(session_id: str | None = None):
+    """Runs one request. `session_id` is normally generated here (internal-
+    timer mode); when driven by the NATS consumer it's instead the id carried
+    by the incoming KIOEnvelope, so telemetry binds to the session the
+    Workflow API/Session Manager are already tracking. Returns a small dict
+    ({"status": "ok"|"error", "output": {...}, "error": ...}) so a caller
+    (the NATS consumer) can report the outcome back as a KIOResult."""
+    session_id = session_id or str(uuid.uuid4())
     labels = {"kio.id": KIO_ID, "llm": KIO_LLM, "task_type": TASK_TYPE}
     active_sessions.add(1, labels)
     try:
@@ -647,8 +666,77 @@ def simulate_request():
 
         # Real-project KPIs (D1.1) — only emits anything for "bugfix"-role KIOs.
         emit_real_kpi_metrics(labels, is_error)
+
+        return {
+            "status": "error" if is_error else "ok",
+            "output": {"tokens_out": out_tokens, "summary": summary_text[:200]},
+            "error": error_type,
+        }
     finally:
         active_sessions.add(-1, labels)
+
+
+# --------------------------------------------------------------------------- #
+# NATS-driven trigger mode (orchestration layer, NATS_ENABLED=true).
+# --------------------------------------------------------------------------- #
+async def handle_task_envelope(nc, msg_data: bytes) -> dict:
+    """Core of the NATS task handler, factored out of _nats_consumer_main so
+    it's directly unit-testable against a fake `nc` (anything with an async
+    `publish(subject, bytes)`), without needing a real NATS server. Parses
+    one KIOEnvelope, runs simulate_request() off-loop, publishes the
+    KIOResult back, and returns the result dict for assertions in tests."""
+    try:
+        envelope = KIOEnvelope.from_json(msg_data)
+    except Exception:
+        logger.warning("Malformed KIOEnvelope, dropping", exc_info=True)
+        return {"status": "error", "output": {}, "error": "malformed_envelope"}
+
+    loop = asyncio.get_event_loop()
+    try:
+        result = await loop.run_in_executor(None, simulate_request, envelope.session_id)
+    except Exception as exc:
+        logger.exception("simulate_request() raised while handling a NATS task")
+        result = {"status": "error", "output": {}, "error": f"handler_exception: {exc}"}
+
+    kio_result = KIOResult(
+        session_id=envelope.session_id,
+        kio_id=KIO_ID,
+        envelope_id=envelope.envelope_id,
+        status=result["status"],
+        output=result.get("output", {}),
+        error=result.get("error"),
+    )
+    try:
+        await nc.publish(result_subject(KIO_ID), kio_result.to_json().encode())
+    except Exception:
+        logger.warning("Failed to publish KIOResult back to NATS", exc_info=True)
+    return result
+
+
+async def _nats_consumer_main():
+    """Subscribes to kio.tasks.<KIO_ID> and drives handle_task_envelope() for
+    every message, then publishes a KIOResult back on kio.results.<KIO_ID>
+    for the Planner to register as lineage. No silent fallback here: if NATS
+    itself is unreachable there is no meaningful degraded mode, so a
+    connection failure is logged and re-raised — Docker's
+    `restart: unless-stopped` handles the retry."""
+    import nats
+
+    nc = await nats.connect(NATS_URL, connect_timeout=10)
+    subject = task_subject(KIO_ID)
+
+    async def _on_task(msg):
+        await handle_task_envelope(nc, msg.data)
+
+    await nc.subscribe(subject, cb=_on_task)
+    logger.info(f"NATS consumer listening on {subject}", extra={
+        "kio.id": KIO_ID, "session.id": "bootstrap", "llm": KIO_LLM, "task_type": TASK_TYPE,
+    })
+    try:
+        while not _stop.is_set():
+            await asyncio.sleep(1)
+    finally:
+        await nc.close()
 
 
 def main():
@@ -664,9 +752,13 @@ def main():
     hb = threading.Thread(target=heartbeat_loop, daemon=True)
     hb.start()
 
-    while not _stop.is_set():
-        simulate_request()
-        _stop.wait(REQUEST_INTERVAL_S * random.uniform(0.5, 1.5))
+    if NATS_ENABLED:
+        logger.info(f"{KIO_ID}: NATS-driven mode, connecting to {NATS_URL}")
+        asyncio.run(_nats_consumer_main())
+    else:
+        while not _stop.is_set():
+            simulate_request()
+            _stop.wait(REQUEST_INTERVAL_S * random.uniform(0.5, 1.5))
 
     log_provider.shutdown()
     trace_provider.shutdown()
