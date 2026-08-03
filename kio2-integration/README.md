@@ -7,7 +7,7 @@ yöneliktir. Amaç: `kio2` kimliğini, şu ana kadar onun yerine veri üreten si
 sağlamak.
 
 Referans dökümanlar:
-- `docs/AI4SWENG_Observability_Teknik_Rapor_v1.3.docx` — genel mimari.
+- `docs/AI4SWENG_Observability_Teknik_Rapor_v1.4.docx` — genel mimari (Bölüm 9.6-9.9: NATS orkestrasyon katmanı, D1.1 KPI durumu, bu devir, dashboard uyarlamaları).
 - `docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx` — D1.1'den gelen gerçek proje KPI'ları.
 - `kio-simulator/kio_simulator.py` — **çalışan referans implementasyon**. Contract'ın
   gerektirdiği her şeyi zaten uyguluyor (metrics/logs/traces/Langfuse pipeline kurulumu,
@@ -192,3 +192,14 @@ Simülatör (`kio2-sim`, `docker-compose.yml`'de) FocusTracer doğrulanana kadar
 çalışmaya devam ediyor — karşılaştırma/baseline için. Gerçek modül stabil olduğunda
 kaldırmak tek satırlık bir `docker compose stop kio2-sim` (ya da servisi
 `docker-compose.yml`'den silmek).
+
+## 5) Not: NATS orkestrasyon katmanı (opsiyonel, sizi etkilemez)
+
+`observability/orchestrator/` altında bir NATS JetStream tabanlı orkestrasyon katmanı
+(Workflow API + Session Manager + Planner) kuruldu — `kio3`/`kio4` artık bununla
+tetikleniyor (bkz. teknik rapor Bölüm 9.6). Planner'ın statik yönlendirme tablosunda
+şu an `kio2`/FocusTracer için bir görev tipi tanımlı değil — CLI tabanlı çalışma modeliniz
+(kısa ömürlü process, `focustracer <komut>`) bu tetikleme modeliyle bire bir örtüşmüyor.
+İsterseniz ileride `orchestrator/planner.py`'deki `DEFAULT_ROUTING_TABLE`'a bir görev tipi
+eklenip Workflow API üzerinden `focustracer` komutlarınızı tetikleyecek bir entegrasyon
+değerlendirilebilir; şimdilik zorunlu değil, mevcut CLI akışınız değişmeden kalabilir.

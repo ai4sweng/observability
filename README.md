@@ -38,7 +38,11 @@ visualizes it. Everything runs locally via Docker Compose.
 | `grafana` | Dashboards (auto-provisioned) | 3000 |
 | `langfuse-web` / `langfuse-worker` | Self-hosted Langfuse — LLM-specific prompt/completion/cost tracing, a stream parallel to and independent of OTel | 3001 (UI+API), internal 3030 (worker) |
 | `postgres` / `clickhouse` / `redis` / `minio` | Langfuse's own required backing stores (relational DB, trace analytics, queue, blob storage) — not something we chose, this is Langfuse's mandated self-host footprint | internal only (127.0.0.1-bound except minio :9090) |
-| `kio2` / `kio3` / `kio4` | KIO simulators pushing contract-compliant dummy telemetry, dual-written to OTel + Langfuse | — |
+| `nats` | JetStream message broker — how KIOs get *triggered* (orchestration layer, see below). Separate concern from the OTel/Langfuse pipeline above | 4222 (client), 8222 (monitoring) |
+| `orchestrator-postgres` | Session Manager's own dedicated DB (session + lineage records) — separate from Langfuse's Postgres | internal only |
+| `workflow-api` | HTTP entry point to trigger a task (`POST /workflow/run`) | 8080 |
+| `planner` | Long-running service: registers lineage as worker KIOs report results over NATS | — |
+| `kio2-sim` / `kio3` / `kio4` | KIO simulators pushing contract-compliant dummy telemetry, dual-written to OTel + Langfuse. `kio2-sim` runs on its own internal timer (real-Ollama demo); `kio3`/`kio4` are NATS-driven | — |
 
 The KIOs never run their own collector, never expose a scrape endpoint, and never
 touch a database directly — exactly as the contract requires.
@@ -73,20 +77,76 @@ Tear down (and wipe data): `docker compose down -v`
 
 ## The three KIO simulators
 
-| KIO | LLM | Task type | Notes |
-|-----|-----|-----------|-------|
-| kio2 | `qwen2.5:3b` | code-analysis | also reports **real** repo line / directory / file counts of its own source; its trace has an extra `repo_scan` span |
-| kio3 | `llama3.1:8b` | test-generation | random dummy telemetry |
-| kio4 | `gpt-4o-mini` | debug | random dummy telemetry (non-zero cost) |
+| KIO | LLM | Task type | Trigger | Notes |
+|-----|-----|-----------|---------|-------|
+| kio2-sim | `qwen2.5:3b` | code-analysis | internal timer | also reports **real** repo line/dir/file counts; **real Ollama tok/s + real GPU energy** (`KIO2_REAL_LLM_ENABLED=true`, see below). `kio2` itself is reserved for the real FocusTracer module — see `kio2-integration/README.md` |
+| kio3 | `llama3.1:8b` | test-generation | NATS (`kio.tasks.kio3`) | random dummy telemetry |
+| kio4 | `gpt-4o-mini` | debug | NATS (`kio.tasks.kio4`) | random dummy telemetry (non-zero cost) |
 
-All values are randomly generated — no real LLM is invoked. Adjust LLMs, task types,
-and rates in `docker-compose.yml`, or edit `kio-simulator/kio_simulator.py`.
+kio3/kio4 are otherwise still random dummy data — no real LLM is invoked for them.
+Adjust LLMs, task types, and rates in `docker-compose.yml`, or edit
+`kio-simulator/kio_simulator.py`.
 
 Each simulated request also emits a **trace**: a root `kio.request` span with
 sequential child spans — `prepare_prompt` → `llm_call` → `postprocess` (code-analysis
 KIOs add a leading `repo_scan` span). Timestamps are set explicitly to mirror the
 request's real latency breakdown, so the waterfall in Grafana reflects the actual
 timing split, not a fixed mock.
+
+## Orchestration layer (NATS JetStream) — how KIOs get triggered
+
+Per the v2 guideline's architecture (Workflow API → Session Manager → Planner →
+NATS JetStream → worker KIO → NATS → Planner → Session Manager lineage), this is now
+implemented — see `orchestrator/`. This is a **separate concern from observability**:
+it's about how a task gets *dispatched* to a KIO, not how that KIO reports telemetry.
+A worker KIO's OTel/Langfuse instrumentation is identical either way.
+
+```
+POST /workflow/run  ──►  workflow-api  ──► Session Manager (Postgres: sessions)
+                              │                      ▲
+                              ▼                      │ lineage
+                          Planner ──► NATS JetStream ──► worker KIO (kio3/kio4)
+                              ▲                              │
+                              └──────── kio.results.* ◄──────┘
+```
+
+- **`orchestrator/envelope.py`** — `KIOEnvelope` (task_type, session_id, kio_id, payload)
+  and `KIOResult` (status, output, error). Vendored, byte-for-byte, into
+  `kio-simulator/envelope.py` too, so kio-simulator's Docker build context doesn't need
+  to change (see comment in that file for why).
+- **`orchestrator/session_manager.py`** — registers sessions and records lineage in
+  Postgres (`orchestrator-postgres`, schema in `orchestrator/postgres/init/001-schema.sql`).
+  Portable to SQLite for local testing (`SESSION_DB_DSN=sqlite:///...`) — no code change.
+- **`orchestrator/workflow_api.py`** — `POST /workflow/run` (`{"task_type", "payload",
+  "target_kio"?}`) registers the session and hands off to the Planner, returns 202 +
+  `session_id` immediately. `GET /workflow/{session_id}` shows status + lineage.
+- **`orchestrator/planner.py`** — routes `task_type` → `kio_id` (a static table:
+  `code-analysis→kio2-sim`, `test-generation→kio3`, `debug→kio4`, or an explicit
+  `target_kio` override), builds the envelope, publishes to `kio.tasks.<kio_id>`. Also
+  runs as its own long-running container, subscribed to `kio.results.*`, registering
+  lineage as workers reply.
+- **kio-simulator's NATS consumer** (`NATS_ENABLED=true`, on by default for kio3/kio4) —
+  subscribes to its own `kio.tasks.<KIO_ID>`, runs the exact same `simulate_request()`
+  used in internal-timer mode (just fed the envelope's `session_id` instead of
+  generating its own), publishes a `KIOResult` back to `kio.results.<KIO_ID>`.
+
+**Scope, stated plainly:** the "Planner & Prompt Router" here is a static routing table,
+not a real multi-step LangGraph workflow graph (conditional branching, multi-KIO
+pipelines, retries) — that's real future work, this just gives every envelope a
+genuine destination and closes the loop honestly. Tested at the logic level (a fake
+pub/sub double standing in for NATS, SQLite standing in for Postgres — no Docker in the
+dev sandbox this was built in); the real NATS wire protocol and the real Postgres schema
+still want one live `docker compose up` verification pass on an actual machine.
+
+Try it:
+```bash
+curl -X POST http://localhost:8080/workflow/run \
+  -H "Content-Type: application/json" \
+  -d '{"task_type": "debug"}'
+# -> 202 {"session_id": "...", "kio_id": "kio4", "status": "accepted"}
+curl http://localhost:8080/workflow/{session_id}
+# -> {"session": {...}, "lineage": [...]}
+```
 
 ## Running a KIO on a different machine
 
@@ -242,12 +302,15 @@ contract — the decisions below are ours, made after comparing the two document
   its 4 backing services) can be removed without touching the OTel pipeline at
   all — it was deliberately kept as an isolated, independently-failing addition.
 - **NATS JetStream / Session Manager / PostgreSQL lineage / Workflow API:
-  deferred, not implemented.** These describe how KIOs get *triggered* (an
-  orchestration layer), not how they're *observed* — arguably a different team's
-  concern, out of scope for this observability workstream. Open question worth
-  discussing further: does the team need this orchestration layer modeled here at
-  all, or is it assumed to exist elsewhere and out of scope by design? Revisit
-  once that's clarified.
+  implemented (2026-08), scoped.** Originally deferred as "a different team's
+  concern" — reversed after an explicit decision to accelerate this. See
+  "Orchestration layer" above for the architecture and `orchestrator/` for the
+  code. Scope is stated there too: the Planner is a static routing table, not a
+  full LangGraph workflow graph. Tested at the logic level (fake pub/sub + SQLite,
+  no Docker available in the dev sandbox this was built in) — kio3/kio4 are wired
+  to it; kio2-sim stays on its internal timer so the real-Ollama demo isn't
+  disrupted. A live `docker compose up` pass against the real NATS/Postgres is
+  the remaining verification step.
 - **Confirmed already-compliant, no change needed:** the 7 mandatory metrics
   (names/types/units), resource attributes, the low-cardinality rule (session IDs
   never used as metric labels — only in trace/log metadata, exactly as v2 also
