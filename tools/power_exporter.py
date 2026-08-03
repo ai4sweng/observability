@@ -20,7 +20,11 @@ Then set in docker-compose.yml (kio2's environment):
     GPU_POWER_EXPORTER_URL: "http://host.docker.internal:9400/power"
 
 Response format:
-    GET /power  ->  {"watts": 87.3, "gpu_index": 0}
+    GET /power  ->  {"watts": 87.3, "gpu_index": 0, "temperature_c": 61.0}
+
+("temperature_c" added 2026-08 for the KIO Detail dashboard's GPU temperature
+gauge; kio_simulator.py treats it as optional — if a given exporter/NVML
+version doesn't return it, the field is just omitted, no crash.)
 """
 import argparse
 import json
@@ -48,6 +52,12 @@ def make_handler(gpu_index):
             try:
                 milliwatts = pynvml.nvmlDeviceGetPowerUsage(handle)
                 payload = {"watts": milliwatts / 1000.0, "gpu_index": gpu_index}
+                try:
+                    payload["temperature_c"] = float(
+                        pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+                    )
+                except Exception:
+                    pass  # older driver/NVML without temperature support — watts still returned
                 body = json.dumps(payload).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")

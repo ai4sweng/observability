@@ -174,6 +174,31 @@ def _read_gpu_power_watts():
     return None
 
 
+def _read_gpu_temperature_celsius():
+    """Real GPU die temperature in °C, or None if no real source is reachable.
+    Mirrors _read_gpu_power_watts()'s two-tier lookup (host power-exporter
+    first, then local NVML) — see tools/power_exporter.py, which now also
+    serves a "temperature_c" field alongside "watts"."""
+    if GPU_POWER_EXPORTER_URL:
+        try:
+            import requests
+            resp = requests.get(GPU_POWER_EXPORTER_URL, timeout=1.5)
+            resp.raise_for_status()
+            temp_c = resp.json().get("temperature_c")
+            if temp_c is not None:
+                return float(temp_c)
+        except Exception:
+            pass  # fall through to NVML
+    _nvml_init_once()
+    if _nvml_ready:
+        try:
+            import pynvml
+            return float(pynvml.nvmlDeviceGetTemperature(_nvml_handle, pynvml.NVML_TEMPERATURE_GPU))
+        except Exception:
+            return None
+    return None
+
+
 def _measure_energy_during(call_fn):
     """Runs call_fn() while sampling real GPU power ~5x/second in a background
     thread, integrating power*dt to get real joules. Returns (result, joules)
@@ -312,6 +337,13 @@ heartbeat_counter = meter.create_counter("kio.heartbeat", unit="1")
 tokens_per_second = meter.create_histogram("kio.llm.tokens_per_second", unit="tokens/s")
 energy_counter = meter.create_counter("kio.llm.energy_joules", unit="J")
 accuracy_hist = meter.create_histogram("kio.request.accuracy", unit="1")
+
+# Real GPU die temperature (°C) — only ever recorded when KIO2_REAL_LLM_ENABLED
+# and a real power-exporter/NVML source is reachable (source=real). Modelled
+# as a histogram (like tokens_per_second) rather than a native OTel gauge, to
+# stay consistent with the rest of this file's instrumentation choices and
+# with how the OTLP->Prometheus exporter here already handles _sum/_count.
+gpu_temp_hist = meter.create_histogram("kio.llm.gpu_temperature_celsius", unit="Cel")
 
 # Repo stats reported only by code-analysis KIOs, via observable gauges.
 _repo_stats = {"lines": 0, "directories": 0, "files": 0}
@@ -531,25 +563,37 @@ def emit_langfuse_trace(session_id, in_tokens, out_tokens, cost, is_error, error
 
 
 def emit_real_kpi_metrics(labels, is_error):
-    """D1.1-aligned KPIs for KIOs with a "bugfix" real-KPI role (KIO2 today).
-    Simulated values, deliberately kept inside D1.1's baseline/target bands so
-    the dashboard reads like plausible pilot-sprint progress, not noise."""
+    """D1.1-aligned KPIs for KIOs with a "bugfix" real-KPI role (kio2-sim
+    today, standing in for KIO2/FocusTracer until it connects). Simulated
+    values, deliberately kept inside D1.1's baseline/target bands so the
+    dashboard reads like plausible pilot-sprint progress, not noise.
+
+    Unlike the LLM-performance metrics above (tok/s, energy, error rate),
+    which have a real measurement path once KIO2_REAL_LLM_ENABLED=true, these
+    four are project-management-level KPIs (bug-fix turnaround, issue
+    resolution speed, dynamic-slicing success rate, customer-reported issue
+    count) that FocusTracer would have to report itself — there is no "real"
+    variant of them here at all yet, regardless of KIO2_REAL_LLM_ENABLED. So
+    source is unconditionally "simulated", not derived from data_source, to
+    avoid implying these are ever anything else until KIO2 hands them off
+    for real (see docs Bölüm 9.7/9.8)."""
     if KIO_REAL_KPI_ROLE != "bugfix":
         return
+    labels_kpi = {**labels, "source": "simulated"}
     # KPI 6.1 — Bug-fix time: baseline ~8-12h, target <=20% reduction.
-    bugfix_duration_hist.record(round(random.uniform(6.0, 10.0), 2), labels)
+    bugfix_duration_hist.record(round(random.uniform(6.0, 10.0), 2), labels_kpi)
     # KPI 1.2 — Issue resolution speed: baseline ~8-12h, target <=30% reduction.
-    issue_resolution_hist.record(round(random.uniform(5.0, 9.0), 2), labels)
+    issue_resolution_hist.record(round(random.uniform(5.0, 9.0), 2), labels_kpi)
     # WP3 task metric — Dynamic slicing success rate: target >=85%, realistic
     # variance means it dips below target sometimes rather than always "passing".
-    slicing_success_hist.record(round(random.uniform(0.75, 0.97), 3), labels)
+    slicing_success_hist.record(round(random.uniform(0.75, 0.97), 3), labels_kpi)
     # KPI 6.2 — Customer-reported issues: rare event, not one per request.
     if is_error and random.random() < 0.05:
-        customer_reported_counter.add(random.randint(1, 2), labels)
+        customer_reported_counter.add(random.randint(1, 2), labels_kpi)
     # "Accuracy" KPI (fix@1) — see _evaluate_fix_success()'s docstring for
     # why this is a placeholder, not yet a real test-suite result.
     outcome = "success" if _evaluate_fix_success() else "failure"
-    fix_attempt_counter.add(1, {**labels, "outcome": outcome})
+    fix_attempt_counter.add(1, {**labels_kpi, "outcome": outcome})
 
 
 # --------------------------------------------------------------------------- #
@@ -632,6 +676,14 @@ def simulate_request(session_id: str | None = None):
             joules = out_tokens * LLM_JOULES_PER_TOKEN.get(KIO_LLM, 2.0) * random.uniform(0.85, 1.15)
         energy_counter.add(round(joules, 2), labels_src)
 
+        if KIO2_REAL_LLM_ENABLED:
+            # Best-effort — only recorded when a real power-exporter/NVML
+            # source is actually reachable; silently skipped otherwise (no
+            # fabricated temperature, unlike the dummy energy formula above).
+            gpu_temp_c = _read_gpu_temperature_celsius()
+            if gpu_temp_c is not None:
+                gpu_temp_hist.record(round(gpu_temp_c, 1), labels_src)
+
         cost = (in_tokens + out_tokens) / 1000.0 * LLM_COST_PER_1K.get(KIO_LLM, 0.0)
         if cost:
             llm_cost_counter.add(round(cost, 6), labels_src)
@@ -652,7 +704,13 @@ def simulate_request(session_id: str | None = None):
         else:
             request_counter.add(1, {**labels_src, "status": "ok"})
             request_duration.record(latency_ms, labels_src)
-            accuracy_hist.record(round(random.uniform(0.6, 0.99), 3), labels_src)
+            # Always source="simulated" here, even when data_source=="real":
+            # unlike tok/s/energy/error-rate above, accuracy (fix@1 stand-in)
+            # has no real measurement path yet at all (would need FocusTracer
+            # to actually run/verify a fix) — tagging it "real" just because
+            # the Ollama call itself was real would be misleading. See Bölüm
+            # 9.7/9.8 for why this stays a placeholder.
+            accuracy_hist.record(round(random.uniform(0.6, 0.99), 3), {**labels_src, "source": "simulated"})
             if real_result is not None and real_result.get("ok") and real_result.get("text"):
                 summary_text = f"[real qwen2.5:3b via Ollama] {real_result['text'].strip()[:400]}"
                 logger.info(summary_text, extra={"kio.id": KIO_ID, "session.id": session_id,
@@ -739,6 +797,20 @@ async def _nats_consumer_main():
         await nc.close()
 
 
+def _internal_timer_loop():
+    """Baseline demo/simulation loop. Runs unconditionally (in a background
+    thread) regardless of NATS_ENABLED — this is what actually keeps kio3/kio4
+    producing continuous telemetry. Enabling NATS_ENABLED adds an ADDITIONAL,
+    independent trigger path (handle_task_envelope(), for on-demand dispatch
+    via the Workflow API/Planner) on top of this; it was never meant to
+    replace it, and the first cut of the NATS integration wrongly made it an
+    either/or — with nothing actually calling the Workflow API, kio3/kio4 went
+    completely quiet ("No data" on every panel). Fixed 2026-08."""
+    while not _stop.is_set():
+        simulate_request()
+        _stop.wait(REQUEST_INTERVAL_S * random.uniform(0.5, 1.5))
+
+
 def main():
     def _shutdown(*_):
         _stop.set()
@@ -752,13 +824,14 @@ def main():
     hb = threading.Thread(target=heartbeat_loop, daemon=True)
     hb.start()
 
+    timer_thread = threading.Thread(target=_internal_timer_loop, daemon=True)
+    timer_thread.start()
+
     if NATS_ENABLED:
-        logger.info(f"{KIO_ID}: NATS-driven mode, connecting to {NATS_URL}")
+        logger.info(f"{KIO_ID}: NATS-driven mode ALSO enabled (on top of the internal timer), connecting to {NATS_URL}")
         asyncio.run(_nats_consumer_main())
     else:
-        while not _stop.is_set():
-            simulate_request()
-            _stop.wait(REQUEST_INTERVAL_S * random.uniform(0.5, 1.5))
+        timer_thread.join()
 
     log_provider.shutdown()
     trace_provider.shutdown()

@@ -6,6 +6,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY kio_simulator.py .
+COPY envelope.py .
 
 # Give the code-analysis KIO something real to scan.
 ENV REPO_SCAN_PATH=/app

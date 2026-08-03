@@ -320,12 +320,22 @@ services:
 
   # ---------------------------------------------------------------------------
   # KIO simulators. Each is an independent module pushing dummy telemetry.
-  # kio2 = code-analysis (emits real repo line/dir metrics), kio3/kio4 = random.
+  # kio2-sim = code-analysis (emits real repo line/dir metrics), kio3/kio4 = random.
   # Each now dual-writes: OTel (metrics/traces/logs) + Langfuse (LLM-specific).
-  # kio3/kio4 also consume their tasks from NATS (NATS_ENABLED=true) instead of
-  # an internal timer — see "NATS tüketici modu" in kio_simulator.py. kio2-sim
-  # is left on its internal loop so the real-Ollama manager demo keeps running
-  # uninterrupted; flip NATS_ENABLED there too whenever that's wanted.
+  #
+  # kio3/kio4 ALSO consume dispatched tasks from NATS (NATS_ENABLED=true) — see
+  # "NATS tüketici modu" in kio_simulator.py — but this is now an ADDITIONAL
+  # trigger path on top of their own internal timer, not a replacement for it.
+  # First cut of the NATS integration made it either/or: with nothing actually
+  # calling the Workflow API, kio3/kio4 went completely silent ("No data" on
+  # every panel). Fixed 2026-08 (kio_simulator.py's main() now always starts
+  # the internal timer thread regardless of NATS_ENABLED).
+  #
+  # Every KIO here is simulated/dummy by default (source=simulated) EXCEPT
+  # kio2-sim's LLM-performance metrics when KIO2_REAL_LLM_ENABLED=true (real
+  # Ollama + real GPU energy/temperature, source=real) — see the "Veri
+  # kaynağı" panel and README's real-vs-simulated data map for the full
+  # picture, metric by metric.
   # ---------------------------------------------------------------------------
   # kio2-sim: the ORIGINAL simulator, kept running in parallel as a contract
   # baseline / comparison reference now that the real FocusTracer module will
@@ -333,9 +343,13 @@ services:
   # KIO2_REAL_LLM_ENABLED is back ON here (2026-08) for demo purposes — the
   # real-Ollama/real-GPU-energy path works independently of whether FocusTracer
   # has connected yet, so there's no need to wait for that handoff just to show
-  # a manager real tok/s and energy numbers. KIO_REAL_KPI_ROLE stays empty:
-  # the D1.1 bugfix-role KPIs (fix@1, slicing success, etc.) are FocusTracer's
-  # signals to own for real, not something to fake again here.
+  # a manager real tok/s and energy numbers.
+  # KIO_REAL_KPI_ROLE is back ON ("bugfix", 2026-08) too: the D1.1 KPI panels
+  # (bug-fix time, issue resolution time, slicing success rate, customer-
+  # reported issues) were sitting on permanent "No data" with it empty, which
+  # read as broken rather than "not yet connected". These four KPIs are always
+  # source=simulated regardless of KIO2_REAL_LLM_ENABLED — FocusTracer would
+  # have to report them for real, there is no real variant of them here yet.
   kio2-sim:
     build: ./kio-simulator
     container_name: ai4sweng-kio2-sim
@@ -348,7 +362,7 @@ services:
       EXPORT_INTERVAL_MS: "5000"
       HEARTBEAT_INTERVAL_S: "60"
       REQUEST_INTERVAL_S: "3"
-      KIO_REAL_KPI_ROLE: ""
+      KIO_REAL_KPI_ROLE: "bugfix"
       KIO2_REAL_LLM_ENABLED: "true"
       OLLAMA_ENDPOINT: "http://host.docker.internal:11434"
       OLLAMA_MODEL: "qwen2.5:3b"
