@@ -441,6 +441,38 @@ services:
       - nats
     restart: unless-stopped
 
+  # kio7 = D1.1's KIO7 (AI-SysDev). D1.1 ties KIO7 to most KPIs; only the
+  # ones where KIO7 is a clear primary owner (4.1, 5.1, 7.1, 9.1, 9.2 — not
+  # already covered by kio2-sim/kio3/kio4) are simulated. Uses claude-sonnet
+  # as its nominal LLM (cost/energy coefficients already defined in
+  # kio_simulator.py's LLM_COST_PER_1K / LLM_JOULES_PER_TOKEN).
+  kio7:
+    build: ./kio-simulator
+    container_name: ai4sweng-kio7
+    environment:
+      KIO_ID: kio7
+      KIO_LLM: "claude-sonnet"
+      KIO_TASK_TYPE: ai-sysdev
+      SERVICE_VERSION: "0.5.0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      EXPORT_INTERVAL_MS: "5000"
+      HEARTBEAT_INTERVAL_S: "60"
+      REQUEST_INTERVAL_S: "5"
+      NATS_ENABLED: "true"
+      NATS_URL: "nats://nats:4222"
+      # D1.1 KPI 4.1 (Developer productivity), 5.1 (Time-to-market),
+      # 7.1 (Annual cost saving), 9.1 (Refactoring reduction), 9.2
+      # (Technical debt reduction), simulated — see
+      # docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx.
+      KIO_REAL_KPI_ROLE: "ai-sysdev"
+      LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
+      LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
+      LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+    depends_on:
+      - otel-collector
+      - nats
+    restart: unless-stopped
+
 volumes:
   vmdata:
   vldata:

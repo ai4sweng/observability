@@ -901,6 +901,95 @@
     },
     "overrides": []
    }
+  },
+  {
+   "id": 19,
+   "title": "Stale KIO Kontrolü (Sözleşme §2.3)",
+   "type": "row",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 47
+   },
+   "panels": []
+  },
+  {
+   "id": 20,
+   "title": "Son heartbeat'ten bu yana geçen süre (saniye)",
+   "type": "table",
+   "description": "Her KIO 60s'de bir heartbeat yayınlamalı (Sözleşme §2.3). 120s'yi (2x aralık) aşan değerler kırmızı — bkz. grafana/provisioning/alerting/rules.yml'deki 'Stale KIO' alert kuralı, aynı eşiği Alerting sekmesinde de tetikler.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 48
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "time() - max by (kio_id) (timestamp(kio_heartbeat))",
+     "format": "table",
+     "instant": true,
+     "refId": "A"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "renameByName": {
+       "kio_id": "KIO",
+       "Value": "Son heartbeat (s önce)"
+      },
+      "excludeByName": {
+       "Time": true
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "color": {
+      "mode": "thresholds"
+     },
+     "custom": {
+      "cellOptions": {
+       "type": "color-background"
+      },
+      "align": "auto"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 60
+       },
+       {
+        "color": "red",
+        "value": 120
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true
+   }
   }
  ]
 }

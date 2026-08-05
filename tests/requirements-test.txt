@@ -1,0 +1,8 @@
+# Test-only dependencies. Install alongside kio-simulator/requirements.txt
+# and orchestrator/requirements.txt (both are exercised by this suite):
+#   pip install -r kio-simulator/requirements.txt \
+#               -r orchestrator/requirements.txt \
+#               -r tests/requirements-test.txt
+# then: pytest
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

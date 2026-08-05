@@ -86,5 +86,8 @@ docker compose down
 ```
 
 Ana yığında hiçbir değişiklik gerekmez; bu KIO durunca Grafana'daki `kio_heartbeat`
-sinyali 120 saniye sonra kesilir ve KIO "stale" (bayat) hale gelir (bkz. teknik rapor
-Bölüm 9.5 — bu alarm henüz otomatik değil, ama metrik varlığı yeterli göstergedir).
+sinyali 120 saniye sonra kesilir ve KIO "stale" (bayat) hale gelir. Bu artık otomatik
+olarak işaretleniyor: `grafana/provisioning/alerting/rules.yml`'deki "Stale KIO" alert
+kuralı, o KIO_id için 120s'yi aşan sessizlikte Grafana Alerting'de "Firing" durumuna
+geçer; Overview dashboard'undaki "Stale KIO Kontrolü" tablosu da aynı eşiği (60s
+turuncu / 120s kırmızı) görsel olarak gösterir — bkz. teknik rapor Bölüm 9.5.

@@ -90,8 +90,9 @@ REPO_SCAN_PATH = os.environ.get("REPO_SCAN_PATH", "/app")
 #   "bugfix"               -> KIO2 (Bug Locate & Fix / LLM Debugger)
 #   "nlp-requirements"      -> KIO3 (NLP -> Formal Requirements)
 #   "architecture-to-code"  -> KIO4 (Architecture-to-Code Planner)
-# KIO7 and others can be added the same way later — see
-# docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx.
+#   "ai-sysdev"             -> KIO7 (AI-SysDev)
+# Others can be added the same way later — see
+# docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx.
 KIO_REAL_KPI_ROLE = os.environ.get("KIO_REAL_KPI_ROLE", "")
 
 # --- Optional real-LLM path (KIO2 today) ---
@@ -433,6 +434,22 @@ if KIO_REAL_KPI_ROLE == "architecture-to-code":
 else:
     review_score_hist = None
 
+# KIO7 (AI-SysDev) in D1.1 is tied to "most KPIs" (1.1, 1.2, 2.x, 3.x, 4.1,
+# 5.1, 6.x, 7.1, 9.x) — far too broad to simulate wholesale without it reading
+# as noise. Only the KPIs where KIO7 is a clear primary/major owner (not
+# already covered by kio2-sim/kio3/kio4 above) are implemented here: developer
+# productivity, time-to-market, annual cost saving, refactoring reduction,
+# technical debt reduction. Concrete units again, same rationale as above.
+if KIO_REAL_KPI_ROLE == "ai-sysdev":
+    dev_productivity_hist = meter.create_histogram("kio.dev_productivity.features_per_day", unit="1")  # KPI 4.1
+    time_to_market_hist = meter.create_histogram("kio.time_to_market.days", unit="d")                  # KPI 5.1
+    cost_saving_hist = meter.create_histogram("kio.cost_saving.pct", unit="%")                          # KPI 7.1
+    refactoring_hist = meter.create_histogram("kio.refactoring.hours_per_feature", unit="h")            # KPI 9.1
+    tech_debt_hist = meter.create_histogram("kio.tech_debt.hours_per_100loc", unit="h")                 # KPI 9.2
+else:
+    dev_productivity_hist = time_to_market_hist = cost_saving_hist = None
+    refactoring_hist = tech_debt_hist = None
+
 # --------------------------------------------------------------------------- #
 # Logs pipeline — unstructured / string telemetry
 # --------------------------------------------------------------------------- #
@@ -628,6 +645,22 @@ def emit_real_kpi_metrics(labels, is_error):
         if KIO_REAL_KPI_ROLE == "architecture-to-code":
             # KPI 3.2 — Review score increase: baseline ~3.5/5, target ~4.2/5.
             review_score_hist.record(round(random.uniform(3.6, 4.4), 2), labels_kpi)
+
+    elif KIO_REAL_KPI_ROLE == "ai-sysdev":
+        # KIO7 (AI-SysDev). D1.1 ties KIO7 to most KPIs; only the ones where
+        # KIO7 is a clear primary owner (and not already covered by kio2-sim/
+        # kio3/kio4 above) are simulated here.
+        # KPI 4.1 — Developer productivity: baseline ~0.5-0.8 features/day,
+        # target increase.
+        dev_productivity_hist.record(round(random.uniform(0.6, 1.1), 2), labels_kpi)
+        # KPI 5.1 — Time-to-market: baseline ~30-45 days, target <=20% reduction.
+        time_to_market_hist.record(round(random.uniform(24.0, 38.0), 1), labels_kpi)
+        # KPI 7.1 — Annual cost saving: target range, realistic variance.
+        cost_saving_hist.record(round(random.uniform(12.0, 28.0), 1), labels_kpi)
+        # KPI 9.1 — Refactoring effort reduction: baseline ~4-6h/feature.
+        refactoring_hist.record(round(random.uniform(2.5, 4.5), 2), labels_kpi)
+        # KPI 9.2 — Technical debt reduction: baseline ~3-5h/100loc.
+        tech_debt_hist.record(round(random.uniform(1.8, 3.5), 2), labels_kpi)
 
 
 # --------------------------------------------------------------------------- #

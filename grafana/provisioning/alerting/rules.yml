@@ -1,0 +1,61 @@
+apiVersion: 1
+
+# Sözleşme §2.3: her KIO 60s'de bir heartbeat (kio.heartbeat) yayınlamak
+# zorunda. Bu kural, herhangi bir kio_id için son heartbeat örneğinden bu yana
+# geçen sürenin 120s'yi (2x heartbeat aralığı) aşmasını "stale" (donmuş /
+# çökmüş / bağlantısı kopmuş) olarak işaretler.
+#
+# Bilinçli tasarım kararları:
+#  - Eşik 120s: HEARTBEAT_INTERVAL_S=60 (docker-compose.yml, tüm KIO'lar) —
+#    120s, tek bir kaçırılan heartbeat'e karşı toleranslı, iki ardışık
+#    kaçırılan heartbeat'te tetiklenir.
+#  - `for: 1m` — tek bir gecikmeli scrape'te yanlış alarm vermemek için en az
+#    1 dakika sürekli ihlal şartı.
+#  - Bildirim (contact point / notification policy) burada AYRICA
+#    tanımlanmadı: Grafana'nın yerleşik varsayılan policy'si zaten
+#    "grafana-default-email" contact point'ine yönlendirir. Bu demo/pilot
+#    ortamında gerçek bir SMTP/Slack hedefi olmadığından, kural yalnızca
+#    Grafana Alerting UI'da "Firing" durumuna geçer (bu, panel/tablo
+#    üzerinden görsel takip ile aynı amaca hizmet eder) — gerçek bir
+#    bildirim kanalı bağlanırsa (Slack/e-posta), bu kural değişiklik
+#    gerektirmeden otomatik olarak oraya da bildirim gönderir.
+groups:
+  - orgId: 1
+    name: ai4sweng-stale-kio
+    folder: AI4SWENG
+    interval: 1m
+    rules:
+      - uid: ai4sweng-stale-kio-heartbeat
+        title: "Stale KIO — heartbeat sessizliği > 120s (Sözleşme §2.3)"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: time() - max by (kio_id) (timestamp(kio_heartbeat))
+              instant: true
+              range: false
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 120
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: warning
+          contract_ref: "§2.3"
+        annotations:
+          summary: "{{ $labels.kio_id }} son 120 saniyedir heartbeat yayınlamıyor (Sözleşme §2.3 kontrolü)."
+          description: "kio.heartbeat metriği bu kio_id için beklenen 60s aralığın iki katından uzun süredir görülmedi. Kapsayıcı çökmüş, ağ bağlantısı kopmuş veya NATS/timer döngüsü durmuş olabilir."

@@ -2578,6 +2578,349 @@
     "showThresholdLabels": false,
     "showThresholdMarkers": true
    }
+  },
+  {
+   "id": 53,
+   "title": "D1.1 Gerçek Proje KPI'ları — kio7 (ai-sysdev, hepsi SİMÜLE)",
+   "type": "row",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 119
+   },
+   "panels": []
+  },
+  {
+   "id": 54,
+   "title": "Developer productivity (KPI 4.1, simüle)",
+   "type": "stat",
+   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; diğer KIO'larda N/A beklenen davranıştır.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 0,
+    "y": 120
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_dev_productivity_features_per_day_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_dev_productivity_features_per_day_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "N/A (ai-sysdev rolü yok)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.7
+       },
+       {
+        "color": "green",
+        "value": 0.9
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   }
+  },
+  {
+   "id": 55,
+   "title": "Time-to-market (KPI 5.1, simüle)",
+   "type": "stat",
+   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~30-45 gün, düşük değer iyi.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 8,
+    "y": 120
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_time_to_market_days_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_time_to_market_days_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "d",
+     "noValue": "N/A (ai-sysdev rolü yok)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 35
+       },
+       {
+        "color": "red",
+        "value": 45
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   }
+  },
+  {
+   "id": 56,
+   "title": "Annual cost saving (KPI 7.1, simüle)",
+   "type": "stat",
+   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 16,
+    "y": 120
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_cost_saving_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_cost_saving_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "noValue": "N/A (ai-sysdev rolü yok)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 15
+       },
+       {
+        "color": "green",
+        "value": 20
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   }
+  },
+  {
+   "id": 57,
+   "title": "Refactoring effort reduction (KPI 9.1, simüle)",
+   "type": "stat",
+   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~4-6 saat/özellik, düşük değer iyi.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 12,
+    "x": 0,
+    "y": 126
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_refactoring_hours_per_feature_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_refactoring_hours_per_feature_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "h",
+     "noValue": "N/A (ai-sysdev rolü yok)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 4
+       },
+       {
+        "color": "red",
+        "value": 5.5
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   }
+  },
+  {
+   "id": 58,
+   "title": "Technical debt reduction (KPI 9.2, simüle)",
+   "type": "stat",
+   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~3-5 saat/100 satır, düşük değer iyi.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 12,
+    "x": 12,
+    "y": 126
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_tech_debt_hours_per_100loc_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_tech_debt_hours_per_100loc_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "h",
+     "noValue": "N/A (ai-sysdev rolü yok)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 3
+       },
+       {
+        "color": "red",
+        "value": 4.5
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   }
   }
  ]
 }

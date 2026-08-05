@@ -44,6 +44,7 @@ DEFAULT_ROUTING_TABLE = {
     "code-analysis": "kio2-sim",
     "nlp-requirements": "kio3",       # D1.1: KIO3 = NLP -> Formal Requirements
     "architecture-to-code": "kio4",  # D1.1: KIO4 = Architecture-to-Code Planner
+    "ai-sysdev": "kio7",              # D1.1: KIO7 = AI-SysDev
 }
 
 

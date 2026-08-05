@@ -3,9 +3,11 @@
 
 **Notion Documentation: [AI4SWENG Observability - Grafana Metrik Sistemi](https://app.notion.com/p/dawn-squash-710/Observability-Grafana-Metrik-Sistemi-3a619cd5a4d88093a1fdebd6ada75f5a)**
 
-Local implementation of the **AI4SWENG Observability Integration Contract v1.0**.
-KIO modules push telemetry over OTLP; the central platform stores it and Grafana
-visualizes it. Everything runs locally via Docker Compose.
+Local implementation of the **[AI4SWENG Observability Integration Contract v1.0](observability_integration_contract.pdf)**
+(normative, issued by the Central Platform Team to all KIO Consortium teams KIO2–KIO13
+— read this first if you're integrating a new KIO). KIO modules push telemetry over
+OTLP; the central platform stores it and Grafana visualizes it. Everything runs
+locally via Docker Compose.
 
 
 
@@ -83,27 +85,29 @@ retries against it until it's up, then start landing traces automatically.
 
 Tear down (and wipe data): `docker compose down -v`
 
-## The three KIO simulators
+## The four KIO simulators
 
 | KIO | LLM | Task type | Trigger | Notes |
 |-----|-----|-----------|---------|-------|
 | kio2-sim | `qwen2.5:3b` | code-analysis | internal timer | also reports **real** repo line/dir/file counts; **real Ollama tok/s + real GPU energy/temperature** (`KIO2_REAL_LLM_ENABLED=true`, see below). `kio2` itself is reserved for the real FocusTracer module — see `kio2-integration/README.md` |
 | kio3 | `llama3.1:8b` | nlp-requirements (D1.1's KIO3) | internal timer **+** NATS (`kio.tasks.kio3`) | random dummy telemetry; D1.1 KPI 1.1 + 3.1 (simulated, `KIO_REAL_KPI_ROLE=nlp-requirements`) |
 | kio4 | `gpt-4o-mini` | architecture-to-code (D1.1's KIO4) | internal timer **+** NATS (`kio.tasks.kio4`) | random dummy telemetry (non-zero cost); D1.1 KPI 1.1 + 3.1 + 3.2 (simulated, `KIO_REAL_KPI_ROLE=architecture-to-code`) |
+| kio7 | `claude-sonnet` | ai-sysdev (D1.1's KIO7) | internal timer **+** NATS (`kio.tasks.kio7`) | random dummy telemetry; D1.1 KPI 4.1 + 5.1 + 7.1 + 9.1 + 9.2 (simulated, `KIO_REAL_KPI_ROLE=ai-sysdev`) — only the KPIs where KIO7 is a clear primary owner, not the full "most KPIs" D1.1 assigns it |
 
 `task_type` for kio3/kio4 was renamed 2026-08 from the arbitrary
 `test-generation`/`debug` to match D1.1's actual KIO3/KIO4 identities, once
 it became clear the D1.1 KPI traceability matrix's assignments (KPI 1.1, 3.1,
 3.2) are keyed to those real roles, not to whatever this simulator happened
-to call them first.
+to call them first. kio7 was added the same way directly against D1.1's
+KIO7 (AI-SysDev) identity.
 
-kio3/kio4 are otherwise still random dummy data — no real LLM is invoked for them.
-NATS-driven dispatch (via the Workflow API/Planner) is an *additional* trigger
-path, not a replacement for the internal timer — an earlier cut made it
-either/or, which meant kio3/kio4 went completely silent ("No data" everywhere)
-whenever nothing happened to call the Workflow API. Both paths now run
-side by side, so these two KIOs always keep producing baseline demo data.
-Adjust LLMs, task types, and rates in `docker-compose.yml`, or edit
+kio3/kio4/kio7 are otherwise still random dummy data — no real LLM is invoked
+for them. NATS-driven dispatch (via the Workflow API/Planner) is an
+*additional* trigger path, not a replacement for the internal timer — an
+earlier cut made it either/or, which meant these KIOs went completely silent
+("No data" everywhere) whenever nothing happened to call the Workflow API.
+Both paths now run side by side, so all three always keep producing baseline
+demo data. Adjust LLMs, task types, and rates in `docker-compose.yml`, or edit
 `kio-simulator/kio_simulator.py`.
 
 ### Gerçek vs Simüle Veri Haritası
@@ -122,6 +126,7 @@ turuncu=simulated, bkz. "Veri kaynağı" paneli):
 | Accuracy / fix@1, `kio.request.accuracy` | her zaman simüle | her zaman simüle (Ollama gerçek olsa bile) | her zaman simüle |
 | D1.1 KPI'ları (bug-fix time, issue resolution, slicing success, customer-reported) | her zaman simüle (yalnızca kio2-sim'de, `KIO_REAL_KPI_ROLE=bugfix`) | her zaman simüle | uygulanamaz (kio3/kio4'ün rolü farklı — bkz. aşağıki satır) |
 | D1.1 KPI'ları (codegen duration, code quality, review score) | uygulanamaz (bu KPI'lar kio3/kio4'e özel) | uygulanamaz | her zaman simüle (`KIO_REAL_KPI_ROLE=nlp-requirements`/`architecture-to-code`) |
+| D1.1 KPI'ları (dev productivity, time-to-market, cost saving, refactoring/tech-debt reduction) | uygulanamaz (bu KPI'lar kio7'ye özel) | uygulanamaz | uygulanamaz — yalnızca **kio7**'de, her zaman simüle (`KIO_REAL_KPI_ROLE=ai-sysdev`) |
 | Kümülatif CO2e (tahmini) | simüle enerjiden türetilmiş tahmin | gerçek enerjiden türetilmiş tahmin (kendisi hâlâ bir tahmin, gerçek karbon ölçümü değil) | simüle enerjiden türetilmiş tahmin |
 
 fix@1 ve tüm D1.1 proje-KPI'ları hiçbir KIO'da "gerçek" olmuyor çünkü bunların
@@ -164,10 +169,10 @@ POST /workflow/run  ──►  workflow-api  ──► Session Manager (Postgres
   "target_kio"?}`) registers the session and hands off to the Planner, returns 202 +
   `session_id` immediately. `GET /workflow/{session_id}` shows status + lineage.
 - **`orchestrator/planner.py`** — routes `task_type` → `kio_id` (a static table:
-  `code-analysis→kio2-sim`, `nlp-requirements→kio3`, `architecture-to-code→kio4`, or an
-  explicit `target_kio` override), builds the envelope, publishes to `kio.tasks.<kio_id>`. Also
-  runs as its own long-running container, subscribed to `kio.results.*`, registering
-  lineage as workers reply.
+  `code-analysis→kio2-sim`, `nlp-requirements→kio3`, `architecture-to-code→kio4`,
+  `ai-sysdev→kio7`, or an explicit `target_kio` override), builds the envelope, publishes
+  to `kio.tasks.<kio_id>`. Also runs as its own long-running container, subscribed to
+  `kio.results.*`, registering lineage as workers reply.
 - **kio-simulator's NATS consumer** (`NATS_ENABLED=true`, on by default for kio3/kio4) —
   subscribes to its own `kio.tasks.<KIO_ID>`, runs the exact same `simulate_request()`
   used in internal-timer mode (just fed the envelope's `session_id` instead of
@@ -199,6 +204,43 @@ databases, Grafana) keeps running wherever it already is. The architecture is pu
 by design, so this needs no code change — only pointing `OTEL_EXPORTER_OTLP_ENDPOINT`
 at the central machine.
 
+## Yeni bir KIO (KIOx) sıfırdan nasıl bağlanır
+
+Kendi kod tabanına sahip, bu repodaki `kio-simulator.py`'yi hiç kullanmayacak yeni bir
+KIO ekibi için başlangıç noktası her zaman **[`observability_integration_contract.pdf`](observability_integration_contract.pdf)**
+— rastgele metrik göndermek diye bir şey yok, normatif bir sözleşme var:
+
+1. **§1 Onboarding**: OTLP Bearer token + Langfuse proje anahtarları merkezi platform
+   ekibinden istenir; `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_RESOURCE_ATTRIBUTES` /
+   `LANGFUSE_*` ortam değişkenleri set edilir; "doğrulama kapısı" olarak `kio.heartbeat`
+   Grafana'da ve en az bir trace Langfuse'da görünmeden bir KIO onboard sayılmaz.
+2. **§2.1 Zorunlu metrik seti** — 7 metrik, isim/tip/birim/label'larıyla birebir
+   sabit (bkz. "Metrics" bölümü aşağıda): `kio.request.count`,
+   `kio.request.duration_ms`, `kio.request.error_count`, `kio.llm.token_count`,
+   `kio.llm.cost_usd`, `kio.session.active_count`, `kio.heartbeat`. Bunlar pazarlık
+   konusu değil.
+3. **G1–G7 kuralları** — isimlendirme deseni (`kio.<domain>.<metric>`), zorunlu
+   correlation key'ler (`kio.id`, `session.id`), yüksek-kardinaliteli label / PII /
+   secret yasağı. **G7: zorunlu 7'nin ötesindeki metrikler self-service** — bu
+   kurallara uyduğu sürece KIOx kendi domain'ine özgü metriği kendi tanımlayabilir
+   (bu repodaki `kio.llm.tokens_per_second`, `kio.llm.energy_joules`, D1.1 KPI
+   metrikleri hep bu şekilde eklendi — hiçbiri contract'ın zorunlu listesinde değil).
+4. Sözleşmenin ekindeki referans Python implementasyonu (`MeterProvider` kurulumu,
+   instrument tanımları, heartbeat loop) doğrudan kopyalanabilir başlangıç noktası.
+
+**Bu, Planner/NATS'tan tamamen ayrı bir konu.** Sözleşmeye uymak (telemetri göndermek)
+zorunlu; `orchestrator/`'daki Workflow API/Planner/NATS'a kayıt olmak ise **opsiyonel**
+— yalnızca KIO'nuzun bizim `POST /workflow/run` çağrımızla tetiklenmesini istiyorsanız
+gerekir (bkz. yukarıdaki "Orchestration layer" bölümü). İstemiyorsanız (ör. FocusTracer'ın
+CLI tabanlı çalışma modeli gibi, bkz. `kio2-integration/README.md`), hiç kayıt olmadan da
+sözleşmeye uygun telemetri göndermeye devam edebilirsiniz — kio.heartbeat + zorunlu
+metrikler yeterli.
+
+İki somut örnek zaten bu repoda var: kendi `kio-simulator.py` kodunuzu başka bir
+makinede/VM'de çalıştırmak istiyorsanız `remote-kio/README.md`; gerçek FocusTracer
+modülünü KIO2 kimliğiyle bağlamak için satır referanslı bir rehber istiyorsanız
+`kio2-integration/README.md`.
+
 ## KIO2 gerçek modül entegrasyonu (FocusTracer)
 
 FocusTracer ekibi kendi modülünü tamamladığında bu sisteme nasıl bağlanacağının rehberi
@@ -219,7 +261,10 @@ Mandatory set, all carrying `kio_id`:
 - `kio_llm_token_count` (counter; `direction` = input/output)
 - `kio_llm_cost_usd` (counter)
 - `kio_session_active_count` (up/down counter)
-- `kio_heartbeat` (counter; ticks every 60s — a KIO silent >120s is "stale")
+- `kio_heartbeat` (counter; ticks every 60s — a KIO silent >120s is "stale", enforced
+  by a real Grafana alert rule, see `grafana/provisioning/alerting/rules.yml`, plus a
+  visual "Stale KIO Kontrolü" table on the Overview dashboard — not just a manual check
+  anymore)
 
 Optional self-service metrics (contract rule G7, meeting requirements):
 
@@ -378,6 +423,24 @@ contract — the decisions below are ours, made after comparing the two document
   scale) and a `session_id` Grafana dashboard filter variable (we currently only
   filter by `kio_id`).
 
+## Testler (pytest)
+
+`tests/` altında `kio-simulator/kio_simulator.py` (D1.1 KPI emisyonu her rol için,
+gerçek GPU sıcaklığı okumasının 3 fallback kademesi, NATS görev handler'ı,
+`simulate_request()`'in simüle/gerçek-başarı/gerçek-hata dallanmaları) ve
+`orchestrator/` (Planner'ın yönlendirme tablosu + dispatch, Session Manager'ın
+SQLite üzerinden test edilen CRUD'ı) için kalıcı bir pytest paketi var:
+
+```bash
+pip install -r kio-simulator/requirements.txt -r orchestrator/requirements.txt \
+            -r tests/requirements-test.txt
+pytest
+```
+
+Gerçek bir OTel collector/NATS/Postgres gerektirmez — tüm dış bağımlılıklar
+(OTLP exporter'lar sessizce erişilemez uca düşer, NATS bir fake `nc` ile,
+Postgres `sqlite:///:memory:` ile) taklit edilmiştir.
+
 ## Design notes & decisions
 
 - **Prometheus is intentionally absent** — VictoriaMetrics ingests via remote_write
@@ -399,14 +462,19 @@ contract — the decisions below are ours, made after comparing the two document
 
 ```
 observability/
+├── observability_integration_contract.pdf   # normative — start here for a new KIO
 ├── docker-compose.yml
+├── pytest.ini
 ├── otel-collector/config.yaml
 ├── tempo/tempo.yaml
 ├── grafana/
 │   ├── provisioning/datasources/datasources.yml
 │   ├── provisioning/dashboards/dashboards.yml
+│   ├── provisioning/alerting/rules.yml       # Stale KIO alert (Sözleşme §2.3)
 │   └── dashboards/{ai4sweng-overview,ai4sweng-kio}.json
 ├── kio-simulator/{kio_simulator.py,requirements.txt,Dockerfile}
+├── orchestrator/{planner.py,session_manager.py,workflow_api.py,envelope.py}
 ├── remote-kio/{docker-compose.yml,.env.example,README.md}
+├── tests/{conftest.py,requirements-test.txt,kio_simulator/,orchestrator/}
 └── docs/AI4SWENG_Observability_Teknik_Rapor.docx
 ```
