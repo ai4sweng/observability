@@ -463,7 +463,7 @@ services:
       # D1.1 KPI 4.1 (Developer productivity), 5.1 (Time-to-market),
       # 7.1 (Annual cost saving), 9.1 (Refactoring reduction), 9.2
       # (Technical debt reduction), simulated — see
-      # docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx.
+      # docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
       KIO_REAL_KPI_ROLE: "ai-sysdev"
       LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
       LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318

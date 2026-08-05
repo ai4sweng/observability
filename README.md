@@ -296,11 +296,11 @@ panel ever comes up empty, the same Trace ID can always be opened via
 
 ## Gerçek proje KPI'ları (D1.1)
 
-`docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx` — projenin resmi Proje Yönetim El Kitabı'ndan (D1.1)
+`docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx` — projenin resmi Proje Yönetim El Kitabı'ndan (D1.1)
 alınan tüm KPI'ların (1.1–9.2) ve iş-paketi/görev seviyesi metriklerin tam kataloğu, ve
 hangi KIO'ya hangi KPI'nın bağlı olduğunun haritası.
 
-D1.1'e göre üç KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeniyle etkinleştirildi
+D1.1'e göre dört KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeniyle etkinleştirildi
 (`docker-compose.yml`), her biri `kio_simulator.py`'de kendi metrik setini yayınlıyor
 (isim/birim doğrudan D1.1'den, değerler henüz simüle):
 
@@ -316,16 +316,25 @@ D1.1'e göre üç KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeniy
 - **kio4** (`KIO_REAL_KPI_ROLE=architecture-to-code`, D1.1'de "Architecture-to-Code Planner"):
   - `kio_codegen_duration_minutes`, `kio_code_quality_score_pct` (kio3 ile aynı, KPI 1.1 + 3.1)
   - `kio_review_score` — KPI 3.2 (Review score increase, yalnızca KIO4)
+- **kio7** (`KIO_REAL_KPI_ROLE=ai-sysdev`, D1.1'de "AI-SysDev" — çoğu KPI ile ortak (1.1, 1.2,
+  2.x, 3.x, 4.1, 5.1, 6.x, 7.1, 9.x), yalnızca net birincil sahip olduğu ve diğer üç KIO
+  tarafından kapsanmayan beşi simüle edildi):
+  - `kio_dev_productivity_features_per_day` — KPI 4.1 (Developer productivity)
+  - `kio_time_to_market_days` — KPI 5.1 (Time-to-Market)
+  - `kio_cost_saving_pct` — KPI 7.1 (Annual cost saving)
+  - `kio_refactoring_hours_per_feature` — KPI 9.1 (Refactoring effort reduction)
+  - `kio_tech_debt_hours_per_100loc` — KPI 9.2 (Technical debt reduction)
 
 Not: kio3/kio4'ün `task_type`'ı 2026-08'de (`test-generation`/`debug` → `nlp-requirements`/
 `architecture-to-code`) D1.1'in gerçek KIO3/KIO4 kimlikleriyle eşleşecek şekilde yeniden
 adlandırıldı — D1.1'in KPI atamaları bu gerçek rollere bağlı, simülatörün ilk seçtiği
-gelişigüzel isimlere değil.
+gelişigüzel isimlere değil. kio7 doğrudan D1.1'in KIO7 kimliğine göre eklendi.
 
-KIO Detail dashboard'unda "D1.1 Gerçek Proje KPI'ları" bölümü bu metrikleri gösterir
+KIO Detail dashboard'unda "D1.1 Gerçek Proje KPI'ları" bölümleri bu metrikleri gösterir
 (yalnızca ilgili `KIO_REAL_KPI_ROLE`'e sahip KIO seçiliyken veri dolu gelir, diğerlerinde
-"N/A" — bkz. "Gerçek vs Simüle Veri Haritası"). KIO7 için aynı yöntem ileride uygulanacak;
-bkz. referans dokümanının "Diğer KIO'lar" bölümü.
+"N/A" — bkz. "Gerçek vs Simüle Veri Haritası"). D1.1'de kendisine KPI ataması bulunan dört
+KIO'nun (KIO2, KIO3, KIO4, KIO7) tamamı artık entegre; bkz. referans dokümanının "Diğer
+KIO'lar — Durum" bölümü.
 
 ## Gerçek LLM entegrasyonu (KIO2, opsiyonel — NVIDIA GPU gerekir)
 

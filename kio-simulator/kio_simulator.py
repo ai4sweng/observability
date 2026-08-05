@@ -92,7 +92,7 @@ REPO_SCAN_PATH = os.environ.get("REPO_SCAN_PATH", "/app")
 #   "architecture-to-code"  -> KIO4 (Architecture-to-Code Planner)
 #   "ai-sysdev"             -> KIO7 (AI-SysDev)
 # Others can be added the same way later — see
-# docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx.
+# docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
 KIO_REAL_KPI_ROLE = os.environ.get("KIO_REAL_KPI_ROLE", "")
 
 # --- Optional real-LLM path (KIO2 today) ---

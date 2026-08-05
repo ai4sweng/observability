@@ -7,8 +7,8 @@ yöneliktir. Amaç: `kio2` kimliğini, şu ana kadar onun yerine veri üreten si
 sağlamak.
 
 Referans dökümanlar:
-- `docs/AI4SWENG_Observability_Teknik_Rapor_v1.4.docx` — genel mimari (Bölüm 9.6-9.9: NATS orkestrasyon katmanı, D1.1 KPI durumu, bu devir, dashboard uyarlamaları).
-- `docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx` — D1.1'den gelen gerçek proje KPI'ları (v1.2: KIO3/KIO4'ün gerçek D1.1 KPI'ları da entegre edildi, kio2-sim'e ek olarak).
+- `docs/AI4SWENG_Observability_Teknik_Rapor_v1.5.docx` — genel mimari (Bölüm 9.5-9.10: Stale KIO alarmı, NATS orkestrasyon katmanı, D1.1 KPI durumu — artık KIO2/KIO3/KIO4/KIO7'nin tümü, bu devir, dashboard uyarlamaları, pytest test paketi).
+- `docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx` — D1.1'den gelen gerçek proje KPI'ları (v1.3: KIO7'nin (AI-SysDev) gerçek D1.1 KPI'ları da entegre edildi, kio2-sim/kio3/kio4'e ek olarak — D1.1'de KPI'sı tanımlı dört KIO'nun tümü artık kapsanıyor).
 - `kio-simulator/kio_simulator.py` — **çalışan referans implementasyon**. Contract'ın
   gerektirdiği her şeyi zaten uyguluyor (metrics/logs/traces/Langfuse pipeline kurulumu,
   gerçek Ollama çağrısı, gerçek GPU enerjisi). Kod örneklerinin çoğu buradan alınabilir.
