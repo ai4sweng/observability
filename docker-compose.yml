@@ -380,22 +380,31 @@ services:
   # OTEL_EXPORTER_OTLP_ENDPOINT). Nothing to bring up on this side; this
   # comment just documents the reserved kio_id so it isn't reused elsewhere.
 
+  # kio3 = D1.1's KIO3 (NLP -> Formal Requirements). Was labeled task_type
+  # "test-generation" before D1.1 KPI mapping was cross-checked — renamed
+  # 2026-08 to match D1.1's actual KIO3 identity, since the D1.1 traceability
+  # matrix's KPI assignments (1.1, 3.1) are keyed to the real KIO3 role, not
+  # to whatever arbitrary task_type this simulator happened to use first.
   kio3:
     build: ./kio-simulator
     container_name: ai4sweng-kio3
     environment:
       KIO_ID: kio3
       KIO_LLM: "llama3.1:8b"
-      KIO_TASK_TYPE: test-generation
+      KIO_TASK_TYPE: nlp-requirements
       SERVICE_VERSION: "0.9.1"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
       EXPORT_INTERVAL_MS: "5000"
       HEARTBEAT_INTERVAL_S: "60"
       REQUEST_INTERVAL_S: "2"
-      # NATS-driven: tasks arrive via kio.tasks.kio3 (published by the
-      # Planner) instead of this KIO firing requests on its own timer.
+      # NATS-driven: tasks ALSO arrive via kio.tasks.kio3 (published by the
+      # Planner) on top of this KIO's own internal timer (see kio_simulator.py
+      # main() — NATS is an additional trigger path, not a replacement).
       NATS_ENABLED: "true"
       NATS_URL: "nats://nats:4222"
+      # D1.1 KPI 1.1 (Code generation speed) + 3.1 (Code quality improvement),
+      # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx Bölüm 5.
+      KIO_REAL_KPI_ROLE: "nlp-requirements"
       LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
       LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
@@ -404,13 +413,16 @@ services:
       - nats
     restart: unless-stopped
 
+  # kio4 = D1.1's KIO4 (Architecture-to-Code Planner). Was labeled task_type
+  # "debug" before the same D1.1 cross-check — renamed 2026-08, see kio3's
+  # comment above for the rationale.
   kio4:
     build: ./kio-simulator
     container_name: ai4sweng-kio4
     environment:
       KIO_ID: kio4
       KIO_LLM: "gpt-4o-mini"
-      KIO_TASK_TYPE: debug
+      KIO_TASK_TYPE: architecture-to-code
       SERVICE_VERSION: "2.0.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
       EXPORT_INTERVAL_MS: "5000"
@@ -418,6 +430,9 @@ services:
       REQUEST_INTERVAL_S: "4"
       NATS_ENABLED: "true"
       NATS_URL: "nats://nats:4222"
+      # D1.1 KPI 1.1 + 3.1 (shared with kio3) + 3.2 (Review score increase,
+      # KIO4-only), simulated.
+      KIO_REAL_KPI_ROLE: "architecture-to-code"
       LANGFUSE_PUBLIC_KEY: pk-lf-724e64325a5bb595077226d8129117fd
       LANGFUSE_SECRET_KEY: sk-lf-484c3829fc7dd2b09018278cc02f5318
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"

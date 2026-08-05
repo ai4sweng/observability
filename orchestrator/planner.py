@@ -42,8 +42,8 @@ NATS_URL = os.environ.get("NATS_URL", "nats://nats:4222")
 # passing an explicit "target_kio" in the workflow payload.
 DEFAULT_ROUTING_TABLE = {
     "code-analysis": "kio2-sim",
-    "test-generation": "kio3",
-    "debug": "kio4",
+    "nlp-requirements": "kio3",       # D1.1: KIO3 = NLP -> Formal Requirements
+    "architecture-to-code": "kio4",  # D1.1: KIO4 = Architecture-to-Code Planner
 }
 
 

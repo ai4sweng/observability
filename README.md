@@ -88,8 +88,14 @@ Tear down (and wipe data): `docker compose down -v`
 | KIO | LLM | Task type | Trigger | Notes |
 |-----|-----|-----------|---------|-------|
 | kio2-sim | `qwen2.5:3b` | code-analysis | internal timer | also reports **real** repo line/dir/file counts; **real Ollama tok/s + real GPU energy/temperature** (`KIO2_REAL_LLM_ENABLED=true`, see below). `kio2` itself is reserved for the real FocusTracer module — see `kio2-integration/README.md` |
-| kio3 | `llama3.1:8b` | test-generation | internal timer **+** NATS (`kio.tasks.kio3`) | random dummy telemetry |
-| kio4 | `gpt-4o-mini` | debug | internal timer **+** NATS (`kio.tasks.kio4`) | random dummy telemetry (non-zero cost) |
+| kio3 | `llama3.1:8b` | nlp-requirements (D1.1's KIO3) | internal timer **+** NATS (`kio.tasks.kio3`) | random dummy telemetry; D1.1 KPI 1.1 + 3.1 (simulated, `KIO_REAL_KPI_ROLE=nlp-requirements`) |
+| kio4 | `gpt-4o-mini` | architecture-to-code (D1.1's KIO4) | internal timer **+** NATS (`kio.tasks.kio4`) | random dummy telemetry (non-zero cost); D1.1 KPI 1.1 + 3.1 + 3.2 (simulated, `KIO_REAL_KPI_ROLE=architecture-to-code`) |
+
+`task_type` for kio3/kio4 was renamed 2026-08 from the arbitrary
+`test-generation`/`debug` to match D1.1's actual KIO3/KIO4 identities, once
+it became clear the D1.1 KPI traceability matrix's assignments (KPI 1.1, 3.1,
+3.2) are keyed to those real roles, not to whatever this simulator happened
+to call them first.
 
 kio3/kio4 are otherwise still random dummy data — no real LLM is invoked for them.
 NATS-driven dispatch (via the Workflow API/Planner) is an *additional* trigger
@@ -114,14 +120,15 @@ turuncu=simulated, bkz. "Veri kaynağı" paneli):
 | Hata oranı, `kio.request.error_count` | simüle (~%7 rastgele) | **gerçek** (gerçek Ollama başarı/hata) | her zaman simüle (~%7 rastgele) |
 | Repo satır/dizin/dosya sayısı | **gerçek** (kendi kaynağını tarar) | **gerçek** | uygulanamaz (code-analysis değiller) |
 | Accuracy / fix@1, `kio.request.accuracy` | her zaman simüle | her zaman simüle (Ollama gerçek olsa bile) | her zaman simüle |
-| D1.1 KPI'ları (bug-fix time, issue resolution, slicing success, customer-reported) | her zaman simüle (yalnızca kio2-sim'de, `KIO_REAL_KPI_ROLE=bugfix`) | her zaman simüle | veri yok (`KIO_REAL_KPI_ROLE` boş) |
+| D1.1 KPI'ları (bug-fix time, issue resolution, slicing success, customer-reported) | her zaman simüle (yalnızca kio2-sim'de, `KIO_REAL_KPI_ROLE=bugfix`) | her zaman simüle | uygulanamaz (kio3/kio4'ün rolü farklı — bkz. aşağıki satır) |
+| D1.1 KPI'ları (codegen duration, code quality, review score) | uygulanamaz (bu KPI'lar kio3/kio4'e özel) | uygulanamaz | her zaman simüle (`KIO_REAL_KPI_ROLE=nlp-requirements`/`architecture-to-code`) |
 | Kümülatif CO2e (tahmini) | simüle enerjiden türetilmiş tahmin | gerçek enerjiden türetilmiş tahmin (kendisi hâlâ bir tahmin, gerçek karbon ölçümü değil) | simüle enerjiden türetilmiş tahmin |
 
-fix@1 ve D1.1 proje-KPI'ları hiçbir KIO'da "gerçek" olmuyor çünkü bunların
-gerçek kaynağı FocusTracer'ın kendisi (Bölüm 9.7/9.8, `kio2-integration/README.md`)
-— bağlantı kurulana kadar burada üretilen her şey bilinçli olarak simüle
-kalıyor, "beklenirken boş panel" yerine "açıkça etiketlenmiş dummy veri"
-tercih edildi.
+fix@1 ve tüm D1.1 proje-KPI'ları hiçbir KIO'da "gerçek" olmuyor çünkü bunların
+gerçek kaynağı ilgili gerçek modülün kendisi (KIO2/FocusTracer için Bölüm 9.7/9.8,
+`kio2-integration/README.md`; KIO3/KIO4'ün gerçek modülleri henüz yok) — bağlantı
+kurulana/modül gelene kadar burada üretilen her şey bilinçli olarak simüle kalıyor,
+"beklenirken boş panel" yerine "açıkça etiketlenmiş dummy veri" tercih edildi.
 
 Each simulated request also emits a **trace**: a root `kio.request` span with
 sequential child spans — `prepare_prompt` → `llm_call` → `postprocess` (code-analysis
@@ -157,8 +164,8 @@ POST /workflow/run  ──►  workflow-api  ──► Session Manager (Postgres
   "target_kio"?}`) registers the session and hands off to the Planner, returns 202 +
   `session_id` immediately. `GET /workflow/{session_id}` shows status + lineage.
 - **`orchestrator/planner.py`** — routes `task_type` → `kio_id` (a static table:
-  `code-analysis→kio2-sim`, `test-generation→kio3`, `debug→kio4`, or an explicit
-  `target_kio` override), builds the envelope, publishes to `kio.tasks.<kio_id>`. Also
+  `code-analysis→kio2-sim`, `nlp-requirements→kio3`, `architecture-to-code→kio4`, or an
+  explicit `target_kio` override), builds the envelope, publishes to `kio.tasks.<kio_id>`. Also
   runs as its own long-running container, subscribed to `kio.results.*`, registering
   lineage as workers reply.
 - **kio-simulator's NATS consumer** (`NATS_ENABLED=true`, on by default for kio3/kio4) —
@@ -178,7 +185,7 @@ Try it:
 ```bash
 curl -X POST http://localhost:8080/workflow/run \
   -H "Content-Type: application/json" \
-  -d '{"task_type": "debug"}'
+  -d '{"task_type": "architecture-to-code"}'
 # -> 202 {"session_id": "...", "kio_id": "kio4", "status": "accepted"}
 curl http://localhost:8080/workflow/{session_id}
 # -> {"session": {...}, "lineage": [...]}
@@ -244,27 +251,36 @@ panel ever comes up empty, the same Trace ID can always be opened via
 
 ## Gerçek proje KPI'ları (D1.1)
 
-`docs/AI4SWENG_KPI_Metrik_Referansi.docx` — projenin resmi Proje Yönetim El Kitabı'ndan (D1.1)
+`docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx` — projenin resmi Proje Yönetim El Kitabı'ndan (D1.1)
 alınan tüm KPI'ların (1.1–9.2) ve iş-paketi/görev seviyesi metriklerin tam kataloğu, ve
 hangi KIO'ya hangi KPI'nın bağlı olduğunun haritası.
 
-Bu sürümde yalnızca **KIO2** (D1.1'de "Bug Locate & Fix / LLM Debugger" — FocusTracer'ın
-yaptığı işin ta kendisi) gerçek KPI'larla entegre edildi. `docker-compose.yml`'de kio2'ye
-`KIO_REAL_KPI_ROLE=bugfix` env değişkeni set edilince, `kio_simulator.py` şu dört ek metriği
-yayınlıyor (isim/birim doğrudan D1.1'den, değerler henüz simüle):
+D1.1'e göre üç KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeniyle etkinleştirildi
+(`docker-compose.yml`), her biri `kio_simulator.py`'de kendi metrik setini yayınlıyor
+(isim/birim doğrudan D1.1'den, değerler henüz simüle):
 
-- `kio_bugfix_duration_hours` — KPI 6.1 (Bug-fix time)
-- `kio_issue_resolution_hours` — KPI 1.2 (Issue resolution speed)
-- `kio_slicing_success_rate` — WP3 görev metriği (Dynamic slicing success rate, hedef ≥%85)
-- `kio_issue_customer_reported_count` — KPI 6.2 (Customer-reported issues)
+- **kio2-sim** (`KIO_REAL_KPI_ROLE=bugfix`, D1.1'de "Bug Locate & Fix / LLM Debugger" —
+  FocusTracer'ın yaptığı işin ta kendisi):
+  - `kio_bugfix_duration_hours` — KPI 6.1 (Bug-fix time)
+  - `kio_issue_resolution_hours` — KPI 1.2 (Issue resolution speed)
+  - `kio_slicing_success_rate` — WP3 görev metriği (Dynamic slicing success rate, hedef ≥%85)
+  - `kio_issue_customer_reported_count` — KPI 6.2 (Customer-reported issues)
+- **kio3** (`KIO_REAL_KPI_ROLE=nlp-requirements`, D1.1'de "NLP → Formal Requirements"):
+  - `kio_codegen_duration_minutes` — KPI 1.1 (Code generation speed)
+  - `kio_code_quality_score_pct` — KPI 3.1 (Code quality improvement)
+- **kio4** (`KIO_REAL_KPI_ROLE=architecture-to-code`, D1.1'de "Architecture-to-Code Planner"):
+  - `kio_codegen_duration_minutes`, `kio_code_quality_score_pct` (kio3 ile aynı, KPI 1.1 + 3.1)
+  - `kio_review_score` — KPI 3.2 (Review score increase, yalnızca KIO4)
 
-KIO Detail dashboard'unda "D1.1 Gerçek Proje KPI'ları" bölümü bu dört metriği
-gösterir (yalnızca kio2-sim seçiliyken veri dolu gelir — bu env değişkeni 2026-08'de
-geçici olarak boşaltılıp panel "No data" bırakılmıştı, sonra "boş panel" yerine
-"açıkça etiketlenmiş simüle veri" tercihiyle tekrar açıldı; bkz. "Gerçek vs Simüle
-Veri Haritası"). Diğer KIO'lar (KIO3, KIO4, KIO7...)
-için aynı yöntem — gerçek isim/birim, KIO'ya özel env-var ile etkinleştirme — ileride
-sırayla uygulanacak; bkz. referans dokümanının "Diğer KIO'lar" bölümü.
+Not: kio3/kio4'ün `task_type`'ı 2026-08'de (`test-generation`/`debug` → `nlp-requirements`/
+`architecture-to-code`) D1.1'in gerçek KIO3/KIO4 kimlikleriyle eşleşecek şekilde yeniden
+adlandırıldı — D1.1'in KPI atamaları bu gerçek rollere bağlı, simülatörün ilk seçtiği
+gelişigüzel isimlere değil.
+
+KIO Detail dashboard'unda "D1.1 Gerçek Proje KPI'ları" bölümü bu metrikleri gösterir
+(yalnızca ilgili `KIO_REAL_KPI_ROLE`'e sahip KIO seçiliyken veri dolu gelir, diğerlerinde
+"N/A" — bkz. "Gerçek vs Simüle Veri Haritası"). KIO7 için aynı yöntem ileride uygulanacak;
+bkz. referans dokümanının "Diğer KIO'lar" bölümü.
 
 ## Gerçek LLM entegrasyonu (KIO2, opsiyonel — NVIDIA GPU gerekir)
 

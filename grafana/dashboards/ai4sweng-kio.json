@@ -1064,7 +1064,7 @@
   },
   {
    "id": 24,
-   "title": "D1.1 Gerçek Proje KPI'ları (yalnızca kio2-sim — hepsi SİMÜLE, bkz. panel açıklamaları)",
+   "title": "D1.1 Gerçek Proje KPI'ları — kio2-sim (bugfix rolü, hepsi SİMÜLE)",
    "type": "row",
    "collapsed": false,
    "gridPos": {
@@ -2365,6 +2365,218 @@
      "displayMode": "list",
      "placement": "bottom"
     }
+   }
+  },
+  {
+   "id": 49,
+   "title": "D1.1 Gerçek Proje KPI'ları — kio3/kio4 (nlp-requirements / architecture-to-code, hepsi SİMÜLE)",
+   "type": "row",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 112
+   },
+   "panels": []
+  },
+  {
+   "id": 50,
+   "title": "Code generation speed (KPI 1.1, simüle)",
+   "type": "stat",
+   "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; kio2-sim'de rol farklı olduğu için N/A beklenir.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 0,
+    "y": 113
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_codegen_duration_minutes_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_codegen_duration_minutes_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "m",
+     "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 85
+       },
+       {
+        "color": "red",
+        "value": 100
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   }
+  },
+  {
+   "id": 51,
+   "title": "Code quality improvement (KPI 3.1, simüle)",
+   "type": "stat",
+   "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; düşük yüzde = baseline'a göre daha az kalite sorunu (D1.1 tanımı böyle).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 8,
+    "y": 113
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_code_quality_score_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_code_quality_score_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 85
+       },
+       {
+        "color": "red",
+        "value": 100
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "value",
+    "graphMode": "area",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   }
+  },
+  {
+   "id": 52,
+   "title": "Review score (KPI 3.2, simüle, yalnızca KIO4)",
+   "type": "gauge",
+   "description": "Yalnızca architecture-to-code rolünde (kio4) üretilir; kio2-sim ve kio3'te N/A beklenen davranıştır.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "victoriametrics"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 16,
+    "y": 113
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "victoriametrics"
+     },
+     "expr": "sum(rate(kio_review_score_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_review_score_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+     "legendFormat": "",
+     "refId": "A",
+     "range": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0,
+     "max": 5,
+     "noValue": "N/A (yalnızca architecture-to-code rolünde)",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 3.5
+       },
+       {
+        "color": "green",
+        "value": 4.0
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "showThresholdLabels": false,
+    "showThresholdMarkers": true
    }
   }
  ]

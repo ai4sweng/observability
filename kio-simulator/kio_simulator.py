@@ -84,11 +84,14 @@ NATS_ENABLED = os.environ.get("NATS_ENABLED", "false").lower() == "true"
 NATS_URL = os.environ.get("NATS_URL", "nats://nats:4222")
 REPO_SCAN_PATH = os.environ.get("REPO_SCAN_PATH", "/app")
 
-# Real-project KPI role (D1.1 Project Management Handbook). Empty by default;
-# set to "bugfix" only for the KIO(s) mapped to KIO2 (Bug Locate & Fix / LLM
-# Debugger) in D1.1's traceability matrix. Other real-KPI roles (e.g. for
-# KIO3/KIO4/KIO7) can be added the same way later without touching this file's
-# core logic — see docs/AI4SWENG_KPI_Metrik_Referansi.docx.
+# Real-project KPI role (D1.1 Project Management Handbook). Empty by default.
+# Valid values, each mapped to a D1.1 KIO identity (not to this simulator's
+# arbitrary task_type/LLM choice):
+#   "bugfix"               -> KIO2 (Bug Locate & Fix / LLM Debugger)
+#   "nlp-requirements"      -> KIO3 (NLP -> Formal Requirements)
+#   "architecture-to-code"  -> KIO4 (Architecture-to-Code Planner)
+# KIO7 and others can be added the same way later — see
+# docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx.
 KIO_REAL_KPI_ROLE = os.environ.get("KIO_REAL_KPI_ROLE", "")
 
 # --- Optional real-LLM path (KIO2 today) ---
@@ -411,6 +414,25 @@ else:
     bugfix_duration_hist = issue_resolution_hist = slicing_success_hist = customer_reported_counter = None
     fix_attempt_counter = None
 
+# KPI 1.1 (Code generation speed) and KPI 3.1 (Code quality improvement) are
+# both mapped by D1.1's traceability matrix to KIO3 (nlp-requirements) AND
+# KIO4 (architecture-to-code) — even though neither role literally "generates
+# code" itself, D1.1 measures these end-to-end from the pipeline's first step.
+# Concrete units (minutes, %), not raw "% of baseline", mirroring the KIO2
+# bugfix metrics above for the same reason (a dashboard-legible absolute
+# number beats an abstract ratio with no baseline shown alongside it).
+if KIO_REAL_KPI_ROLE in ("nlp-requirements", "architecture-to-code"):
+    codegen_duration_hist = meter.create_histogram("kio.codegen.duration_minutes", unit="min")  # KPI 1.1
+    code_quality_hist = meter.create_histogram("kio.code_quality.score_pct", unit="%")           # KPI 3.1
+else:
+    codegen_duration_hist = code_quality_hist = None
+
+# KPI 3.2 (Review score increase) is D1.1-mapped to KIO4 only (architecture-to-code).
+if KIO_REAL_KPI_ROLE == "architecture-to-code":
+    review_score_hist = meter.create_histogram("kio.review.score", unit="1")  # KPI 3.2
+else:
+    review_score_hist = None
+
 # --------------------------------------------------------------------------- #
 # Logs pipeline — unstructured / string telemetry
 # --------------------------------------------------------------------------- #
@@ -563,37 +585,49 @@ def emit_langfuse_trace(session_id, in_tokens, out_tokens, cost, is_error, error
 
 
 def emit_real_kpi_metrics(labels, is_error):
-    """D1.1-aligned KPIs for KIOs with a "bugfix" real-KPI role (kio2-sim
-    today, standing in for KIO2/FocusTracer until it connects). Simulated
-    values, deliberately kept inside D1.1's baseline/target bands so the
-    dashboard reads like plausible pilot-sprint progress, not noise.
+    """D1.1-aligned KPIs, gated by KIO_REAL_KPI_ROLE (empty = none emitted).
+    Simulated values, deliberately kept inside D1.1's baseline/target bands so
+    the dashboard reads like plausible pilot-sprint progress, not noise.
 
     Unlike the LLM-performance metrics above (tok/s, energy, error rate),
-    which have a real measurement path once KIO2_REAL_LLM_ENABLED=true, these
-    four are project-management-level KPIs (bug-fix turnaround, issue
-    resolution speed, dynamic-slicing success rate, customer-reported issue
-    count) that FocusTracer would have to report itself — there is no "real"
-    variant of them here at all yet, regardless of KIO2_REAL_LLM_ENABLED. So
-    source is unconditionally "simulated", not derived from data_source, to
-    avoid implying these are ever anything else until KIO2 hands them off
-    for real (see docs Bölüm 9.7/9.8)."""
-    if KIO_REAL_KPI_ROLE != "bugfix":
+    which have a real measurement path once KIO2_REAL_LLM_ENABLED=true, every
+    metric emitted here is project-management-level (D1.1 Table 8/9) and has
+    no real variant at all yet — it would require the actual KIO module
+    (FocusTracer for "bugfix", or whichever team eventually owns KIO3/KIO4's
+    real roles) to report it for real. So source is unconditionally
+    "simulated" here, never derived from data_source."""
+    if not KIO_REAL_KPI_ROLE:
         return
     labels_kpi = {**labels, "source": "simulated"}
-    # KPI 6.1 — Bug-fix time: baseline ~8-12h, target <=20% reduction.
-    bugfix_duration_hist.record(round(random.uniform(6.0, 10.0), 2), labels_kpi)
-    # KPI 1.2 — Issue resolution speed: baseline ~8-12h, target <=30% reduction.
-    issue_resolution_hist.record(round(random.uniform(5.0, 9.0), 2), labels_kpi)
-    # WP3 task metric — Dynamic slicing success rate: target >=85%, realistic
-    # variance means it dips below target sometimes rather than always "passing".
-    slicing_success_hist.record(round(random.uniform(0.75, 0.97), 3), labels_kpi)
-    # KPI 6.2 — Customer-reported issues: rare event, not one per request.
-    if is_error and random.random() < 0.05:
-        customer_reported_counter.add(random.randint(1, 2), labels_kpi)
-    # "Accuracy" KPI (fix@1) — see _evaluate_fix_success()'s docstring for
-    # why this is a placeholder, not yet a real test-suite result.
-    outcome = "success" if _evaluate_fix_success() else "failure"
-    fix_attempt_counter.add(1, {**labels_kpi, "outcome": outcome})
+
+    if KIO_REAL_KPI_ROLE == "bugfix":
+        # KIO2 (Bug Locate & Fix / LLM Debugger).
+        # KPI 6.1 — Bug-fix time: baseline ~8-12h, target <=20% reduction.
+        bugfix_duration_hist.record(round(random.uniform(6.0, 10.0), 2), labels_kpi)
+        # KPI 1.2 — Issue resolution speed: baseline ~8-12h, target <=30% reduction.
+        issue_resolution_hist.record(round(random.uniform(5.0, 9.0), 2), labels_kpi)
+        # WP3 task metric — Dynamic slicing success rate: target >=85%, realistic
+        # variance means it dips below target sometimes rather than always "passing".
+        slicing_success_hist.record(round(random.uniform(0.75, 0.97), 3), labels_kpi)
+        # KPI 6.2 — Customer-reported issues: rare event, not one per request.
+        if is_error and random.random() < 0.05:
+            customer_reported_counter.add(random.randint(1, 2), labels_kpi)
+        # "Accuracy" KPI (fix@1) — see _evaluate_fix_success()'s docstring for
+        # why this is a placeholder, not yet a real test-suite result.
+        outcome = "success" if _evaluate_fix_success() else "failure"
+        fix_attempt_counter.add(1, {**labels_kpi, "outcome": outcome})
+
+    elif KIO_REAL_KPI_ROLE in ("nlp-requirements", "architecture-to-code"):
+        # KIO3 (NLP -> Formal Requirements) / KIO4 (Architecture-to-Code Planner).
+        # KPI 1.1 — Code generation speed: baseline ~100-120 min (100%),
+        # target <=70% (~70-84 min). Simulated mostly under baseline, with
+        # realistic variance rather than always beating target.
+        codegen_duration_hist.record(round(random.uniform(65.0, 95.0), 1), labels_kpi)
+        # KPI 3.1 — Code quality improvement: baseline 100%, target <=70%.
+        code_quality_hist.record(round(random.uniform(65.0, 90.0), 1), labels_kpi)
+        if KIO_REAL_KPI_ROLE == "architecture-to-code":
+            # KPI 3.2 — Review score increase: baseline ~3.5/5, target ~4.2/5.
+            review_score_hist.record(round(random.uniform(3.6, 4.4), 2), labels_kpi)
 
 
 # --------------------------------------------------------------------------- #

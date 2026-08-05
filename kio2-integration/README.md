@@ -8,7 +8,7 @@ sağlamak.
 
 Referans dökümanlar:
 - `docs/AI4SWENG_Observability_Teknik_Rapor_v1.4.docx` — genel mimari (Bölüm 9.6-9.9: NATS orkestrasyon katmanı, D1.1 KPI durumu, bu devir, dashboard uyarlamaları).
-- `docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx` — D1.1'den gelen gerçek proje KPI'ları.
+- `docs/AI4SWENG_KPI_Metrik_Referansi_v1.2.docx` — D1.1'den gelen gerçek proje KPI'ları (v1.2: KIO3/KIO4'ün gerçek D1.1 KPI'ları da entegre edildi, kio2-sim'e ek olarak).
 - `kio-simulator/kio_simulator.py` — **çalışan referans implementasyon**. Contract'ın
   gerektirdiği her şeyi zaten uyguluyor (metrics/logs/traces/Langfuse pipeline kurulumu,
   gerçek Ollama çağrısı, gerçek GPU enerjisi). Kod örneklerinin çoğu buradan alınabilir.
