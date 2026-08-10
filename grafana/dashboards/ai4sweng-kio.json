@@ -1,2926 +1,3341 @@
 {
- "uid": "ai4sweng-kio",
- "title": "AI4SWENG — KIO Detail",
- "tags": [
-  "ai4sweng",
-  "kio"
- ],
- "timezone": "browser",
- "schemaVersion": 39,
- "version": 1,
- "refresh": "10s",
- "time": {
-  "from": "now-30m",
-  "to": "now"
- },
- "templating": {
-  "list": [
-   {
-    "name": "kio_id",
-    "type": "query",
-    "datasource": {
-     "type": "prometheus",
-     "uid": "victoriametrics"
+  "uid": "ai4sweng-kio",
+  "title": "AI4SWENG — KIO Detail",
+  "tags": [
+    "ai4sweng",
+    "kio"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "kio_id",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "victoriametrics"
+        },
+        "query": {
+          "query": "label_values(kio_heartbeat, kio_id)",
+          "refId": "A"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "current": {},
+        "includeAll": false,
+        "label": "KIO"
+      },
+      {
+        "name": "trace_id",
+        "type": "textbox",
+        "label": "Trace ID (aşağıdaki tablodan kopyala)",
+        "query": "",
+        "current": {
+          "value": "",
+          "text": ""
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "LLM",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "count by (llm) (kio_heartbeat{kio_id=\"$kio_id\"})",
+          "legendFormat": "{{llm}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "name"
+      }
     },
-    "query": {
-     "query": "label_values(kio_heartbeat, kio_id)",
-     "refId": "A"
+    {
+      "id": 2,
+      "title": "Task type",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "count by (task_type) (kio_heartbeat{kio_id=\"$kio_id\"})",
+          "legendFormat": "{{task_type}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
     },
-    "refresh": 2,
-    "sort": 1,
-    "current": {},
-    "includeAll": false,
-    "label": "KIO"
-   },
-   {
-    "name": "trace_id",
-    "type": "textbox",
-    "label": "Trace ID (aşağıdaki tablodan kopyala)",
-    "query": "",
-    "current": {
-     "value": "",
-     "text": ""
+    {
+      "id": 3,
+      "title": "Requests/sec",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_request_count{kio_id=\"$kio_id\"}[5m]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "green",
+                "value": 0.15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Error rate %",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "100 * sum(rate(kio_request_error_count{kio_id=\"$kio_id\"}[5m])) / clamp_min(sum(rate(kio_request_count{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Avg tokens/sec",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 200
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Avg accuracy",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_request_accuracy_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_request_accuracy_count{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.7
+              },
+              {
+                "color": "green",
+                "value": 0.85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "fix@1 yerine geçen kio.request.accuracy — HER ZAMAN source=simulated (gerçek bir doğrulama yolu yok, bkz. Bölüm 9.4/9.7/9.8)."
+    },
+    {
+      "id": 7,
+      "title": "Requests",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "title": "Request rate (ok vs error)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (status) (rate(kio_request_count{kio_id=\"$kio_id\"}[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Latency p50 / p95 / p99 (ms)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
+          "legendFormat": "p50",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "B",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
+          "legendFormat": "p99",
+          "refId": "C",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "LLM & Energy",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "title": "Token throughput by direction",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (direction) (rate(kio_llm_token_count{kio_id=\"$kio_id\"}[5m]))",
+          "legendFormat": "{{direction}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "GPU energy rate (J/s)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[5m]))",
+          "legendFormat": "J/s",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "LLM cost rate (USD/s)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_llm_cost_usd{kio_id=\"$kio_id\"}[5m]))",
+          "legendFormat": "USD/s",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Code-analysis'e Özel İstatistikler (yalnızca kio2-sim'de veri var)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "title": "Repo lines",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 23
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max(kio_repo_line_count{kio_id=\"$kio_id\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "N/A (code-analysis değil)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
+    },
+    {
+      "id": 16,
+      "title": "Repo directories",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 23
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max(kio_repo_directory_count{kio_id=\"$kio_id\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "N/A (code-analysis değil)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
+    },
+    {
+      "id": 17,
+      "title": "Repo files",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 23
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max(kio_repo_file_count{kio_id=\"$kio_id\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "N/A (code-analysis değil)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
+    },
+    {
+      "id": 18,
+      "title": "Unstructured / string telemetry",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "panels": []
+    },
+    {
+      "id": 19,
+      "title": "Log stream for $kio_id",
+      "type": "logs",
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "victorialogs"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "expr": "kio.id:$kio_id",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 20,
+      "title": "İşlem Sıraları (Trace / Tempo)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "title": "Nasıl kullanılır",
+      "type": "text",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Aşağıdaki tablo, seçili KIO'nun son isteklerine ait trace'leri listeler (Trace ID, süre, kök span). Bir satırdaki **Trace ID** değerini kopyalayıp yukarıdaki **Trace ID** kutusuna yapıştırın — altındaki panel o işlemin adım adım sırasını (repo_scan → prepare_prompt → llm_call → postprocess) şelale görünümüyle gösterir. Panel boş kalırsa aynı Trace ID ile Explore → Tempo üzerinden de açılabilir."
+      }
+    },
+    {
+      "id": 22,
+      "title": "Son trace'ler ($kio_id)",
+      "type": "table",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"$kio_id\"}",
+          "limit": 20,
+          "tableType": "traces",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 23,
+      "title": "Seçili trace'in şelale görünümü ($trace_id)",
+      "type": "traces",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "$trace_id",
+          "refId": "A"
+        }
+      ],
+      "options": {}
+    },
+    {
+      "id": 24,
+      "title": "D1.1 Gerçek Proje KPI'ları — kio2-sim (bugfix rolü, hepsi SİMÜLE)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "panels": []
+    },
+    {
+      "id": 25,
+      "title": "Bug-fix time (KPI 6.1, simüle)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 61
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_bugfix_duration_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_bugfix_duration_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 9.6
+              },
+              {
+                "color": "red",
+                "value": 12
+              }
+            ]
+          },
+          "noValue": "N/A (bugfix rolü yok)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+    },
+    {
+      "id": 26,
+      "title": "Issue resolution time (KPI 1.2, simüle)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 61
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_issue_resolution_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_issue_resolution_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 8.4
+              },
+              {
+                "color": "red",
+                "value": 12
+              }
+            ]
+          },
+          "noValue": "N/A (bugfix rolü yok)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+    },
+    {
+      "id": 27,
+      "title": "Dynamic slicing success rate (WP3, hedef ≥%85, simüle)",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 61
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_slicing_success_rate_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_slicing_success_rate_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.7
+              },
+              {
+                "color": "green",
+                "value": 0.85
+              }
+            ]
+          },
+          "noValue": "N/A (bugfix rolü yok)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+    },
+    {
+      "id": 28,
+      "title": "Customer-reported issues (KPI 6.2, simüle)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 61
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(increase(kio_issue_customer_reported_count{kio_id=\"$kio_id\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "N/A (bugfix rolü yok)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+    },
+    {
+      "id": 29,
+      "title": "Bug-fix / Issue resolution time trendi (saat, simüle)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_bugfix_duration_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_bugfix_duration_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "bug-fix time (KPI 6.1)",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_issue_resolution_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_issue_resolution_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "issue resolution (KPI 1.2)",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 30,
+      "title": "Dynamic slicing success rate trendi (simüle)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_slicing_success_rate_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_slicing_success_rate_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "success rate",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Model Karşılaştırması & Veri Kaynağı (idt4gdc-grafana-demo tarzından uyarlandı)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "panels": []
+    },
+    {
+      "id": 32,
+      "title": "Veri kaynağı (tok/s) — REAL vs SIMULATED",
+      "type": "stat",
+      "description": "KIO2_REAL_LLM_ENABLED açıkken gerçek Ollama çağrısı başarılıysa 'real', Ollama'ya ulaşılamayıp simülasyona düşüldüyse 'simulated' sayılır. Son 30 dakikada hangi kaynaktan kaç istek geldiğini gösterir.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (source) (increase(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[30m]))",
+          "legendFormat": "{{source}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*real.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*simulated.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 33,
+      "title": "Energy Consumption by Model",
+      "description": "idt4gdc-grafana-demo'daki aynı isimli panelden esinlenildi. Postgres+rawSql yerine bizim PromQL/VictoriaMetrics verimizle: tüm KIO'ların (llm etiketine göre) enerji tüketim oranı karşılaştırması ($kio_id filtresi yok, kasıtlı — model bazlı kıyaslama).",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (llm) (rate(kio_llm_energy_joules[10m]))",
+          "legendFormat": "{{llm}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "title": "Accuracy (fix@1) vs Energy Trade-off — by model",
+      "description": "idt4gdc-grafana-demo'daki 'Accuracy vs Energy Trade-off' panelinden uyarlandı. KIO2 (bugfix rolü) için fix@1 başarı oranı ile enerji tüketim oranını yan yana gösterir. fix@1 henüz FocusTracer'a bağlı değil, yer tutucu değer — bkz. docs/AI4SWENG_KPI_Metrik_Referansi. Sadece bugfix rolündeki KIO'larda (şu an KIO2) veri olur.",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 76
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (llm) (rate(kio_fix_attempt_count{outcome=\"success\"}[30m])) / clamp_min(sum by (llm) (rate(kio_fix_attempt_count[30m])),0.001)",
+          "legendFormat": "fix@1 success rate",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (llm) (rate(kio_llm_energy_joules[30m]))",
+          "legendFormat": "energy rate (J/s)",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "watt"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 35,
+      "title": "Gösterge Görünümü — Hata, Verim, Doğruluk (gauge)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 83
+      },
+      "panels": []
+    },
+    {
+      "id": 36,
+      "title": "Error rate % (gösterge)",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 84
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "100 * sum(rate(kio_request_error_count{kio_id=\"$kio_id\"}[5m])) / clamp_min(sum(rate(kio_request_count{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 37,
+      "title": "Avg tokens/sec (gösterge)",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 84
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 500,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 200
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 38,
+      "title": "Avg accuracy (gösterge)",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 84
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_request_accuracy_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_request_accuracy_count{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.7
+              },
+              {
+                "color": "green",
+                "value": 0.85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "description": "fix@1 (kio.request.accuracy) hâlâ simüle bir değer — bkz. Bölüm 9.4/9.7 (KIO7 kapsamı)."
+    },
+    {
+      "id": 39,
+      "title": "Güç, Verimlilik ve Karbon (tahmini)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 90
+      },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "title": "Anlık Güç (W)",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 91
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[5m]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "description": "kio.llm.energy_joules'un rate'i zaten J/s = Watt; gerçek modda gerçek GPU gücü, simüle modda model-başı sabit katsayıdan."
+    },
+    {
+      "id": 41,
+      "title": "Verimlilik (tok/W)",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 91
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "(sum(rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[5m])),0.001)) / clamp_min(sum(rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 50,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "green",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "description": "Ortalama tok/s ÷ Watt — 'performance per watt' kavramının bizim veriyle karşılığı. Yeni bir ölçüm gerekmez, saf PromQL türetmesi."
+    },
+    {
+      "id": 42,
+      "title": "Kümülatif Karbon (kg CO2e, tahmini)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 91
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(kio_llm_energy_joules{kio_id=\"$kio_id\"}) / 3600000 * 0.4",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "0.4 kg CO2e/kWh sabit bir grid-ortalama varsayımıyla enerjiden türetilmiş TAHMİNİ değer — gerçek bir karbon ölçümü değil. Kümülatif (süreç başından beri) olduğu için sağlık eşiği yok, nötr renk."
+    },
+    {
+      "id": 43,
+      "title": "GPU Sıcaklığı (gerçek — yalnızca kio2-sim gerçek modda)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 97
+      },
+      "panels": []
+    },
+    {
+      "id": 44,
+      "title": "GPU Sıcaklığı (°C)",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 98
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_llm_gpu_temperature_celsius_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_gpu_temperature_celsius_count{kio_id=\"$kio_id\"}[5m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "description": "Yalnızca KIO2_REAL_LLM_ENABLED=true iken VE power-exporter/NVML gerçekten erişilebilirken veri üretir (kio.llm.gpu_temperature_celsius, source=real). Kapalıyken veya kaynak yokken bu panelde 'No data' görmek beklenen davranıştır — hiçbir zaman uydurulmaz."
+    },
+    {
+      "id": 45,
+      "title": "Gerçek vs Simüle Karşılaştırması (Before/After)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 104
+      },
+      "panels": []
+    },
+    {
+      "id": 46,
+      "title": "Enerji oranı: Simulated vs Real (W)",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 105
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (source) (rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[10m]))",
+          "legendFormat": "{{source}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "description": "source=real|simulated etiketine göre kırılmış ortalama güç — kio2-sim'in gerçek modu açıkken bile, geçmişte simüle modda toplanan veri varsa iki bar birden görünebilir."
+    },
+    {
+      "id": 47,
+      "title": "Ortalama tok/s: Simulated vs Real",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 105
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (source) (rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[10m])) / clamp_min(sum by (source) (rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[10m])),0.001)",
+          "legendFormat": "{{source}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 48,
+      "title": "Ortalama gecikme (ms): Simulated vs Real",
+      "type": "barchart",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 105
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (source) (rate(kio_request_duration_ms_sum{kio_id=\"$kio_id\"}[10m])) / clamp_min(sum by (source) (rate(kio_request_duration_ms_count{kio_id=\"$kio_id\"}[10m])),0.001)",
+          "legendFormat": "{{source}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "showValue": "always",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 49,
+      "title": "D1.1 Gerçek Proje KPI'ları — kio3/kio4 (nlp-requirements / architecture-to-code, hepsi SİMÜLE)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 112
+      },
+      "panels": []
+    },
+    {
+      "id": 50,
+      "title": "Code generation speed (KPI 1.1, simüle)",
+      "type": "stat",
+      "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; kio2-sim'de rol farklı olduğu için N/A beklenir.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 113
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_codegen_duration_minutes_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_codegen_duration_minutes_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 85
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 51,
+      "title": "Code quality improvement (KPI 3.1, simüle)",
+      "type": "stat",
+      "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; düşük yüzde = baseline'a göre daha az kalite sorunu (D1.1 tanımı böyle).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 113
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_code_quality_score_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_code_quality_score_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 85
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 52,
+      "title": "Review score (KPI 3.2, simüle, yalnızca KIO4)",
+      "type": "gauge",
+      "description": "Yalnızca architecture-to-code rolünde (kio4) üretilir; kio2-sim ve kio3'te N/A beklenen davranıştır.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 113
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_review_score_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_review_score_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 5,
+          "noValue": "N/A (yalnızca architecture-to-code rolünde)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 3.5
+              },
+              {
+                "color": "green",
+                "value": 4.0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 53,
+      "title": "D1.1 Gerçek Proje KPI'ları — kio7 (ai-sysdev, hepsi SİMÜLE)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 119
+      },
+      "panels": []
+    },
+    {
+      "id": 54,
+      "title": "Developer productivity (KPI 4.1, simüle)",
+      "type": "stat",
+      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; diğer KIO'larda N/A beklenen davranıştır.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 120
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_dev_productivity_features_per_day_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_dev_productivity_features_per_day_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "N/A (ai-sysdev rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.7
+              },
+              {
+                "color": "green",
+                "value": 0.9
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 55,
+      "title": "Time-to-market (KPI 5.1, simüle)",
+      "type": "stat",
+      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~30-45 gün, düşük değer iyi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 120
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_time_to_market_days_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_time_to_market_days_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "noValue": "N/A (ai-sysdev rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 35
+              },
+              {
+                "color": "red",
+                "value": 45
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 56,
+      "title": "Annual cost saving (KPI 7.1, simüle)",
+      "type": "stat",
+      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 120
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_cost_saving_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_cost_saving_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "N/A (ai-sysdev rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 15
+              },
+              {
+                "color": "green",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 57,
+      "title": "Refactoring effort reduction (KPI 9.1, simüle)",
+      "type": "stat",
+      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~4-6 saat/özellik, düşük değer iyi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 126
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_refactoring_hours_per_feature_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_refactoring_hours_per_feature_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "noValue": "N/A (ai-sysdev rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 5.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 58,
+      "title": "Technical debt reduction (KPI 9.2, simüle)",
+      "type": "stat",
+      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~3-5 saat/100 satır, düşük değer iyi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 126
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_tech_debt_hours_per_100loc_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_tech_debt_hours_per_100loc_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "noValue": "N/A (ai-sysdev rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 4.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 59,
+      "title": "D1.1 Gerçek Proje KPI'ları — kio8 (green-deploy, hepsi SİMÜLE)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 132
+      },
+      "panels": []
+    },
+    {
+      "id": 60,
+      "title": "Lifecycle energy reduction (KPI 2.1, simüle)",
+      "type": "stat",
+      "description": "Yalnızca green-deploy rolünde (kio8) üretilir; baseline 100%, hedef <=85% (>=%15 azalma), düşük değer iyi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 133
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_lifecycle_energy_pct_of_baseline_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_lifecycle_energy_pct_of_baseline_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "N/A (green-deploy rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 85
+              },
+              {
+                "color": "red",
+                "value": 95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 61,
+      "title": "Deployment energy efficiency (KPI 2.2, simüle)",
+      "type": "stat",
+      "description": "Yalnızca green-deploy rolünde (kio8) üretilir; birim tokens/s/W, varsayılan optimize edilmemiş baseline ~7.5, hedef >=%15 iyileşme (~8.6+), yüksek değer iyi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 133
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_deploy_energy_tokens_per_s_per_w_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_deploy_energy_tokens_per_s_per_w_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "N/A (green-deploy rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 7.5
+              },
+              {
+                "color": "green",
+                "value": 8.6
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 62,
+      "title": "Cross-Architecture Build Success (KPI 8.3, simüle)",
+      "type": "stat",
+      "description": "Yalnızca green-deploy rolünde (kio8) üretilir; hedef >=1 doğrulanmış heterojen hedef (FPGA/ARM/RISC-V), seçili zaman aralığındaki toplam.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 133
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(increase(kio_cross_arch_build_success_count{kio_id=\"$kio_id\"}[$__range]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "N/A (green-deploy rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 63,
+      "title": "D1.1 Gerçek Proje KPI'ları — kio13 (adoption, hepsi SİMÜLE)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 139
+      },
+      "panels": []
+    },
+    {
+      "id": 64,
+      "title": "Adoption rate (KPI 8.1, simüle)",
+      "type": "stat",
+      "description": "Yalnızca adoption rolünde (kio13) üretilir; baseline 0%, hedef >=%50 (2 pilot sprint içinde), yüksek değer iyi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 140
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_adoption_active_user_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_adoption_active_user_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "N/A (adoption rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 35
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 65,
+      "title": "Active usage (KPI 8.2, simüle)",
+      "type": "stat",
+      "description": "Yalnızca adoption rolünde (kio13) üretilir; baseline ~0%, hedef >=%60, yüksek değer iyi.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 140
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_adoption_usage_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_adoption_usage_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "N/A (adoption rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 45
+              },
+              {
+                "color": "green",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 66,
+      "title": "Satisfaction — MOS (KPI 8.2, simüle)",
+      "type": "gauge",
+      "description": "Yalnızca adoption rolünde (kio13) üretilir; baseline ~3.0/5, hedef >=4.0/5.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 140
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_adoption_mos_score_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_adoption_mos_score_count{kio_id=\"$kio_id\"}[15m])),0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 5,
+          "noValue": "N/A (adoption rolü yok)",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 3.5
+              },
+              {
+                "color": "green",
+                "value": 4.0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
     }
-   }
   ]
- },
- "panels": [
-  {
-   "id": 1,
-   "title": "LLM",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 0,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "count by (llm) (kio_heartbeat{kio_id=\"$kio_id\"})",
-     "legendFormat": "{{llm}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "fixed"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "none",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "name"
-   }
-  },
-  {
-   "id": 2,
-   "title": "Task type",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 4,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "count by (task_type) (kio_heartbeat{kio_id=\"$kio_id\"})",
-     "legendFormat": "{{task_type}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "fixed"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 3,
-   "title": "Requests/sec",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 8,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_request_count{kio_id=\"$kio_id\"}[5m]))",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "reqps",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 0.05
-       },
-       {
-        "color": "green",
-        "value": 0.15
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 4,
-   "title": "Error rate %",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 12,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "100 * sum(rate(kio_request_error_count{kio_id=\"$kio_id\"}[5m])) / clamp_min(sum(rate(kio_request_count{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percent",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 5
-       },
-       {
-        "color": "red",
-        "value": 15
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 5,
-   "title": "Avg tokens/sec",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 16,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 50
-       },
-       {
-        "color": "green",
-        "value": 200
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 6,
-   "title": "Avg accuracy",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 20,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_request_accuracy_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_request_accuracy_count{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percentunit",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 0.7
-       },
-       {
-        "color": "green",
-        "value": 0.85
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "fix@1 yerine geçen kio.request.accuracy — HER ZAMAN source=simulated (gerçek bir doğrulama yolu yok, bkz. Bölüm 9.4/9.7/9.8)."
-  },
-  {
-   "id": 7,
-   "title": "Requests",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 4
-   },
-   "panels": []
-  },
-  {
-   "id": 8,
-   "title": "Request rate (ok vs error)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 0,
-    "y": 5
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (status) (rate(kio_request_count{kio_id=\"$kio_id\"}[5m]))",
-     "legendFormat": "{{status}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "reqps",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 9,
-   "title": "Latency p50 / p95 / p99 (ms)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 5
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "histogram_quantile(0.50, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
-     "legendFormat": "p50",
-     "refId": "A",
-     "range": true
-    },
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "histogram_quantile(0.95, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
-     "legendFormat": "p95",
-     "refId": "B",
-     "range": true
-    },
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "histogram_quantile(0.99, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
-     "legendFormat": "p99",
-     "refId": "C",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 10,
-   "title": "LLM & Energy",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 13
-   },
-   "panels": []
-  },
-  {
-   "id": 11,
-   "title": "Token throughput by direction",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 8,
-    "x": 0,
-    "y": 14
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (direction) (rate(kio_llm_token_count{kio_id=\"$kio_id\"}[5m]))",
-     "legendFormat": "{{direction}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "normal"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 12,
-   "title": "GPU energy rate (J/s)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 8,
-    "x": 8,
-    "y": 14
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[5m]))",
-     "legendFormat": "J/s",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "watt",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 13,
-   "title": "LLM cost rate (USD/s)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 8,
-    "x": 16,
-    "y": 14
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_llm_cost_usd{kio_id=\"$kio_id\"}[5m]))",
-     "legendFormat": "USD/s",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "currencyUSD",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 14,
-   "title": "Code-analysis'e Özel İstatistikler (yalnızca kio2-sim'de veri var)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 22
-   },
-   "panels": []
-  },
-  {
-   "id": 15,
-   "title": "Repo lines",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 8,
-    "x": 0,
-    "y": 23
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "max(kio_repo_line_count{kio_id=\"$kio_id\"})",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       }
-      ]
-     },
-     "noValue": "N/A (code-analysis değil)"
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
-  },
-  {
-   "id": 16,
-   "title": "Repo directories",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 8,
-    "x": 8,
-    "y": 23
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "max(kio_repo_directory_count{kio_id=\"$kio_id\"})",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       }
-      ]
-     },
-     "noValue": "N/A (code-analysis değil)"
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
-  },
-  {
-   "id": 17,
-   "title": "Repo files",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 8,
-    "x": 16,
-    "y": 23
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "max(kio_repo_file_count{kio_id=\"$kio_id\"})",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       }
-      ]
-     },
-     "noValue": "N/A (code-analysis değil)"
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
-  },
-  {
-   "id": 18,
-   "title": "Unstructured / string telemetry",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 27
-   },
-   "panels": []
-  },
-  {
-   "id": 19,
-   "title": "Log stream for $kio_id",
-   "type": "logs",
-   "datasource": {
-    "type": "victoriametrics-logs-datasource",
-    "uid": "victorialogs"
-   },
-   "gridPos": {
-    "h": 10,
-    "w": 24,
-    "x": 0,
-    "y": 28
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "victoriametrics-logs-datasource",
-      "uid": "victorialogs"
-     },
-     "expr": "kio.id:$kio_id",
-     "refId": "A",
-     "queryType": "instant"
-    }
-   ],
-   "options": {
-    "showTime": true,
-    "wrapLogMessage": true,
-    "sortOrder": "Descending",
-    "enableLogDetails": true,
-    "dedupStrategy": "none"
-   }
-  },
-  {
-   "id": 20,
-   "title": "İşlem Sıraları (Trace / Tempo)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 38
-   },
-   "panels": []
-  },
-  {
-   "id": 21,
-   "title": "Nasıl kullanılır",
-   "type": "text",
-   "gridPos": {
-    "h": 3,
-    "w": 24,
-    "x": 0,
-    "y": 39
-   },
-   "options": {
-    "mode": "markdown",
-    "content": "Aşağıdaki tablo, seçili KIO'nun son isteklerine ait trace'leri listeler (Trace ID, süre, kök span). Bir satırdaki **Trace ID** değerini kopyalayıp yukarıdaki **Trace ID** kutusuna yapıştırın — altındaki panel o işlemin adım adım sırasını (repo_scan → prepare_prompt → llm_call → postprocess) şelale görünümüyle gösterir. Panel boş kalırsa aynı Trace ID ile Explore → Tempo üzerinden de açılabilir."
-   }
-  },
-  {
-   "id": 22,
-   "title": "Son trace'ler ($kio_id)",
-   "type": "table",
-   "datasource": {
-    "type": "tempo",
-    "uid": "tempo"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 24,
-    "x": 0,
-    "y": 42
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "tempo",
-      "uid": "tempo"
-     },
-     "queryType": "traceql",
-     "query": "{resource.service.name=\"$kio_id\"}",
-     "limit": 20,
-     "tableType": "traces",
-     "refId": "A"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "custom": {
-      "align": "auto"
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "showHeader": true
-   }
-  },
-  {
-   "id": 23,
-   "title": "Seçili trace'in şelale görünümü ($trace_id)",
-   "type": "traces",
-   "datasource": {
-    "type": "tempo",
-    "uid": "tempo"
-   },
-   "gridPos": {
-    "h": 10,
-    "w": 24,
-    "x": 0,
-    "y": 50
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "tempo",
-      "uid": "tempo"
-     },
-     "queryType": "traceql",
-     "query": "$trace_id",
-     "refId": "A"
-    }
-   ],
-   "options": {}
-  },
-  {
-   "id": 24,
-   "title": "D1.1 Gerçek Proje KPI'ları — kio2-sim (bugfix rolü, hepsi SİMÜLE)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 60
-   },
-   "panels": []
-  },
-  {
-   "id": 25,
-   "title": "Bug-fix time (KPI 6.1, simüle)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 6,
-    "x": 0,
-    "y": 61
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_bugfix_duration_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_bugfix_duration_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "h",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 9.6
-       },
-       {
-        "color": "red",
-        "value": 12
-       }
-      ]
-     },
-     "noValue": "N/A (bugfix rolü yok)"
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
-  },
-  {
-   "id": 26,
-   "title": "Issue resolution time (KPI 1.2, simüle)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 6,
-    "x": 6,
-    "y": 61
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_issue_resolution_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_issue_resolution_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "h",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 8.4
-       },
-       {
-        "color": "red",
-        "value": 12
-       }
-      ]
-     },
-     "noValue": "N/A (bugfix rolü yok)"
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
-  },
-  {
-   "id": 27,
-   "title": "Dynamic slicing success rate (WP3, hedef ≥%85, simüle)",
-   "type": "gauge",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 6,
-    "x": 12,
-    "y": 61
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_slicing_success_rate_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_slicing_success_rate_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percentunit",
-     "min": 0,
-     "max": 1,
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 0.7
-       },
-       {
-        "color": "green",
-        "value": 0.85
-       }
-      ]
-     },
-     "noValue": "N/A (bugfix rolü yok)"
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   },
-   "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
-  },
-  {
-   "id": 28,
-   "title": "Customer-reported issues (KPI 6.2, simüle)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 6,
-    "x": 18,
-    "y": 61
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(increase(kio_issue_customer_reported_count{kio_id=\"$kio_id\"}[$__range]))",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       }
-      ]
-     },
-     "noValue": "N/A (bugfix rolü yok)"
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
-  },
-  {
-   "id": 29,
-   "title": "Bug-fix / Issue resolution time trendi (saat, simüle)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 0,
-    "y": 67
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_bugfix_duration_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_bugfix_duration_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "bug-fix time (KPI 6.1)",
-     "refId": "A",
-     "range": true
-    },
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_issue_resolution_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_issue_resolution_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "issue resolution (KPI 1.2)",
-     "refId": "B",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "h",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 10,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 30,
-   "title": "Dynamic slicing success rate trendi (simüle)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 67
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_slicing_success_rate_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_slicing_success_rate_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "success rate",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percentunit",
-     "min": 0,
-     "max": 1,
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 10,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 31,
-   "title": "Model Karşılaştırması & Veri Kaynağı (idt4gdc-grafana-demo tarzından uyarlandı)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 75
-   },
-   "panels": []
-  },
-  {
-   "id": 32,
-   "title": "Veri kaynağı (tok/s) — REAL vs SIMULATED",
-   "type": "stat",
-   "description": "KIO2_REAL_LLM_ENABLED açıkken gerçek Ollama çağrısı başarılıysa 'real', Ollama'ya ulaşılamayıp simülasyona düşüldüyse 'simulated' sayılır. Son 30 dakikada hangi kaynaktan kaç istek geldiğini gösterir.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 0,
-    "y": 76
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (source) (increase(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[30m]))",
-     "legendFormat": "{{source}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "blue",
-        "value": null
-       }
-      ]
-     }
-    },
-    "overrides": [
-     {
-      "matcher": {
-       "id": "byRegexp",
-       "options": ".*real.*"
-      },
-      "properties": [
-       {
-        "id": "color",
-        "value": {
-         "mode": "fixed",
-         "fixedColor": "green"
-        }
-       }
-      ]
-     },
-     {
-      "matcher": {
-       "id": "byRegexp",
-       "options": ".*simulated.*"
-      },
-      "properties": [
-       {
-        "id": "color",
-        "value": {
-         "mode": "fixed",
-         "fixedColor": "orange"
-        }
-       }
-      ]
-     }
-    ]
-   },
-   "options": {
-    "colorMode": "background",
-    "graphMode": "none",
-    "justifyMode": "auto",
-    "orientation": "horizontal",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "value_and_name"
-   }
-  },
-  {
-   "id": 33,
-   "title": "Energy Consumption by Model",
-   "description": "idt4gdc-grafana-demo'daki aynı isimli panelden esinlenildi. Postgres+rawSql yerine bizim PromQL/VictoriaMetrics verimizle: tüm KIO'ların (llm etiketine göre) enerji tüketim oranı karşılaştırması ($kio_id filtresi yok, kasıtlı — model bazlı kıyaslama).",
-   "type": "barchart",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 8,
-    "y": 76
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (llm) (rate(kio_llm_energy_joules[10m]))",
-     "legendFormat": "{{llm}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "transformations": [
-    {
-     "id": "reduce",
-     "options": {
-      "reducers": [
-       "lastNotNull"
-      ]
-     }
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "watt",
-     "custom": {}
-    },
-    "overrides": []
-   },
-   "options": {
-    "orientation": "auto",
-    "xTickLabelRotation": 0,
-    "showValue": "always",
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    }
-   }
-  },
-  {
-   "id": 34,
-   "title": "Accuracy (fix@1) vs Energy Trade-off — by model",
-   "description": "idt4gdc-grafana-demo'daki 'Accuracy vs Energy Trade-off' panelinden uyarlandı. KIO2 (bugfix rolü) için fix@1 başarı oranı ile enerji tüketim oranını yan yana gösterir. fix@1 henüz FocusTracer'a bağlı değil, yer tutucu değer — bkz. docs/AI4SWENG_KPI_Metrik_Referansi. Sadece bugfix rolündeki KIO'larda (şu an KIO2) veri olur.",
-   "type": "barchart",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 16,
-    "y": 76
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (llm) (rate(kio_fix_attempt_count{outcome=\"success\"}[30m])) / clamp_min(sum by (llm) (rate(kio_fix_attempt_count[30m])),0.001)",
-     "legendFormat": "fix@1 success rate",
-     "refId": "A",
-     "range": true
-    },
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (llm) (rate(kio_llm_energy_joules[30m]))",
-     "legendFormat": "energy rate (J/s)",
-     "refId": "B",
-     "range": true
-    }
-   ],
-   "transformations": [
-    {
-     "id": "reduce",
-     "options": {
-      "reducers": [
-       "lastNotNull"
-      ]
-     }
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short"
-    },
-    "overrides": [
-     {
-      "matcher": {
-       "id": "byFrameRefID",
-       "options": "A"
-      },
-      "properties": [
-       {
-        "id": "unit",
-        "value": "percentunit"
-       }
-      ]
-     },
-     {
-      "matcher": {
-       "id": "byFrameRefID",
-       "options": "B"
-      },
-      "properties": [
-       {
-        "id": "unit",
-        "value": "watt"
-       },
-       {
-        "id": "custom.axisPlacement",
-        "value": "right"
-       }
-      ]
-     }
-    ]
-   },
-   "options": {
-    "orientation": "auto",
-    "xTickLabelRotation": 0,
-    "showValue": "always",
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    }
-   }
-  },
-  {
-   "id": 35,
-   "title": "Gösterge Görünümü — Hata, Verim, Doğruluk (gauge)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 83
-   },
-   "panels": []
-  },
-  {
-   "id": 36,
-   "title": "Error rate % (gösterge)",
-   "type": "gauge",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 0,
-    "y": 84
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "100 * sum(rate(kio_request_error_count{kio_id=\"$kio_id\"}[5m])) / clamp_min(sum(rate(kio_request_count{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percent",
-     "min": 0,
-     "max": 100,
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 5
-       },
-       {
-        "color": "red",
-        "value": 15
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   }
-  },
-  {
-   "id": 37,
-   "title": "Avg tokens/sec (gösterge)",
-   "type": "gauge",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 8,
-    "y": 84
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "min": 0,
-     "max": 500,
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 50
-       },
-       {
-        "color": "green",
-        "value": 200
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   }
-  },
-  {
-   "id": 38,
-   "title": "Avg accuracy (gösterge)",
-   "type": "gauge",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 16,
-    "y": 84
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_request_accuracy_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_request_accuracy_count{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percentunit",
-     "min": 0,
-     "max": 1,
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 0.7
-       },
-       {
-        "color": "green",
-        "value": 0.85
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   },
-   "description": "fix@1 (kio.request.accuracy) hâlâ simüle bir değer — bkz. Bölüm 9.4/9.7 (KIO7 kapsamı)."
-  },
-  {
-   "id": 39,
-   "title": "Güç, Verimlilik ve Karbon (tahmini)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 90
-   },
-   "panels": []
-  },
-  {
-   "id": 40,
-   "title": "Anlık Güç (W)",
-   "type": "gauge",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 0,
-    "y": 91
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[5m]))",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "watt",
-     "min": 0,
-     "max": 100,
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 20
-       },
-       {
-        "color": "red",
-        "value": 50
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   },
-   "description": "kio.llm.energy_joules'un rate'i zaten J/s = Watt; gerçek modda gerçek GPU gücü, simüle modda model-başı sabit katsayıdan."
-  },
-  {
-   "id": 41,
-   "title": "Verimlilik (tok/W)",
-   "type": "gauge",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 8,
-    "y": 91
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "(sum(rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[5m])),0.001)) / clamp_min(sum(rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "min": 0,
-     "max": 50,
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 5
-       },
-       {
-        "color": "green",
-        "value": 15
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   },
-   "description": "Ortalama tok/s ÷ Watt — 'performance per watt' kavramının bizim veriyle karşılığı. Yeni bir ölçüm gerekmez, saf PromQL türetmesi."
-  },
-  {
-   "id": 42,
-   "title": "Kümülatif Karbon (kg CO2e, tahmini)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 16,
-    "y": 91
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(kio_llm_energy_joules{kio_id=\"$kio_id\"}) / 3600000 * 0.4",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "fixed",
-      "fixedColor": "blue"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "blue",
-        "value": null
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "0.4 kg CO2e/kWh sabit bir grid-ortalama varsayımıyla enerjiden türetilmiş TAHMİNİ değer — gerçek bir karbon ölçümü değil. Kümülatif (süreç başından beri) olduğu için sağlık eşiği yok, nötr renk."
-  },
-  {
-   "id": 43,
-   "title": "GPU Sıcaklığı (gerçek — yalnızca kio2-sim gerçek modda)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 97
-   },
-   "panels": []
-  },
-  {
-   "id": 44,
-   "title": "GPU Sıcaklığı (°C)",
-   "type": "gauge",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 0,
-    "y": 98
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_llm_gpu_temperature_celsius_sum{kio_id=\"$kio_id\"}[5m]))/clamp_min(sum(rate(kio_llm_gpu_temperature_celsius_count{kio_id=\"$kio_id\"}[5m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "celsius",
-     "min": 0,
-     "max": 100,
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 70
-       },
-       {
-        "color": "red",
-        "value": 85
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   },
-   "description": "Yalnızca KIO2_REAL_LLM_ENABLED=true iken VE power-exporter/NVML gerçekten erişilebilirken veri üretir (kio.llm.gpu_temperature_celsius, source=real). Kapalıyken veya kaynak yokken bu panelde 'No data' görmek beklenen davranıştır — hiçbir zaman uydurulmaz."
-  },
-  {
-   "id": 45,
-   "title": "Gerçek vs Simüle Karşılaştırması (Before/After)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 104
-   },
-   "panels": []
-  },
-  {
-   "id": 46,
-   "title": "Enerji oranı: Simulated vs Real (W)",
-   "type": "barchart",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 0,
-    "y": 105
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (source) (rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[10m]))",
-     "legendFormat": "{{source}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "transformations": [
-    {
-     "id": "reduce",
-     "options": {
-      "reducers": [
-       "lastNotNull"
-      ]
-     }
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "watt",
-     "custom": {}
-    },
-    "overrides": []
-   },
-   "options": {
-    "orientation": "auto",
-    "xTickLabelRotation": 0,
-    "showValue": "always",
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    }
-   },
-   "description": "source=real|simulated etiketine göre kırılmış ortalama güç — kio2-sim'in gerçek modu açıkken bile, geçmişte simüle modda toplanan veri varsa iki bar birden görünebilir."
-  },
-  {
-   "id": 47,
-   "title": "Ortalama tok/s: Simulated vs Real",
-   "type": "barchart",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 8,
-    "y": 105
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (source) (rate(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"}[10m])) / clamp_min(sum by (source) (rate(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}[10m])),0.001)",
-     "legendFormat": "{{source}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "transformations": [
-    {
-     "id": "reduce",
-     "options": {
-      "reducers": [
-       "lastNotNull"
-      ]
-     }
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "custom": {}
-    },
-    "overrides": []
-   },
-   "options": {
-    "orientation": "auto",
-    "xTickLabelRotation": 0,
-    "showValue": "always",
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    }
-   }
-  },
-  {
-   "id": 48,
-   "title": "Ortalama gecikme (ms): Simulated vs Real",
-   "type": "barchart",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 16,
-    "y": 105
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (source) (rate(kio_request_duration_ms_sum{kio_id=\"$kio_id\"}[10m])) / clamp_min(sum by (source) (rate(kio_request_duration_ms_count{kio_id=\"$kio_id\"}[10m])),0.001)",
-     "legendFormat": "{{source}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "transformations": [
-    {
-     "id": "reduce",
-     "options": {
-      "reducers": [
-       "lastNotNull"
-      ]
-     }
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms",
-     "custom": {}
-    },
-    "overrides": []
-   },
-   "options": {
-    "orientation": "auto",
-    "xTickLabelRotation": 0,
-    "showValue": "always",
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    }
-   }
-  },
-  {
-   "id": 49,
-   "title": "D1.1 Gerçek Proje KPI'ları — kio3/kio4 (nlp-requirements / architecture-to-code, hepsi SİMÜLE)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 112
-   },
-   "panels": []
-  },
-  {
-   "id": 50,
-   "title": "Code generation speed (KPI 1.1, simüle)",
-   "type": "stat",
-   "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; kio2-sim'de rol farklı olduğu için N/A beklenir.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 0,
-    "y": 113
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_codegen_duration_minutes_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_codegen_duration_minutes_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "m",
-     "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 85
-       },
-       {
-        "color": "red",
-        "value": 100
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 51,
-   "title": "Code quality improvement (KPI 3.1, simüle)",
-   "type": "stat",
-   "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; düşük yüzde = baseline'a göre daha az kalite sorunu (D1.1 tanımı böyle).",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 8,
-    "y": 113
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_code_quality_score_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_code_quality_score_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percent",
-     "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 85
-       },
-       {
-        "color": "red",
-        "value": 100
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 52,
-   "title": "Review score (KPI 3.2, simüle, yalnızca KIO4)",
-   "type": "gauge",
-   "description": "Yalnızca architecture-to-code rolünde (kio4) üretilir; kio2-sim ve kio3'te N/A beklenen davranıştır.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 16,
-    "y": 113
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_review_score_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_review_score_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "min": 0,
-     "max": 5,
-     "noValue": "N/A (yalnızca architecture-to-code rolünde)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 3.5
-       },
-       {
-        "color": "green",
-        "value": 4.0
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "showThresholdLabels": false,
-    "showThresholdMarkers": true
-   }
-  },
-  {
-   "id": 53,
-   "title": "D1.1 Gerçek Proje KPI'ları — kio7 (ai-sysdev, hepsi SİMÜLE)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 119
-   },
-   "panels": []
-  },
-  {
-   "id": 54,
-   "title": "Developer productivity (KPI 4.1, simüle)",
-   "type": "stat",
-   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; diğer KIO'larda N/A beklenen davranıştır.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 0,
-    "y": 120
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_dev_productivity_features_per_day_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_dev_productivity_features_per_day_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "noValue": "N/A (ai-sysdev rolü yok)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 0.7
-       },
-       {
-        "color": "green",
-        "value": 0.9
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 55,
-   "title": "Time-to-market (KPI 5.1, simüle)",
-   "type": "stat",
-   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~30-45 gün, düşük değer iyi.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 8,
-    "y": 120
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_time_to_market_days_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_time_to_market_days_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "d",
-     "noValue": "N/A (ai-sysdev rolü yok)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 35
-       },
-       {
-        "color": "red",
-        "value": 45
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 56,
-   "title": "Annual cost saving (KPI 7.1, simüle)",
-   "type": "stat",
-   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 8,
-    "x": 16,
-    "y": 120
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_cost_saving_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_cost_saving_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percent",
-     "noValue": "N/A (ai-sysdev rolü yok)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 15
-       },
-       {
-        "color": "green",
-        "value": 20
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 57,
-   "title": "Refactoring effort reduction (KPI 9.1, simüle)",
-   "type": "stat",
-   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~4-6 saat/özellik, düşük değer iyi.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 12,
-    "x": 0,
-    "y": 126
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_refactoring_hours_per_feature_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_refactoring_hours_per_feature_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "h",
-     "noValue": "N/A (ai-sysdev rolü yok)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 4
-       },
-       {
-        "color": "red",
-        "value": 5.5
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 58,
-   "title": "Technical debt reduction (KPI 9.2, simüle)",
-   "type": "stat",
-   "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~3-5 saat/100 satır, düşük değer iyi.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 6,
-    "w": 12,
-    "x": 12,
-    "y": 126
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_tech_debt_hours_per_100loc_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_tech_debt_hours_per_100loc_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "h",
-     "noValue": "N/A (ai-sysdev rolü yok)",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 3
-       },
-       {
-        "color": "red",
-        "value": 4.5
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  }
- ]
 }

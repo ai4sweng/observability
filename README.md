@@ -85,7 +85,7 @@ retries against it until it's up, then start landing traces automatically.
 
 Tear down (and wipe data): `docker compose down -v`
 
-## The four KIO simulators
+## The six KIO simulators
 
 | KIO | LLM | Task type | Trigger | Notes |
 |-----|-----|-----------|---------|-------|
@@ -93,22 +93,27 @@ Tear down (and wipe data): `docker compose down -v`
 | kio3 | `llama3.1:8b` | nlp-requirements (D1.1's KIO3) | internal timer **+** NATS (`kio.tasks.kio3`) | random dummy telemetry; D1.1 KPI 1.1 + 3.1 (simulated, `KIO_REAL_KPI_ROLE=nlp-requirements`) |
 | kio4 | `gpt-4o-mini` | architecture-to-code (D1.1's KIO4) | internal timer **+** NATS (`kio.tasks.kio4`) | random dummy telemetry (non-zero cost); D1.1 KPI 1.1 + 3.1 + 3.2 (simulated, `KIO_REAL_KPI_ROLE=architecture-to-code`) |
 | kio7 | `claude-sonnet` | ai-sysdev (D1.1's KIO7) | internal timer **+** NATS (`kio.tasks.kio7`) | random dummy telemetry; D1.1 KPI 4.1 + 5.1 + 7.1 + 9.1 + 9.2 (simulated, `KIO_REAL_KPI_ROLE=ai-sysdev`) — only the KPIs where KIO7 is a clear primary owner, not the full "most KPIs" D1.1 assigns it |
+| kio8 | `gemini-1.5-pro` | green-deploy (D1.1's KIO8) | internal timer only (no NATS) | random dummy telemetry; D1.1 KPI 2.1 + 2.2 + 8.3 (simulated, `KIO_REAL_KPI_ROLE=green-deploy`) |
+| kio13 | `gpt-4o-mini` | adoption (D1.1's KIO13) | internal timer only (no NATS) | random dummy telemetry; D1.1 KPI 8.1 + 8.2 (simulated, `KIO_REAL_KPI_ROLE=adoption`) — the only two D1.1 KPIs mapped to a single KIO with no co-owner |
 
 `task_type` for kio3/kio4 was renamed 2026-08 from the arbitrary
 `test-generation`/`debug` to match D1.1's actual KIO3/KIO4 identities, once
 it became clear the D1.1 KPI traceability matrix's assignments (KPI 1.1, 3.1,
 3.2) are keyed to those real roles, not to whatever this simulator happened
-to call them first. kio7 was added the same way directly against D1.1's
-KIO7 (AI-SysDev) identity.
+to call them first. kio7, kio8, kio13 were added the same way directly
+against D1.1's KIO7/KIO8/KIO13 identities — kio8/kio13 close out D1.1's last
+two uncovered KPIs (2.1/2.2/8.3 and 8.1/8.2). kio8/kio13 skip the NATS
+trigger path since they have no real dispatch target behind them yet (see
+the orchestrator's task_type routing table) — pure KPI simulators, timer-only.
 
-kio3/kio4/kio7 are otherwise still random dummy data — no real LLM is invoked
-for them. NATS-driven dispatch (via the Workflow API/Planner) is an
-*additional* trigger path, not a replacement for the internal timer — an
-earlier cut made it either/or, which meant these KIOs went completely silent
-("No data" everywhere) whenever nothing happened to call the Workflow API.
-Both paths now run side by side, so all three always keep producing baseline
-demo data. Adjust LLMs, task types, and rates in `docker-compose.yml`, or edit
-`kio-simulator/kio_simulator.py`.
+kio3/kio4/kio7/kio8/kio13 are otherwise still random dummy data — no real LLM
+is invoked for them. NATS-driven dispatch (via the Workflow API/Planner) is an
+*additional* trigger path for kio3/kio4/kio7, not a replacement for the
+internal timer — an earlier cut made it either/or, which meant these KIOs
+went completely silent ("No data" everywhere) whenever nothing happened to
+call the Workflow API. Both paths now run side by side for those three, so
+they always keep producing baseline demo data. Adjust LLMs, task types, and
+rates in `docker-compose.yml`, or edit `kio-simulator/kio_simulator.py`.
 
 ### Gerçek vs Simüle Veri Haritası
 
@@ -127,6 +132,8 @@ turuncu=simulated, bkz. "Veri kaynağı" paneli):
 | D1.1 KPI'ları (bug-fix time, issue resolution, slicing success, customer-reported) | her zaman simüle (yalnızca kio2-sim'de, `KIO_REAL_KPI_ROLE=bugfix`) | her zaman simüle | uygulanamaz (kio3/kio4'ün rolü farklı — bkz. aşağıki satır) |
 | D1.1 KPI'ları (codegen duration, code quality, review score) | uygulanamaz (bu KPI'lar kio3/kio4'e özel) | uygulanamaz | her zaman simüle (`KIO_REAL_KPI_ROLE=nlp-requirements`/`architecture-to-code`) |
 | D1.1 KPI'ları (dev productivity, time-to-market, cost saving, refactoring/tech-debt reduction) | uygulanamaz (bu KPI'lar kio7'ye özel) | uygulanamaz | uygulanamaz — yalnızca **kio7**'de, her zaman simüle (`KIO_REAL_KPI_ROLE=ai-sysdev`) |
+| D1.1 KPI'ları (lifecycle energy, deploy energy efficiency, cross-arch build success) | uygulanamaz (bu KPI'lar kio8'e özel) | uygulanamaz | uygulanamaz — yalnızca **kio8**'de, her zaman simüle (`KIO_REAL_KPI_ROLE=green-deploy`) |
+| D1.1 KPI'ları (adoption rate, active usage, satisfaction/MOS) | uygulanamaz (bu KPI'lar kio13'e özel) | uygulanamaz | uygulanamaz — yalnızca **kio13**'te, her zaman simüle (`KIO_REAL_KPI_ROLE=adoption`) |
 | Kümülatif CO2e (tahmini) | simüle enerjiden türetilmiş tahmin | gerçek enerjiden türetilmiş tahmin (kendisi hâlâ bir tahmin, gerçek karbon ölçümü değil) | simüle enerjiden türetilmiş tahmin |
 
 fix@1 ve tüm D1.1 proje-KPI'ları hiçbir KIO'da "gerçek" olmuyor çünkü bunların
@@ -300,7 +307,7 @@ panel ever comes up empty, the same Trace ID can always be opened via
 alınan tüm KPI'ların (1.1–9.2) ve iş-paketi/görev seviyesi metriklerin tam kataloğu, ve
 hangi KIO'ya hangi KPI'nın bağlı olduğunun haritası.
 
-D1.1'e göre dört KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeniyle etkinleştirildi
+D1.1'e göre altı KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeniyle etkinleştirildi
 (`docker-compose.yml`), her biri `kio_simulator.py`'de kendi metrik setini yayınlıyor
 (isim/birim doğrudan D1.1'den, değerler henüz simüle):
 
@@ -324,17 +331,30 @@ D1.1'e göre dört KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeni
   - `kio_cost_saving_pct` — KPI 7.1 (Annual cost saving)
   - `kio_refactoring_hours_per_feature` — KPI 9.1 (Refactoring effort reduction)
   - `kio_tech_debt_hours_per_100loc` — KPI 9.2 (Technical debt reduction)
+- **kio8** (`KIO_REAL_KPI_ROLE=green-deploy`, D1.1'de "Cross-Architecture / Energy-Efficient
+  Deploy" — KPI 2.1/2.2'de KIO7/KIO10 ile ortak, KPI 8.3'te tek sahip):
+  - `kio_lifecycle_energy_pct_of_baseline` — KPI 2.1 (Lifecycle energy reduction)
+  - `kio_deploy_energy_tokens_per_s_per_w` — KPI 2.2 (Deployment energy efficiency)
+  - `kio_cross_arch_build_success_count` — KPI 8.3 (Cross-Architecture Build Success Rate)
+- **kio13** (`KIO_REAL_KPI_ROLE=adoption`, D1.1'de "Adoption & Usage Tracking" — D1.1'in
+  hiçbir başka KIO ile paylaşmadığı tek iki KPI'sının sahibi):
+  - `kio_adoption_active_user_pct` — KPI 8.1 (Adoption rate)
+  - `kio_adoption_usage_pct`, `kio_adoption_mos_score` — KPI 8.2 (Active usage & satisfaction)
 
 Not: kio3/kio4'ün `task_type`'ı 2026-08'de (`test-generation`/`debug` → `nlp-requirements`/
 `architecture-to-code`) D1.1'in gerçek KIO3/KIO4 kimlikleriyle eşleşecek şekilde yeniden
 adlandırıldı — D1.1'in KPI atamaları bu gerçek rollere bağlı, simülatörün ilk seçtiği
-gelişigüzel isimlere değil. kio7 doğrudan D1.1'in KIO7 kimliğine göre eklendi.
+gelişigüzel isimlere değil. kio7/kio8/kio13 doğrudan D1.1'in ilgili kimliklerine göre
+eklendi. kio7'nin `ai-sysdev` rolü kasıtlı olarak KPI 2.1/2.2'yi dışarıda bırakmıştı (bkz.
+`kio_simulator.py` yorumu) — bu ikisi burada kio8 altında, D1.1'in daha net/spesifik sahibi
+olarak uygulandı.
 
 KIO Detail dashboard'unda "D1.1 Gerçek Proje KPI'ları" bölümleri bu metrikleri gösterir
 (yalnızca ilgili `KIO_REAL_KPI_ROLE`'e sahip KIO seçiliyken veri dolu gelir, diğerlerinde
-"N/A" — bkz. "Gerçek vs Simüle Veri Haritası"). D1.1'de kendisine KPI ataması bulunan dört
-KIO'nun (KIO2, KIO3, KIO4, KIO7) tamamı artık entegre; bkz. referans dokümanının "Diğer
-KIO'lar — Durum" bölümü.
+"N/A" — bkz. "Gerçek vs Simüle Veri Haritası"). D1.1'de kendisine KPI ataması bulunan tüm
+KIO'ların (KIO2, KIO3, KIO4, KIO7, KIO8, KIO13) tamamı artık entegre; D1.1'in 16 KPI'sının
+(1.1–9.2) tamamı en az bir KIO üzerinden simüle veriyle görünür durumda. Bkz. referans
+dokümanının "Diğer KIO'lar — Durum" bölümü.
 
 ## Gerçek LLM entegrasyonu (KIO2, opsiyonel — NVIDIA GPU gerekir)
 

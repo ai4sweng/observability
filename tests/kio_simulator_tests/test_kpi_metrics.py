@@ -140,3 +140,78 @@ def test_ai_sysdev_role_does_not_touch_other_roles_kpis(fresh_kio_module):
     assert m.bugfix_duration_hist is None
     assert m.codegen_duration_hist is None
     assert m.review_score_hist is None
+
+
+def test_green_deploy_role_emits_energy_kpis(fresh_kio_module, monkeypatch):
+    m = fresh_kio_module(KIO_REAL_KPI_ROLE="green-deploy")
+    fake_lifecycle = _FakeInstrument()
+    fake_deploy_eff = _FakeInstrument()
+    fake_cross_arch = _FakeInstrument()
+    monkeypatch.setattr(m, "lifecycle_energy_hist", fake_lifecycle)
+    monkeypatch.setattr(m, "deploy_energy_eff_hist", fake_deploy_eff)
+    monkeypatch.setattr(m, "cross_arch_build_counter", fake_cross_arch)
+    monkeypatch.setattr(m.random, "random", lambda: 0.99)  # skip the rare build-success branch
+
+    m.emit_real_kpi_metrics({"kio.id": "kio8"}, is_error=False)
+
+    assert len(fake_lifecycle.calls) == 1
+    value, labels = fake_lifecycle.calls[0]
+    assert 78.0 <= value <= 96.0
+    assert labels["source"] == "simulated"
+
+    assert len(fake_deploy_eff.calls) == 1
+    assert 6.5 <= fake_deploy_eff.calls[0][0] <= 10.5
+
+    # is_error is irrelevant here; only random() gates this branch, and it's
+    # pinned above the 0.05 threshold.
+    assert fake_cross_arch.calls == []
+
+
+def test_green_deploy_role_cross_arch_build_fires_on_rare_branch(fresh_kio_module, monkeypatch):
+    m = fresh_kio_module(KIO_REAL_KPI_ROLE="green-deploy")
+    monkeypatch.setattr(m, "lifecycle_energy_hist", _FakeInstrument())
+    monkeypatch.setattr(m, "deploy_energy_eff_hist", _FakeInstrument())
+    fake_cross_arch = _FakeInstrument()
+    monkeypatch.setattr(m, "cross_arch_build_counter", fake_cross_arch)
+    monkeypatch.setattr(m.random, "random", lambda: 0.0)  # force the <0.05 branch to fire
+
+    m.emit_real_kpi_metrics({"kio.id": "kio8"}, is_error=False)
+
+    assert len(fake_cross_arch.calls) == 1
+    assert fake_cross_arch.calls[0][0] == 1
+
+
+def test_green_deploy_role_does_not_touch_other_roles_kpis(fresh_kio_module):
+    m = fresh_kio_module(KIO_REAL_KPI_ROLE="green-deploy")
+    assert m.bugfix_duration_hist is None
+    assert m.dev_productivity_hist is None
+    assert m.adoption_rate_hist is None
+
+
+def test_adoption_role_emits_both_kpis(fresh_kio_module, monkeypatch):
+    m = fresh_kio_module(KIO_REAL_KPI_ROLE="adoption")
+    names = ("adoption_rate_hist", "adoption_usage_hist", "adoption_mos_hist")
+    fakes = {name: _FakeInstrument() for name in names}
+    for name, fake in fakes.items():
+        monkeypatch.setattr(m, name, fake)
+
+    m.emit_real_kpi_metrics({"kio.id": "kio13"}, is_error=False)
+
+    ranges = {
+        "adoption_rate_hist": (32.0, 58.0),
+        "adoption_usage_hist": (45.0, 68.0),
+        "adoption_mos_hist": (3.4, 4.3),
+    }
+    for name, fake in fakes.items():
+        assert len(fake.calls) == 1, name
+        value, labels = fake.calls[0]
+        lo, hi = ranges[name]
+        assert lo <= value <= hi, (name, value)
+        assert labels["source"] == "simulated"
+
+
+def test_adoption_role_does_not_touch_other_roles_kpis(fresh_kio_module):
+    m = fresh_kio_module(KIO_REAL_KPI_ROLE="adoption")
+    assert m.bugfix_duration_hist is None
+    assert m.lifecycle_energy_hist is None
+    assert m.dev_productivity_hist is None

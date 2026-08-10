@@ -91,6 +91,8 @@ REPO_SCAN_PATH = os.environ.get("REPO_SCAN_PATH", "/app")
 #   "nlp-requirements"      -> KIO3 (NLP -> Formal Requirements)
 #   "architecture-to-code"  -> KIO4 (Architecture-to-Code Planner)
 #   "ai-sysdev"             -> KIO7 (AI-SysDev)
+#   "green-deploy"          -> KIO8 (Cross-Architecture / Energy-Efficient Deploy)
+#   "adoption"              -> KIO13 (Adoption & Usage Tracking)
 # Others can be added the same way later — see
 # docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
 KIO_REAL_KPI_ROLE = os.environ.get("KIO_REAL_KPI_ROLE", "")
@@ -450,6 +452,28 @@ else:
     dev_productivity_hist = time_to_market_hist = cost_saving_hist = None
     refactoring_hist = tech_debt_hist = None
 
+# KIO8 in D1.1 = the KIO uniquely tied to KPI 8.3 (Cross-Architecture Build
+# Success Rate), and one of three KIOs (with KIO7/KIO10) tied to KPI 2.1/2.2
+# (energy). KIO7's "ai-sysdev" role above deliberately left 2.1/2.2 out
+# (see comment above) since neither was covered anywhere yet; they're
+# implemented here under KIO8 instead, its clearer/more specific owner.
+if KIO_REAL_KPI_ROLE == "green-deploy":
+    lifecycle_energy_hist = meter.create_histogram("kio.lifecycle_energy.pct_of_baseline", unit="%")       # KPI 2.1
+    deploy_energy_eff_hist = meter.create_histogram("kio.deploy_energy.tokens_per_s_per_w", unit="1")      # KPI 2.2
+    cross_arch_build_counter = meter.create_counter("kio.cross_arch_build.success_count", unit="1")        # KPI 8.3
+else:
+    lifecycle_energy_hist = deploy_energy_eff_hist = cross_arch_build_counter = None
+
+# KIO13 in D1.1 = the KIO uniquely tied to KPI 8.1 (Adoption rate) and
+# KPI 8.2 (Active usage & satisfaction) — the only two KPIs D1.1 maps to a
+# single KIO with no co-owners, so both are implemented together here.
+if KIO_REAL_KPI_ROLE == "adoption":
+    adoption_rate_hist = meter.create_histogram("kio.adoption.active_user_pct", unit="%")  # KPI 8.1
+    adoption_usage_hist = meter.create_histogram("kio.adoption.usage_pct", unit="%")       # KPI 8.2 (usage half)
+    adoption_mos_hist = meter.create_histogram("kio.adoption.mos_score", unit="1")         # KPI 8.2 (MOS half)
+else:
+    adoption_rate_hist = adoption_usage_hist = adoption_mos_hist = None
+
 # --------------------------------------------------------------------------- #
 # Logs pipeline — unstructured / string telemetry
 # --------------------------------------------------------------------------- #
@@ -662,6 +686,32 @@ def emit_real_kpi_metrics(labels, is_error):
         # KPI 9.2 — Technical debt reduction: baseline ~3-5h/100loc.
         tech_debt_hist.record(round(random.uniform(1.8, 3.5), 2), labels_kpi)
 
+    elif KIO_REAL_KPI_ROLE == "green-deploy":
+        # KIO8 (Cross-Architecture / Energy-Efficient Deploy).
+        # KPI 2.1 — Lifecycle energy reduction: baseline 100%, target <=85%
+        # (>=15% reduction). Realistic variance, occasionally short of target.
+        lifecycle_energy_hist.record(round(random.uniform(78.0, 96.0), 1), labels_kpi)
+        # KPI 2.2 — Deployment energy efficiency (tokens/s/W): reported as a
+        # concrete absolute number rather than "% of baseline" for the same
+        # dashboard-legibility reason as the KIO2/KIO3/KIO4 metrics above; an
+        # assumed unoptimized baseline of ~7.5 tok/s/W, target >=15% improvement.
+        deploy_energy_eff_hist.record(round(random.uniform(6.5, 10.5), 2), labels_kpi)
+        # KPI 8.3 — Cross-Architecture Build Success Rate: target >=1 verified
+        # heterogeneous target (FPGA/ARM/RISC-V); rare, discrete event, not
+        # something that happens on every simulated request.
+        if random.random() < 0.05:
+            cross_arch_build_counter.add(1, labels_kpi)
+
+    elif KIO_REAL_KPI_ROLE == "adoption":
+        # KIO13 (Adoption & Usage Tracking).
+        # KPI 8.1 — Adoption rate: baseline 0%, target >=50% within 2 pilot
+        # sprints. Simulated mid-ramp, since a fixed pilot has no "day zero".
+        adoption_rate_hist.record(round(random.uniform(32.0, 58.0), 1), labels_kpi)
+        # KPI 8.2 — Active usage & satisfaction: baseline usage ~0%/MOS ~3.0,
+        # target usage >=60% / MOS >=4.0.
+        adoption_usage_hist.record(round(random.uniform(45.0, 68.0), 1), labels_kpi)
+        adoption_mos_hist.record(round(random.uniform(3.4, 4.3), 2), labels_kpi)
+
 
 # --------------------------------------------------------------------------- #
 # Background heartbeat (Contract §2.3)
@@ -789,7 +839,7 @@ def simulate_request(session_id: str | None = None):
         # trace above so both systems can be correlated by a human.
         emit_langfuse_trace(session_id, in_tokens, out_tokens, cost, is_error, error_type, summary_text)
 
-        # Real-project KPIs (D1.1) — only emits anything for "bugfix"-role KIOs.
+        # Real-project KPIs (D1.1) — no-op unless KIO_REAL_KPI_ROLE is set.
         emit_real_kpi_metrics(labels, is_error)
 
         return {
