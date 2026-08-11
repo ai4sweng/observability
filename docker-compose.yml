@@ -359,10 +359,12 @@ services:
   # kio2-sim: the ORIGINAL simulator, kept running in parallel as a contract
   # baseline / comparison reference now that the real FocusTracer module will
   # eventually take over kio_id=kio2 (see kio2-integration/README.md).
-  # KIO2_REAL_LLM_ENABLED is back ON here (2026-08) for demo purposes — the
-  # real-Ollama/real-GPU-energy path works independently of whether FocusTracer
-  # has connected yet, so there's no need to wait for that handoff just to show
-  # a manager real tok/s and energy numbers.
+  # KIO2_REAL_LLM_ENABLED defaults to false (override via .env, see
+  # .env.example) — the real-Ollama/real-GPU-energy path works independently
+  # of whether FocusTracer has connected yet, so it's available to flip on
+  # any time (e.g. for a demo) without waiting for that handoff; it stays off
+  # by default since it needs a native Ollama + GPU on the host, which a
+  # headless remote test server typically doesn't have.
   # KIO_REAL_KPI_ROLE is back ON ("bugfix", 2026-08) too: the D1.1 KPI panels
   # (bug-fix time, issue resolution time, slicing success rate, customer-
   # reported issues) were sitting on permanent "No data" with it empty, which
@@ -378,11 +380,11 @@ services:
       KIO_TASK_TYPE: code-analysis
       SERVICE_VERSION: "1.2.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "5000"
-      HEARTBEAT_INTERVAL_S: "60"
-      REQUEST_INTERVAL_S: "3"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+      REQUEST_INTERVAL_S: "${KIO2_REQUEST_INTERVAL_S:-3}"
       KIO_REAL_KPI_ROLE: "bugfix"
-      KIO2_REAL_LLM_ENABLED: "true"
+      KIO2_REAL_LLM_ENABLED: ${KIO2_REAL_LLM_ENABLED:-false}
       OLLAMA_ENDPOINT: "http://host.docker.internal:11434"
       OLLAMA_MODEL: "qwen2.5:3b"
       GPU_POWER_EXPORTER_URL: "http://host.docker.internal:9400/power"
@@ -419,9 +421,9 @@ services:
       KIO_TASK_TYPE: nlp-requirements
       SERVICE_VERSION: "0.9.1"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "5000"
-      HEARTBEAT_INTERVAL_S: "60"
-      REQUEST_INTERVAL_S: "2"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+      REQUEST_INTERVAL_S: "${KIO3_REQUEST_INTERVAL_S:-2}"
       # NATS-driven: tasks ALSO arrive via kio.tasks.kio3 (published by the
       # Planner) on top of this KIO's own internal timer (see kio_simulator.py
       # main() — NATS is an additional trigger path, not a replacement).
@@ -450,9 +452,9 @@ services:
       KIO_TASK_TYPE: architecture-to-code
       SERVICE_VERSION: "2.0.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "5000"
-      HEARTBEAT_INTERVAL_S: "60"
-      REQUEST_INTERVAL_S: "4"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+      REQUEST_INTERVAL_S: "${KIO4_REQUEST_INTERVAL_S:-4}"
       NATS_ENABLED: "true"
       NATS_URL: "nats://nats:4222"
       # D1.1 KPI 1.1 + 3.1 (shared with kio3) + 3.2 (Review score increase,
@@ -480,9 +482,9 @@ services:
       KIO_TASK_TYPE: ai-sysdev
       SERVICE_VERSION: "0.5.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "5000"
-      HEARTBEAT_INTERVAL_S: "60"
-      REQUEST_INTERVAL_S: "5"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+      REQUEST_INTERVAL_S: "${KIO7_REQUEST_INTERVAL_S:-5}"
       NATS_ENABLED: "true"
       NATS_URL: "nats://nats:4222"
       # D1.1 KPI 4.1 (Developer productivity), 5.1 (Time-to-market),
@@ -512,9 +514,9 @@ services:
       KIO_TASK_TYPE: green-deploy
       SERVICE_VERSION: "0.3.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "5000"
-      HEARTBEAT_INTERVAL_S: "60"
-      REQUEST_INTERVAL_S: "5"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+      REQUEST_INTERVAL_S: "${KIO8_REQUEST_INTERVAL_S:-5}"
       # D1.1 KPI 2.1 (Lifecycle energy reduction), 2.2 (Deployment energy
       # efficiency), 8.3 (Cross-Architecture Build Success Rate), simulated —
       # see docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
@@ -538,9 +540,9 @@ services:
       KIO_TASK_TYPE: adoption
       SERVICE_VERSION: "0.3.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "5000"
-      HEARTBEAT_INTERVAL_S: "60"
-      REQUEST_INTERVAL_S: "5"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+      REQUEST_INTERVAL_S: "${KIO13_REQUEST_INTERVAL_S:-5}"
       # D1.1 KPI 8.1 (Adoption rate), 8.2 (Active usage & satisfaction),
       # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
       KIO_REAL_KPI_ROLE: "adoption"

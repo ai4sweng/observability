@@ -373,11 +373,12 @@ dokümanının "Diğer KIO'lar — Durum" bölümü.
 
 KIO2'nin gerçek modülü (FocusTracer) henüz bağlanmadığı için, o bağlanana kadar en
 azından **gerçek bir LLM'i gerçekten çalıştırıp** tokens/sec ve GPU enerjisini gerçek
-ölçmek için bu yol `kio2-sim`'de var. Varsayılan olarak kapalı tasarlanmıştı
-(`KIO2_REAL_LLM_ENABLED: "false"`), ama 2026-08'de demo amacıyla tekrar **açıldı**
-(`docker-compose.yml`'de şu an `"true"`) — bu yol FocusTracer bağlantısından bağımsız
-çalıştığı için o handoff'u beklemeye gerek yok; istenirse `"false"`'a geri çekilebilir.
-Açıkken değişen şey:
+ölçmek için bu yol `kio2-sim`'de var. Varsayılan olarak kapalı (`KIO2_REAL_LLM_ENABLED`
+default'u `docker-compose.yml`'de `"false"`) — bu yol FocusTracer bağlantısından bağımsız
+çalıştığı için istendiğinde (ör. bir demo için) `.env`'de `KIO2_REAL_LLM_ENABLED=true`
+yapılıp o handoff beklenmeden açılabilir; sadece host'ta gerçek bir Ollama + GPU
+gerektirdiği için (headless bir uzak test sunucusunda olmayabilir) varsayılan kapalı
+tutuldu. Açıkken değişen şey:
 
 - **Gerçek olan:** tokens/sec, input/output token sayısı ve latency (Ollama'nın kendi
   `eval_count`/`eval_duration`'ından), GPU enerjisi VE GPU sıcaklığı (gerçek NVML
@@ -401,7 +402,7 @@ Açıkken değişen şey:
 Kurulum (Windows veya Linux host, ikisinde de aynı adımlar):
 1. Bu bilgisayarda (container içinde değil) Ollama kurulu olsun ve model çekilmiş olsun: `ollama pull qwen2.5:3b`
 2. (Opsiyonel, gerçek enerji için) `pip install nvidia-ml-py` sonra `python tools/power_exporter.py` çalıştır — host'ta (Windows veya Linux) NVML'den okuyup `http://localhost:9400/power` üzerinden JSON servis eder (`{"watts": 87.3, "temperature_c": 61.5}` — `temperature_c` 2026-08'de KIO Detail'in GPU sıcaklığı gauge'ı için eklendi, eski exporter/NVML sürümlerinde yoksa sessizce atlanır). Bunu çalıştırmazsan enerji eski tahmini formüle döner, sistem yine de çalışır.
-3. Zaten açık (`docker-compose.yml`'de `kio2-sim` altında `KIO2_REAL_LLM_ENABLED: "true"`); kapatmak istersen `"false"` yapıp `docker compose up -d --build kio2-sim` ile yeniden başlat.
+3. Repo kökünde `.env` dosyasına `KIO2_REAL_LLM_ENABLED=true` ekleyip (yoksa `cp .env.example .env`'den başla) `docker compose up -d --build kio2-sim` ile yeniden başlat; kapatmak için satırı sil veya `false` yap (varsayılan zaten `false`).
 
 Neden bu yol (container'a GPU passthrough değil, host'ta native Ollama + ayrı bir
 power-exporter script'i)? Çünkü Linux container'ların host'un GPU'suna
