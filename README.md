@@ -58,6 +58,12 @@ mounts and standard Linux images; the only host-OS-sensitive bit
 `extra_hosts` in `docker-compose.yml`, see the "Gerçek LLM entegrasyonu"
 section below.
 
+All ports and passwords/keys are centralized: every one is overridable from a
+single repo-root `.env` file (`cp .env.example .env`, then uncomment what you
+need) — `docker-compose.yml` itself never needs editing. No `.env`? Every
+default in `.env.example` is already baked in, so `docker compose up` works
+as-is.
+
 ```bash
 cd observability
 docker compose up -d --build
@@ -427,6 +433,21 @@ of the stack (see `kio_simulator.py`'s `emit_langfuse_trace()`).
 Self-hosted via `LANGFUSE_INIT_*` "headless initialization" env vars on
 `langfuse-web`, so the org/project/API-keys exist automatically on first boot —
 no manual UI setup step, no copy-pasting keys before the KIOs can connect.
+
+**Remote Ubuntu sunucuda çalıştırıp başka bir makineden bağlanıyorsan** (ör.
+`docker compose up` bir Ubuntu sunucuda, tarayıcı senin Windows makinende):
+`NEXTAUTH_URL` ve `LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT` varsayılan olarak
+`localhost`'a işaret eder, bu da sadece Docker'ın çalıştığı makinenin
+kendisinden erişimde doğru sonuç verir. Repo kökünde bir `.env` dosyası
+oluşturup (`.env.example`'dan kopyala) `PUBLIC_HOST=<sunucunun IP/hostname'i>`
+ayarla — aksi halde Langfuse girişi (NextAuth yönlendirmesi yanlış host'a
+gider) ve multi-modal medya önizlemeleri (presigned URL'ler yanlış host'a
+işaret eder) bozulur. Core OTel telemetri (Grafana/traces/metrics/logs) ve
+Langfuse'un trace/cost verisi bundan etkilenmez — onlar zaten
+`otel-collector`/`minio` gibi Docker-internal adresler kullanıyor. Yerel
+kullanımda (Docker hangi OS'ta çalışıyorsa tarayıcı da orada açılıyorsa,
+Windows ya da Linux fark etmez) hiçbir şey yapmana gerek yok, varsayılan
+`localhost` zaten doğru.
 
 ## V2 Guideline Değerlendirmesi (2026-07-23)
 
