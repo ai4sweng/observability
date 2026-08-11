@@ -51,6 +51,13 @@ touch a database directly — exactly as the contract requires.
 
 ## Quick start
 
+Works unmodified on both Windows (Docker Desktop) and Linux (native Docker
+Engine, e.g. Ubuntu) — everything runs in containers with relative bind
+mounts and standard Linux images; the only host-OS-sensitive bit
+(`host.docker.internal` for the optional real-Ollama/GPU path) is handled via
+`extra_hosts` in `docker-compose.yml`, see the "Gerçek LLM entegrasyonu"
+section below.
+
 ```bash
 cd observability
 docker compose up -d --build
@@ -385,17 +392,27 @@ Açıkken değişen şey:
   sebeple simüle kalıyor — bir LLM cevabının "doğruluğunu" otomatik ölçecek bir referans/test
   seti yok.
 
-Kurulum:
+Kurulum (Windows veya Linux host, ikisinde de aynı adımlar):
 1. Bu bilgisayarda (container içinde değil) Ollama kurulu olsun ve model çekilmiş olsun: `ollama pull qwen2.5:3b`
-2. (Opsiyonel, gerçek enerji için) `pip install nvidia-ml-py` sonra `python tools/power_exporter.py` çalıştır — Windows host'ta NVML'den okuyup `http://localhost:9400/power` üzerinden JSON servis eder (`{"watts": 87.3, "temperature_c": 61.5}` — `temperature_c` 2026-08'de KIO Detail'in GPU sıcaklığı gauge'ı için eklendi, eski exporter/NVML sürümlerinde yoksa sessizce atlanır). Bunu çalıştırmazsan enerji eski tahmini formüle döner, sistem yine de çalışır.
+2. (Opsiyonel, gerçek enerji için) `pip install nvidia-ml-py` sonra `python tools/power_exporter.py` çalıştır — host'ta (Windows veya Linux) NVML'den okuyup `http://localhost:9400/power` üzerinden JSON servis eder (`{"watts": 87.3, "temperature_c": 61.5}` — `temperature_c` 2026-08'de KIO Detail'in GPU sıcaklığı gauge'ı için eklendi, eski exporter/NVML sürümlerinde yoksa sessizce atlanır). Bunu çalıştırmazsan enerji eski tahmini formüle döner, sistem yine de çalışır.
 3. Zaten açık (`docker-compose.yml`'de `kio2-sim` altında `KIO2_REAL_LLM_ENABLED: "true"`); kapatmak istersen `"false"` yapıp `docker compose up -d --build kio2-sim` ile yeniden başlat.
 
 Neden bu yol (container'a GPU passthrough değil, host'ta native Ollama + ayrı bir
-power-exporter script'i)? Çünkü Linux container'ların Windows host'un GPU'suna
-görünürlüğü yok (passthrough ayrıca kurulmadıkça); Ollama zaten native Windows'ta GPU'yu
-doğrudan kullanabiliyor, bu yüzden en az sürtünmeli yol bu. `_read_gpu_power_watts()`
-önce `GPU_POWER_EXPORTER_URL`'i, sonra (varsa) container'ın kendi NVML'ini dener, ikisi
-de yoksa sessizce eski tahmini değere düşer — hiçbir durumda simülatör çökmez.
+power-exporter script'i)? Çünkü Linux container'ların host'un GPU'suna
+görünürlüğü yok (passthrough ayrıca kurulmadıkça — Linux'ta `nvidia-container-toolkit`
+ile mümkün ama burada tercih edilmedi); Ollama zaten host'ta (Windows veya Linux fark
+etmez) GPU'yu doğrudan kullanabiliyor, bu yüzden en az sürtünmeli yol bu.
+`_read_gpu_power_watts()` önce `GPU_POWER_EXPORTER_URL`'i, sonra (varsa) container'ın
+kendi NVML'ini dener, ikisi de yoksa sessizce eski tahmini değere düşer — hiçbir
+durumda simülatör çökmez.
+
+**Windows/Linux farkı — `host.docker.internal`:** `OLLAMA_ENDPOINT` ve
+`GPU_POWER_EXPORTER_URL` container'dan host'a bu DNS adıyla ulaşır. Docker Desktop
+(Windows/Mac) bunu otomatik çözer; native Linux Docker Engine'de (ör. Ubuntu sunucuda
+Docker Desktop olmadan kurulu Docker) otomatik çözülmez — bu yüzden `docker-compose.yml`'de
+`kio2-sim` servisine `extra_hosts: ["host.docker.internal:host-gateway"]` eklendi
+(Docker Engine 20.10+ gerektirir). Bu satır Docker Desktop'ta da zararsızdır, aynı adrese
+çözülür — tek bir `docker-compose.yml` hem Windows hem Linux'ta değişiklik gerekmeden çalışır.
 
 ## Langfuse (LLM-specific tracing)
 

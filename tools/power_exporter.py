@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-GPU power exporter — run this NATIVELY on the Windows host (not in Docker),
-next to Ollama. Exposes the current NVIDIA GPU power draw as tiny JSON HTTP
-endpoint that kio2 (running inside a Linux container) can poll.
+GPU power exporter — run this NATIVELY on the host (Windows or Linux, not in
+Docker), next to Ollama. Exposes the current NVIDIA GPU power draw as a tiny
+JSON HTTP endpoint that kio2 (running inside a Linux container) can poll.
 
-Why this exists: a Linux container has no visibility into the Windows host's
-GPU unless it's been explicitly passed through. Since Ollama runs natively on
-Windows (simplest, most reliable setup for a single dev machine), the actual
-power draw happens on the host — so this script reads it there via NVML and
-serves it over plain HTTP on localhost, which the container can reach through
-Docker Desktop's special `host.docker.internal` DNS name.
+Why this exists: a container has no visibility into the host's GPU unless
+it's been explicitly passed through. Since Ollama runs natively on the host
+(simplest, most reliable setup for a single dev machine, Windows or Linux),
+the actual power draw happens on the host — so this script reads it there via
+NVML and serves it over plain HTTP on localhost, which the container can
+reach through the `host.docker.internal` DNS name (works out of the box on
+Docker Desktop; on native Linux Docker Engine, docker-compose.yml maps it via
+`extra_hosts: host-gateway`).
 
-Usage:
+Usage (same on both platforms):
     pip install nvidia-ml-py   # provides `import pynvml` — NVIDIA's current official package
     python power_exporter.py            # serves on 0.0.0.0:9400 by default
     python power_exporter.py --port 9400 --gpu-index 0
