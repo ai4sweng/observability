@@ -5,7 +5,9 @@
 # Plus 3 KIO simulators pushing contract-compliant dummy telemetry over OTLP/gRPC + Langfuse.
 #
 # Bring up:   docker compose up -d --build
-# Grafana:    http://localhost:3000  (admin / admin)
+# Grafana:    http://localhost:3000  (browse anonymously as Viewer; admin login
+#             is "admin" / GF_SECURITY_ADMIN_PASSWORD below, rotate before any
+#             real/shared deployment)
 # Langfuse:   http://localhost:3001  (see LANGFUSE_INIT_USER_EMAIL / _PASSWORD below)
 # Tear down:  docker compose down -v
 #
@@ -22,6 +24,12 @@ services:
     image: otel/opentelemetry-collector-contrib:0.109.0
     container_name: ai4sweng-otel-collector
     command: ["--config=/etc/otel/config.yaml"]
+    environment:
+      # Read by config.yaml's bearertokenauth extension (${env:OTLP_BEARER_TOKEN}).
+      # Every KIO below sends this same token via OTEL_EXPORTER_OTLP_HEADERS —
+      # change it here (or override OTLP_BEARER_TOKEN in a repo-root .env) and
+      # it propagates everywhere, same pattern as the Langfuse keys/passwords.
+      OTLP_BEARER_TOKEN: "${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
     volumes:
       - ./otel-collector/config.yaml:/etc/otel/config.yaml:ro
     ports:
@@ -88,10 +96,15 @@ services:
     image: grafana/grafana:11.2.0
     container_name: ai4sweng-grafana
     environment:
-      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_USER: "${GF_SECURITY_ADMIN_USER:-admin}"
       GF_SECURITY_ADMIN_PASSWORD: "${GF_SECURITY_ADMIN_PASSWORD:-admin}"
+      # 2026-08: anonymous viewers only — was Admin (anyone reaching :3000 got
+      # full edit/delete/datasource/user-management rights with zero login).
+      # Viewer still lets anyone browse the dashboards without an account
+      # (KIO1 etc. can just look), but editing/deleting/alerting/datasources
+      # now require the admin login above.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -380,7 +393,10 @@ services:
       KIO_TASK_TYPE: code-analysis
       SERVICE_VERSION: "1.2.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+      # otel-collector/config.yaml) or every OTLP export gets rejected.
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
       HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
       REQUEST_INTERVAL_S: "${KIO2_REQUEST_INTERVAL_S:-3}"
       KIO_REAL_KPI_ROLE: "bugfix"
@@ -421,7 +437,10 @@ services:
       KIO_TASK_TYPE: nlp-requirements
       SERVICE_VERSION: "0.9.1"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+      # otel-collector/config.yaml) or every OTLP export gets rejected.
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
       HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
       REQUEST_INTERVAL_S: "${KIO3_REQUEST_INTERVAL_S:-2}"
       # NATS-driven: tasks ALSO arrive via kio.tasks.kio3 (published by the
@@ -452,7 +471,10 @@ services:
       KIO_TASK_TYPE: architecture-to-code
       SERVICE_VERSION: "2.0.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+      # otel-collector/config.yaml) or every OTLP export gets rejected.
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
       HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
       REQUEST_INTERVAL_S: "${KIO4_REQUEST_INTERVAL_S:-4}"
       NATS_ENABLED: "true"
@@ -482,7 +504,10 @@ services:
       KIO_TASK_TYPE: ai-sysdev
       SERVICE_VERSION: "0.5.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+      # otel-collector/config.yaml) or every OTLP export gets rejected.
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
       HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
       REQUEST_INTERVAL_S: "${KIO7_REQUEST_INTERVAL_S:-5}"
       NATS_ENABLED: "true"
@@ -514,7 +539,10 @@ services:
       KIO_TASK_TYPE: green-deploy
       SERVICE_VERSION: "0.3.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+      # otel-collector/config.yaml) or every OTLP export gets rejected.
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
       HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
       REQUEST_INTERVAL_S: "${KIO8_REQUEST_INTERVAL_S:-5}"
       # D1.1 KPI 2.1 (Lifecycle energy reduction), 2.2 (Deployment energy
@@ -540,7 +568,10 @@ services:
       KIO_TASK_TYPE: adoption
       SERVICE_VERSION: "0.3.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-5000}"
+      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+      # otel-collector/config.yaml) or every OTLP export gets rejected.
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
       HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
       REQUEST_INTERVAL_S: "${KIO13_REQUEST_INTERVAL_S:-5}"
       # D1.1 KPI 8.1 (Adoption rate), 8.2 (Active usage & satisfaction),

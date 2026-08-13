@@ -69,8 +69,11 @@ cd observability
 docker compose up -d --build
 ```
 
-Then open **http://localhost:3000** (login `admin` / `admin`, anonymous access is
-also on). Two dashboards appear under the **AI4SWENG** folder:
+Then open **http://localhost:3000** — anonymous browsing is on (Viewer role, no
+login needed to look at dashboards); editing/deleting/datasources/alerting/user
+management need the admin login (`admin` / `GF_SECURITY_ADMIN_PASSWORD` from
+`.env.example`, rotate before any real/shared deployment). Two dashboards appear
+under the **AI4SWENG** folder:
 
 - **AI4SWENG — Overview (All KIOs)**: aggregate stats across every KIO — request &
   error rates, latency p95, token throughput, tokens/sec, GPU energy, cost, accuracy.
@@ -216,6 +219,24 @@ curl http://localhost:8080/workflow/{session_id}
 # -> {"session": {...}, "lineage": [...]}
 ```
 
+### Orkestrasyon doğrulama
+
+Yukarıdaki `curl` örneğini elle tekrar tekrar çalıştırmak yerine, tüm zinciri
+(`POST /workflow/run` → NATS JetStream → kio3'ün NATS consumer'ı → `kio.results.kio3`
+→ Planner'ın `run_result_listener`'ı → Postgres lineage) tek seferde doğrulayan bir
+script var, hiçbir ekstra paket kurmadan (stdlib-only):
+
+```bash
+docker compose up -d nats orchestrator-postgres workflow-api planner kio3
+python scripts/verify_orchestration.py
+```
+
+`PASS`/`FAIL` ile çıkar; `FAIL` olursa hangi hop'ta koptuğunu (Workflow API'ye hiç
+ulaşılamıyor / lineage hiç gelmiyor / vb.) ve hangi container'ın loglarına bakılacağını
+yazar. Bu repo'nun geliştirildiği sandbox'ta Docker olmadığı için bu adım hiç gerçek
+NATS/Postgres'e karşı çalıştırılmadı — bu script'i çalıştırmak, README'nin "V2 Guideline
+Değerlendirmesi" bölümünde işaretli son açık doğrulama adımını kapatıyor.
+
 ## Running a KIO on a different machine
 
 See **[`remote-kio/README.md`](remote-kio/README.md)** for a copy-paste-ready package
@@ -233,7 +254,10 @@ KIO ekibi için başlangıç noktası her zaman **[`observability_integration_co
 1. **§1 Onboarding**: OTLP Bearer token + Langfuse proje anahtarları merkezi platform
    ekibinden istenir; `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_RESOURCE_ATTRIBUTES` /
    `LANGFUSE_*` ortam değişkenleri set edilir; "doğrulama kapısı" olarak `kio.heartbeat`
-   Grafana'da ve en az bir trace Langfuse'da görünmeden bir KIO onboard sayılmaz.
+   Grafana'da ve en az bir trace Langfuse'da görünmeden bir KIO onboard sayılmaz. **Bearer
+   token artık gerçekten zorunlu (2026-08, §9.3)** — `OTEL_EXPORTER_OTLP_HEADERS`
+   olmadan collector OTLP çağrısını (gRPC ve HTTP, 4317 ve 4318) reddeder; önceden bu
+   sadece sözleşmesel bir gereksinimdi, teknik olarak zorlanmıyordu.
 2. **§2.1 Zorunlu metrik seti** — 7 metrik, isim/tip/birim/label'larıyla birebir
    sabit (bkz. "Metrics" bölümü aşağıda): `kio.request.count`,
    `kio.request.duration_ms`, `kio.request.error_count`, `kio.llm.token_count`,
@@ -481,15 +505,26 @@ contract — the decisions below are ours, made after comparing the two document
   no Docker available in the dev sandbox this was built in) — kio3/kio4 are wired
   to it; kio2-sim stays on its internal timer so the real-Ollama demo isn't
   disrupted. A live `docker compose up` pass against the real NATS/Postgres is
-  the remaining verification step.
+  the remaining verification step — run `python scripts/verify_orchestration.py`
+  after bringing the stack up (see "Orkestrasyon doğrulama" below); it drives
+  the whole round trip (`POST /workflow/run` -> NATS -> kio3 -> `kio.results.kio3`
+  -> Planner -> Postgres lineage) and prints exactly which hop failed if it doesn't.
 - **Confirmed already-compliant, no change needed:** the 7 mandatory metrics
   (names/types/units), resource attributes, the low-cardinality rule (session IDs
   never used as metric labels — only in trace/log metadata, exactly as v2 also
   specifies), and the metrics+traces-over-OTLP/gRPC transport.
-- **Minor, cheap-to-adopt items not yet applied:** v2's 15s metric export interval
-  (we currently use 5s — fine for this KIO count, worth revisiting at higher
-  scale) and a `session_id` Grafana dashboard filter variable (we currently only
-  filter by `kio_id`).
+- **Adopted (2026-08):** v2's 15s metric export interval (was 5s — bumped across
+  all 6 KIO simulators' `EXPORT_INTERVAL_MS` default in `docker-compose.yml`/
+  `.env.example`/`remote-kio/.env.example`/`kio_simulator.py`'s own fallback; no
+  panel changes needed, existing `rate(...[15m])` windows comfortably contain
+  multiple 15s samples) and a `$session_id` Grafana dashboard filter variable
+  (textbox, regex, default `.*` = all — wired into the log-stream panel via
+  VictoriaLogs LogsQL's `field:~"regex"` syntax and the Tempo trace table via
+  TraceQL's `=~` operator; the LogsQL syntax is unverified against a live
+  VictoriaLogs instance, first real `docker compose up` should confirm it).
+  Metrics themselves still never carry `session_id` as a label (low-cardinality
+  rule) — the new variable only filters the log/trace panels, matching v2's own
+  metric-label rules.
 
 ## Testler (pytest)
 
@@ -519,12 +554,29 @@ Postgres `sqlite:///:memory:` ile) taklit edilmiştir.
 - **Langfuse** is now integrated (see "Langfuse" section above) as a second stream
   parallel to metrics + logs + traces, added per direct request and evaluated
   against v2 in the section above.
-- **Auth/TLS**: the contract uses Bearer token + TLS on `:4317`. For local dev the
-  collector listens insecure. To exercise the real path, add a `bearertokenauth`
-  extension to the collector and set `OTEL_EXPORTER_OTLP_HEADERS` on the KIOs (the
-  OTel SDK picks this env var up automatically — no code change needed).
+- **Auth/TLS (2026-08, §9.3): Bearer done, TLS still deferred.** The contract uses
+  Bearer token + TLS on `:4317`/`:4318`. The collector's `bearertokenauth`
+  extension (`otel-collector/config.yaml`) now enforces the Bearer half on both
+  gRPC and HTTP — every KIO in `docker-compose.yml` sends
+  `OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer $OTLP_BEARER_TOKEN"` (shared
+  value, set via `.env`'s `OTLP_BEARER_TOKEN`, default `local-dev-otlp-token`; no
+  `kio_simulator.py` code change needed — the OTel SDK reads this env var on its
+  own). TLS itself is still not enabled — the connection is authenticated but not
+  encrypted, fine for a trusted LAN/VPN, not for the open internet. Real TLS
+  (certs on the collector, `insecure=False` on every client) is left for an
+  actual remote/production deployment, not this docker-compose.
 - **Remote KIOs**: fully supported today via the push architecture — see
   `remote-kio/README.md`. No code change is required, only environment variables.
+- **Grafana access (2026-08):** anonymous viewers, not anonymous admins. Until
+  now `GF_AUTH_ANONYMOUS_ORG_ROLE=Admin` meant anyone who could reach `:3000` —
+  no login at all — got full edit/delete/datasource/alerting/user-management
+  rights. Harmless on localhost-only, a real problem the moment this port is
+  reachable over Tailscale/LAN/internet (which is exactly the direction this
+  project is heading with remote KIOs). Now: anonymous role is `Viewer`
+  (dashboards stay fully browsable with zero login, matching the "let anyone
+  look" intent), and the default admin password was rotated off `admin` to a
+  random placeholder in `.env.example` — still rotate it yourself before any
+  real/shared deployment, this is still a shared local-dev default.
 
 ## Layout
 

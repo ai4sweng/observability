@@ -112,13 +112,22 @@ zaman serileri iç içe girer ve dashboard karışık görünür. İki seçenek:
 
 ## Güvenlik notu
 
-Bu paket varsayılan olarak **kimlik doğrulamasız (insecure)** bağlanır — tıpkı yerel
-kurulum gibi. Bu, güvenilir bir ağda (aynı LAN veya VPN) yapılan testler için yeterlidir.
-Bunu genel internete açmadan önce: ana collector'a bir `bearertokenauth` extension'ı
-eklenmeli ve `.env` içindeki `OTEL_EXPORTER_OTLP_HEADERS` satırı açılmalıdır (satır
-`.env.example` içinde hazır, sadece yorum satırından çıkarılması ve gerçek token'ın
-girilmesi yeterli — kod tarafında ekstra değişiklik gerekmez, OpenTelemetry SDK bu
-ortam değişkenini otomatik okur).
+**2026-08 itibarıyla Bearer token artık zorunlu** (§9.3 — ana collector'a
+`bearertokenauth` extension'ı eklendi, bkz. `otel-collector/config.yaml`).
+`.env`'deki `OTEL_EXPORTER_OTLP_HEADERS` satırı artık yorum satırı değil,
+doldurulması gereken zorunlu bir alan (`.env.example`'a bak) — doğru token
+girilmezse collector bu KIO'nun **hiçbir** OTLP çağrısını (metrik/log/trace,
+hem gRPC hem HTTP) kabul etmez, KIO kendisi çökmez ama telemetrisi sessizce
+kaybolur (bağlantı hataları için container loglarına bak). Token değerini ana
+platformu işleten kişiden iste — tüm KIO'lar arasında paylaşılan tek bir
+değer, KIO'ya özel değil (`docker-compose.yml`'deki `otel-collector` servisinin
+`OTLP_BEARER_TOKEN`'ı ile birebir aynı olmalı).
+
+Bunun ötesinde bağlantı hâlâ **TLS'siz (insecure)** — gerçek TLS, güvenilir
+bir ağın (aynı LAN/VPN) dışına, genel internete açılan bir kurulum için hâlâ
+planlı ama uygulanmadı (bkz. ana README'nin "V2 Guideline Değerlendirmesi").
+Aynı LAN/VPN (Tailscale vb.) üzerindeki testler için Bearer token tek başına
+yeterli bir asgari önlem.
 
 ## Kaldırma
 

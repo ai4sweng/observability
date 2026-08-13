@@ -32,6 +32,18 @@ kullanır — aynı Docker network'te olduğu için servis adıyla erişilir.
 Hangisi olursa olsun, kod tarafında **hiçbir instrumentation farkı yok** — tek fark bu
 endpoint değişkeni.
 
+**2026-08 itibarıyla bir ortam değişkeni daha zorunlu (§9.3):** collector artık
+Bearer token istiyor (`otel-collector/config.yaml`'daki `bearertokenauth`
+extension'ı), yoksa OTLP çağrıları sessizce reddediliyor:
+```bash
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <OTLP_BEARER_TOKEN değeri>
+```
+Token, `docker-compose.yml`'deki `otel-collector` servisinin `OTLP_BEARER_TOKEN`'ıyla
+(ya da repo-root `.env`'deki override'la) birebir aynı olmalı — tüm KIO'lar arasında
+paylaşılan tek değer, KIO'ya özel değil. Kod tarafında değişiklik gerekmez, OTel SDK
+bu değişkeni otomatik okur (bkz. `kio_simulator.py`'nin exporter kurulumu, hiç
+`headers=` parametresi geçmiyor).
+
 ## 1) Zorunlu kimlik bilgileri (Contract §1.2)
 
 Her metrik/log/trace'e şu attribute'lar eklenmeli (OTel `Resource` üzerinden, bkz.
@@ -66,7 +78,7 @@ Süreç başında bir kere OTel pipeline'ı kurun (metrics + logs + traces expor
 Süreç sonunda (`main()` return etmeden) `MeterProvider`/`LoggerProvider`/`TracerProvider`
 üzerinde `force_flush()`/`shutdown()` çağırmayı unutmayın — kısa ömürlü bir process'te
 `PeriodicExportingMetricReader`'ın export aralığını beklemeden çıkarsanız son verinizi
-kaybedersiniz (5000ms varsayılan `EXPORT_INTERVAL_MS` yerine kısa komutlar için daha kısa
+kaybedersiniz (15000ms varsayılan `EXPORT_INTERVAL_MS` yerine kısa komutlar için daha kısa
 bir aralık + `force_flush()` kombinasyonu düşünün).
 
 Her komut çağrısı için bir kök span (`focustracer.command`, attributes: `command`,

@@ -33,6 +33,16 @@
         "label": "KIO"
       },
       {
+        "name": "session_id",
+        "type": "textbox",
+        "label": "Session ID (regex, varsayılan .* = tümü)",
+        "query": ".*",
+        "current": {
+          "value": ".*",
+          "text": ".*"
+        }
+      },
+      {
         "name": "trace_id",
         "type": "textbox",
         "label": "Trace ID (aşağıdaki tablodan kopyala)",
@@ -955,7 +965,7 @@
             "type": "victoriametrics-logs-datasource",
             "uid": "victorialogs"
           },
-          "expr": "kio.id:$kio_id",
+          "expr": "kio.id:$kio_id AND session.id:~\"$session_id\"",
           "refId": "A",
           "queryType": "instant"
         }
@@ -966,7 +976,8 @@
         "sortOrder": "Descending",
         "enableLogDetails": true,
         "dedupStrategy": "none"
-      }
+      },
+      "description": " Session ID regex filtresi eklendi (v2 guideline); VictoriaLogs LogsQL regex sözdizimi (field:~\"regex\") canlı ortamda ilk kullanımda doğrulanmalı."
     },
     {
       "id": 20,
@@ -1017,7 +1028,7 @@
             "uid": "tempo"
           },
           "queryType": "traceql",
-          "query": "{resource.service.name=\"$kio_id\"}",
+          "query": "{resource.service.name=\"$kio_id\" && session.id=~\"$session_id\"}",
           "limit": 20,
           "tableType": "traces",
           "refId": "A"
@@ -1033,7 +1044,8 @@
       },
       "options": {
         "showHeader": true
-      }
+      },
+      "description": "Session ID regex filtresi eklendi (v2 guideline); TraceQL =~ regex operatörü kullanılıyor."
     },
     {
       "id": 23,
