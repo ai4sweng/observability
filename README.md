@@ -218,11 +218,25 @@ curl http://localhost:8080/workflow/{session_id}
 
 ## Running a KIO on a different machine
 
-See **[`remote-kio/README.md`](remote-kio/README.md)** for a copy-paste-ready package
-that runs a single KIO on a separate machine while the rest of the stack (collector,
-databases, Grafana) keeps running wherever it already is. The architecture is push-based
-by design, so this needs no code change — only pointing `OTEL_EXPORTER_OTLP_ENDPOINT`
-at the central machine.
+The `remote-kio/` folder is the single home for connecting a KIO that runs on a
+**separate machine** (same LAN, or a different network via Tailscale/VPN) while
+the rest of the stack keeps running wherever it already is. The architecture is
+push-based by design, so this needs no code change — only pointing
+`OTEL_EXPORTER_OTLP_ENDPOINT` at the central machine. Two scenarios:
+
+- **A different developer's own KIO module** (its own codebase, not our
+  simulator, and **no Docker required**): **[`remote-kio/INTEGRATION.en.md`](remote-kio/INTEGRATION.en.md)**
+  (English) / **[`remote-kio/INTEGRATION.md`](remote-kio/INTEGRATION.md)** (Turkish)
+  — an end-to-end guide that also documents the exact data/naming contract and
+  non-Docker deployment, plus **[`remote-kio/reference-client/`](remote-kio/reference-client/)**,
+  a minimal contract-compliant instrumentation helper (`kio_otel.py`), a runnable
+  example, and a connectivity preflight (`check_connectivity.py`) to drop into
+  their code.
+- **Our simulator on another box** (test/demo): **[`remote-kio/README.md`](remote-kio/README.md)**,
+  a copy-paste-ready package.
+
+Networking (firewall on both sides, static IP, Tailscale) is common to both and
+documented once in **[`remote-kio/NETWORK.md`](remote-kio/NETWORK.md)**.
 
 ## Yeni bir KIO (KIOx) sıfırdan nasıl bağlanır
 
@@ -256,10 +270,14 @@ CLI tabanlı çalışma modeli gibi, bkz. `kio2-integration/README.md`), hiç ka
 sözleşmeye uygun telemetri göndermeye devam edebilirsiniz — kio.heartbeat + zorunlu
 metrikler yeterli.
 
-İki somut örnek zaten bu repoda var: kendi `kio-simulator.py` kodunuzu başka bir
-makinede/VM'de çalıştırmak istiyorsanız `remote-kio/README.md`; gerçek FocusTracer
-modülünü KIO2 kimliğiyle bağlamak için satır referanslı bir rehber istiyorsanız
-`kio2-integration/README.md`.
+Somut örnekler bu repoda: kendi kod tabanınıza sahip bir modülü (başka bir
+makinede olsun ya da olmasın) sıfırdan bağlamak için uçtan uca rehber +
+kopyalanabilir başlangıç kiti `remote-kio/INTEGRATION.md` ve
+`remote-kio/reference-client/` (`kio_otel.py` — yalnızca zorunlu sözleşmeyi
+uygulayan minimal yardımcı, `check_connectivity.py` ön-uçuş testi); bizim hazır
+`kio-simulator.py`'mizi başka bir makinede/VM'de çalıştırmak için
+`remote-kio/README.md`; gerçek FocusTracer modülünü KIO2 kimliğiyle bağlamak için
+satır referanslı bir rehber için `kio2-integration/README.md`.
 
 ## KIO2 gerçek modül entegrasyonu (FocusTracer)
 
@@ -542,7 +560,10 @@ observability/
 │   └── dashboards/{ai4sweng-overview,ai4sweng-kio}.json
 ├── kio-simulator/{kio_simulator.py,requirements.txt,Dockerfile}
 ├── orchestrator/{planner.py,session_manager.py,workflow_api.py,envelope.py}
-├── remote-kio/{docker-compose.yml,.env.example,README.md}
+├── remote-kio/                              # connect a KIO from another machine
+│   ├── {README.md,INTEGRATION.md,INTEGRATION.en.md,NETWORK.md}   # hub / own-module guide (TR+EN) / networking
+│   ├── {docker-compose.yml,.env.example}       # run OUR simulator remotely
+│   └── reference-client/{kio_otel.py,example_kio.py,check_connectivity.py,requirements.txt,.env.example}
 ├── tests/{conftest.py,requirements-test.txt,kio_simulator/,orchestrator/}
 └── docs/AI4SWENG_Observability_Teknik_Rapor.docx
 ```
