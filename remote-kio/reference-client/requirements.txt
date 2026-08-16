@@ -1,0 +1,12 @@
+# Minimal dependency set for a real KIO that pushes OTLP telemetry.
+# Pinned to the same versions the rest of this repo resolves to, so a KIO
+# built against these behaves identically to the central-side tooling.
+#
+# NOTE: unlike kio-simulator/requirements.txt, there is deliberately NO
+# langfuse / nats-py / nvidia-ml-py here — those belong to optional streams
+# (Langfuse LLM tracing, NATS dispatch, real GPU energy) that a plain
+# contract-compliant KIO does not need. Add them only if you opt into those
+# features (see INTEGRATION.md "Opsiyonel akışlar").
+opentelemetry-api==1.44.0
+opentelemetry-sdk==1.44.0
+opentelemetry-exporter-otlp-proto-grpc==1.44.0

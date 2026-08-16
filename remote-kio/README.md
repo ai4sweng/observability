@@ -1,11 +1,33 @@
-# Uzak KIO Paketi (remote-kio)
+# remote-kio — bir KIO'yu başka bir makineden bağlama
 
-Bu klasör, tek bir KIO'yu **ana gözlemlenebilirlik yığınından (Collector, VictoriaMetrics,
-VictoriaLogs, Tempo, Grafana) fiziksel olarak ayrı bir makinede** çalıştırmak için
-hazırlanmış, kopyalanabilir/bağımsız bir "lego parçası"dır. Ana yığın nerede duruyorsa
-orada kalır; sadece bu paket + `kio-simulator/` kaynak kodu uzak makineye taşınır.
+Bu klasör, merkezi observability yığınından (Collector, VictoriaMetrics,
+VictoriaLogs, Tempo, Grafana) **fiziksel olarak ayrı bir makinede** çalışan bir
+KIO'yu merkeze bağlamakla ilgili her şeyi toplar. Mimari push tabanlı olduğu
+için bu, kodda değil, yalnızca bir ortam değişkeninde (`OTEL_EXPORTER_OTLP_ENDPOINT`)
+değişiklik demektir.
 
-## Bu paketi bir KIO sahibine gönderirken (zip'lemeden önce)
+## Hangi rehber bana lazım? (buradan başla)
+
+| Durumunuz | Gideceğiniz yer |
+|---|---|
+| **Bu sistemi hiç bilmiyorum, kendi KIO modülümü sıfırdan bağlayacağım** (Docker'lı ya da **Docker'sız**) | **[`INTEGRATION.md`](INTEGRATION.md)** (TR) / **[`INTEGRATION.en.md`](INTEGRATION.en.md)** (EN) — sıfırdan, kendi kendine yeten kapsamlı rehber + kopyalanabilir kit [`reference-client/`](reference-client/) |
+| **I'm new here and need this in English** | **[`INTEGRATION.en.md`](INTEGRATION.en.md)** — complete guide incl. exact data/naming contract and non-Docker deployment |
+| Sizin hazır **simülatörünüzü** başka bir makinede çalıştırmak istiyorum (test/demo) | Bu dökümanın devamı (↓) |
+| Sadece **ağ / firewall / statik IP / Tailscale** ayrıntısı gerekiyor | **[`NETWORK.md`](NETWORK.md)** |
+| Gerçek **FocusTracer (KIO2)** modülünü bağlamak | [`../kio2-integration/README.md`](../kio2-integration/README.md) |
+| Normatif **sözleşme** (7 metrik, kurallar, referans kod) | [`../observability_integration_contract.pdf`](../observability_integration_contract.pdf) |
+
+---
+
+## Bu paket: simülatörü uzak bir makinede çalıştırma
+
+Aşağıdaki kısım, tek bir KIO'yu **bizim simülatör kodumuzla** ayrı bir makinede
+çalıştırmak için hazırlanmış, kopyalanabilir/bağımsız bir "lego parçası"dır. Ana
+yığın nerede duruyorsa orada kalır; sadece bu paket + `kio-simulator/` kaynak
+kodu uzak makineye taşınır. (Kendi kodunuzu bağlıyorsanız bunun yerine
+[`INTEGRATION.md`](INTEGRATION.md)'e gidin — orada bu simülatöre hiç ihtiyaç yok.)
+
+### Bu paketi bir KIO sahibine gönderirken (zip'lemeden önce)
 
 `observability/kio-simulator/` ve `observability/remote-kio/` klasörlerini olduğu gibi
 zip'leyip göndermeden önce şunları çıkar — `.gitignore` bunları git'ten gizler ama ham
@@ -22,7 +44,7 @@ Kontrol: paketi açtığınızda `remote-kio/` altında yalnızca `docker-compos
 `.env.example`, `README.md` olmalı; `kio-simulator/` altında `Dockerfile`, `envelope.py`,
 `kio_simulator.py`, `requirements.txt` olmalı — başka hiçbir şey.
 
-## Nasıl çalışır
+### Nasıl çalışır
 
 Mimari zaten push tabanlı (bkz. ana `README.md`): her KIO, verisini OTLP/gRPC ile merkezi
 Collector'a **iter**. KIO'nun nerede çalıştığı önemli değil — collector'a ağ üzerinden
@@ -30,7 +52,7 @@ erişebildiği sürece, ister aynı makinede ister başka bir kıtada olsun fark
 yüzden "uzaklaştırma" için koda hiç dokunulmuyor, sadece bir ortam değişkeni
 (`OTEL_EXPORTER_OTLP_ENDPOINT`) değişiyor.
 
-## Adım adım kurulum
+### Adım adım kurulum
 
 **1) İki klasörü uzak makineye kopyala** (aynı göreli konumda kalmalı, çünkü bu paket
 `../kio-simulator`'ı build context olarak kullanır — kod tekrarı yerine tek kaynağı
@@ -69,25 +91,14 @@ gerçekten ulaşılabildiğinden emin ol):
 nc -zv <ana-makine-IP> 4317
 ```
 
-Başarısız olursa: ana makinede güvenlik duvarı/router 4317 portunu açmalı (port
-yönlendirme), ya da iki makineyi aynı VPN'e (ör. Tailscale, ZeroTier) almak en basit
-ve güvenli çözümdür — bu, herhangi bir portu genel internete açmadan çalışır.
-
-**Tailscale ile "aynı ağ": statik IP gerekmez.** Tailscale'in bütün amacı bu — her
-cihaza (NAT/router arkasında olsa bile) kalıcı, değişmeyen bir `100.x.y.z` adresi
-(ve MagicDNS ile bir hostname) veriyor; port yönlendirme veya statik/genel bir IP satın
-almaya gerek yok. KIO sahibini eklemenin iki yolu var:
-- **Tam tailnet üyeliği** (admin panelinden "Invite") — ekip arkadaşınızsa mantıklı,
-  ACL'lerle hangi cihazları görebileceğini sınırlayabilirsiniz.
-- **Tek cihaz paylaşımı** ("Share" — admin panelinde ana makinenizin yanında) — dış bir
-  kişiyle (bir KIO sahibiyle) tailnet'inizin tamamına eklemeden, yalnızca o tek makineyi
-  paylaşmanızı sağlar; alıcı kendi Tailscale hesabıyla bir link üzerinden kabul eder,
-  yalnızca paylaşılan cihaza erişebilir. Tek seferlik/dış bir alıcı için bu daha az
-  yetki verir, muhtemelen aradığınız şey bu.
-
-Her iki durumda da alıcı, sizin makinenizin Tailscale IP'sini (`tailscale ip` komutuyla
-görülür, hiç değişmez) `.env`'deki `OTEL_EXPORTER_OTLP_ENDPOINT`'e yazar — statik IP
-kurulumuyla uğraşmaya gerek kalmaz.
+Başarısız olursa neredeyse her zaman ya ana makinede **güvenlik duvarı 4317'yi
+kapatıyordur**, ya iki makine **aynı ağda değildir**. Firewall açma komutları
+(Windows/Linux), merkez makinenin adresini bulma, aynı LAN / statik IP /
+Tailscale seçenekleri ve daha kapsamlı bir doğrulama testi (gerçek bir OTLP
+export'u) için tek durak: **[`NETWORK.md`](NETWORK.md)**. Kısaca: farklı
+ağlardaysanız Tailscale/ZeroTier en basit ve güvenli çözümdür — her iki makineye
+kurun, `tailscale ip -4` ile öğrendiğiniz `100.x.y.z` adresini `.env`'deki
+`OTEL_EXPORTER_OTLP_ENDPOINT`'e yazın; statik IP veya port yönlendirme gerekmez.
 
 **4) Çalıştır:**
 
@@ -100,7 +111,7 @@ açılır menüsünde yeni `KIO_ID` görünmelidir (heartbeat + metrik export ar
 beklemek gerekir). `docker compose logs -f` ile de KIO'nun "online" log satırını
 görebilirsin.
 
-## KIO_ID çakışması — önemli
+### KIO_ID çakışması — önemli
 
 Aynı `kio_id` değeriyle iki kaynak (biri yerel, biri uzak) aynı anda veri gönderirse,
 zaman serileri iç içe girer ve dashboard karışık görünür. İki seçenek:
@@ -110,7 +121,7 @@ zaman serileri iç içe girer ve dashboard karışık görünür. İki seçenek:
   durdur: ana `observability/` klasöründe `docker compose stop kio4`, sonra uzak
   paketi başlat.
 
-## Güvenlik notu
+### Güvenlik notu
 
 **2026-08 itibarıyla Bearer token artık zorunlu** (§9.3 — ana collector'a
 `bearertokenauth` extension'ı eklendi, bkz. `otel-collector/config.yaml`).
@@ -129,7 +140,7 @@ planlı ama uygulanmadı (bkz. ana README'nin "V2 Guideline Değerlendirmesi").
 Aynı LAN/VPN (Tailscale vb.) üzerindeki testler için Bearer token tek başına
 yeterli bir asgari önlem.
 
-## Kaldırma
+### Kaldırma
 
 ```bash
 docker compose down
