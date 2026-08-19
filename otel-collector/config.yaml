@@ -1,13 +1,29 @@
 # OpenTelemetry Collector - AI4SWENG central ingestion gateway
 # Receives OTLP from every KIO, fans out: metrics -> VictoriaMetrics, logs -> VictoriaLogs, traces -> Tempo.
 
+# Bearer token auth on the OTLP receiver (contract/v2 guideline §1/§9.3).
+# Real TLS is still deferred to a real remote/production deployment (see
+# README's "V2 Guideline Değerlendirmesi" — this closes the "Bearer" half of
+# "TLS + Bearer token", not the TLS half). Every KIO must now send
+# OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>" matching
+# OTLP_BEARER_TOKEN below or the collector rejects the call. Token value
+# comes from this container's own env (set via docker-compose.yml, overridable
+# through the repo-root .env / OTLP_BEARER_TOKEN).
+extensions:
+  bearertokenauth:
+    token: "${env:OTLP_BEARER_TOKEN}"
+
 receivers:
   otlp:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        auth:
+          authenticator: bearertokenauth
       http:
         endpoint: 0.0.0.0:4318
+        auth:
+          authenticator: bearertokenauth
 
 processors:
   memory_limiter:
@@ -49,6 +65,7 @@ exporters:
     verbosity: basic
 
 service:
+  extensions: [bearertokenauth]
   telemetry:
     logs:
       level: info
