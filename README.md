@@ -36,7 +36,7 @@ locally via Docker Compose.
 | `otel-collector` | Single OTLP ingestion gateway; fans metrics → VictoriaMetrics, logs → VictoriaLogs, traces → Tempo | 4317 (gRPC), 4318 (HTTP) |
 | `victoriametrics` | Metrics store (Prometheus-compatible, no Prometheus needed) | 8428 |
 | `victorialogs` | Store for unstructured / string telemetry | 9428 |
-| `tempo` | Trace store (monolithic mode, local disk) — powers the "işlem sırası" waterfall view | 3200 |
+| `tempo` | Trace store (monolithic mode, local disk) — powers the trace waterfall view | 3200 |
 | `grafana` | Dashboards (auto-provisioned) | 3000 |
 | `langfuse-web` / `langfuse-worker` | Self-hosted Langfuse — LLM-specific prompt/completion/cost tracing, a stream parallel to and independent of OTel | 3001 (UI+API), internal 3030 (worker) |
 | `postgres` / `clickhouse` / `redis` / `minio` | Langfuse's own required backing stores (relational DB, trace analytics, queue, blob storage) — not something we chose, this is Langfuse's mandated self-host footprint | internal only (127.0.0.1-bound except minio :9090) |
@@ -55,7 +55,7 @@ Works unmodified on both Windows (Docker Desktop) and Linux (native Docker
 Engine, e.g. Ubuntu) — everything runs in containers with relative bind
 mounts and standard Linux images; the only host-OS-sensitive bit
 (`host.docker.internal` for the optional real-Ollama/GPU path) is handled via
-`extra_hosts` in `docker-compose.yml`, see the "Gerçek LLM entegrasyonu"
+`extra_hosts` in `docker-compose.yml`, see the "Real LLM integration"
 section below.
 
 All ports and passwords/keys are centralized: every one is overridable from a
@@ -131,32 +131,33 @@ call the Workflow API. Both paths now run side by side for those three, so
 they always keep producing baseline demo data. Adjust LLMs, task types, and
 rates in `docker-compose.yml`, or edit `kio-simulator/kio_simulator.py`.
 
-### Gerçek vs Simüle Veri Haritası
+### Real vs. Simulated Data Map
 
-Hangi panelin/metriğin ne zaman gerçek, ne zaman simüle (dummy) olduğu — hepsi
-`source=real|simulated` etiketiyle Grafana'da da ayırt edilebilir (yeşil=real,
-turuncu=simulated, bkz. "Veri kaynağı" paneli):
+Which panel/metric is real vs. simulated (dummy), and when — all distinguishable
+in Grafana via the `source=real|simulated` label too (green=real, orange=simulated,
+see the "Data source" panel):
 
-| Metrik / Panel | kio2-sim (`KIO2_REAL_LLM_ENABLED=false`) | kio2-sim (`=true`) | kio3 / kio4 |
+| Metric / Panel | kio2-sim (`KIO2_REAL_LLM_ENABLED=false`) | kio2-sim (`=true`) | kio3 / kio4 |
 |---|---|---|---|
-| tok/s, `kio.llm.tokens_per_second` | simüle | **gerçek** (Ollama `eval_count/eval_duration`) | her zaman simüle |
-| Enerji (W/J), `kio.llm.energy_joules` | simüle (model-başı sabit katsayı) | **gerçek** (NVML / `tools/power_exporter.py`) | her zaman simüle |
-| GPU sıcaklığı, `kio.llm.gpu_temperature_celsius` | veri yok ("No data") | **gerçek** (NVML/power-exporter erişilebilirse) | veri yok (GPU'ları yok) |
-| Hata oranı, `kio.request.error_count` | simüle (~%7 rastgele) | **gerçek** (gerçek Ollama başarı/hata) | her zaman simüle (~%7 rastgele) |
-| Repo satır/dizin/dosya sayısı | **gerçek** (kendi kaynağını tarar) | **gerçek** | uygulanamaz (code-analysis değiller) |
-| Accuracy / fix@1, `kio.request.accuracy` | her zaman simüle | her zaman simüle (Ollama gerçek olsa bile) | her zaman simüle |
-| D1.1 KPI'ları (bug-fix time, issue resolution, slicing success, customer-reported) | her zaman simüle (yalnızca kio2-sim'de, `KIO_REAL_KPI_ROLE=bugfix`) | her zaman simüle | uygulanamaz (kio3/kio4'ün rolü farklı — bkz. aşağıki satır) |
-| D1.1 KPI'ları (codegen duration, code quality, review score) | uygulanamaz (bu KPI'lar kio3/kio4'e özel) | uygulanamaz | her zaman simüle (`KIO_REAL_KPI_ROLE=nlp-requirements`/`architecture-to-code`) |
-| D1.1 KPI'ları (dev productivity, time-to-market, cost saving, refactoring/tech-debt reduction) | uygulanamaz (bu KPI'lar kio7'ye özel) | uygulanamaz | uygulanamaz — yalnızca **kio7**'de, her zaman simüle (`KIO_REAL_KPI_ROLE=ai-sysdev`) |
-| D1.1 KPI'ları (lifecycle energy, deploy energy efficiency, cross-arch build success) | uygulanamaz (bu KPI'lar kio8'e özel) | uygulanamaz | uygulanamaz — yalnızca **kio8**'de, her zaman simüle (`KIO_REAL_KPI_ROLE=green-deploy`) |
-| D1.1 KPI'ları (adoption rate, active usage, satisfaction/MOS) | uygulanamaz (bu KPI'lar kio13'e özel) | uygulanamaz | uygulanamaz — yalnızca **kio13**'te, her zaman simüle (`KIO_REAL_KPI_ROLE=adoption`) |
-| Kümülatif CO2e (tahmini) | simüle enerjiden türetilmiş tahmin | gerçek enerjiden türetilmiş tahmin (kendisi hâlâ bir tahmin, gerçek karbon ölçümü değil) | simüle enerjiden türetilmiş tahmin |
+| tok/s, `kio.llm.tokens_per_second` | simulated | **real** (Ollama `eval_count/eval_duration`) | always simulated |
+| Energy (W/J), `kio.llm.energy_joules` | simulated (fixed per-model coefficient) | **real** (NVML / `tools/power_exporter.py`) | always simulated |
+| GPU temperature, `kio.llm.gpu_temperature_celsius` | no data ("No data") | **real** (if NVML/power-exporter is reachable) | no data (no GPUs) |
+| Error rate, `kio.request.error_count` | simulated (~7% random) | **real** (actual Ollama success/failure) | always simulated (~7% random) |
+| Repo line/directory/file counts | **real** (scans its own source) | **real** | not applicable (not code-analysis) |
+| Accuracy / fix@1, `kio.request.accuracy` | always simulated | always simulated (even with real Ollama) | always simulated |
+| D1.1 KPIs (bug-fix time, issue resolution, slicing success, customer-reported) | always simulated (kio2-sim only, `KIO_REAL_KPI_ROLE=bugfix`) | always simulated | not applicable (kio3/kio4 have a different role — see below) |
+| D1.1 KPIs (codegen duration, code quality, review score) | not applicable (these KPIs are kio3/kio4-specific) | not applicable | always simulated (`KIO_REAL_KPI_ROLE=nlp-requirements`/`architecture-to-code`) |
+| D1.1 KPIs (dev productivity, time-to-market, cost saving, refactoring/tech-debt reduction) | not applicable (these KPIs are kio7-specific) | not applicable | not applicable — **kio7** only, always simulated (`KIO_REAL_KPI_ROLE=ai-sysdev`) |
+| D1.1 KPIs (lifecycle energy, deploy energy efficiency, cross-arch build success) | not applicable (these KPIs are kio8-specific) | not applicable | not applicable — **kio8** only, always simulated (`KIO_REAL_KPI_ROLE=green-deploy`) |
+| D1.1 KPIs (adoption rate, active usage, satisfaction/MOS) | not applicable (these KPIs are kio13-specific) | not applicable | not applicable — **kio13** only, always simulated (`KIO_REAL_KPI_ROLE=adoption`) |
+| Cumulative CO2e (estimated) | estimate derived from simulated energy | estimate derived from real energy (still an estimate, not a real carbon measurement) | estimate derived from simulated energy |
 
-fix@1 ve tüm D1.1 proje-KPI'ları hiçbir KIO'da "gerçek" olmuyor çünkü bunların
-gerçek kaynağı ilgili gerçek modülün kendisi (KIO2/FocusTracer için Bölüm 9.7/9.8,
-`kio2-integration/README.md`; KIO3/KIO4'ün gerçek modülleri henüz yok) — bağlantı
-kurulana/modül gelene kadar burada üretilen her şey bilinçli olarak simüle kalıyor,
-"beklenirken boş panel" yerine "açıkça etiketlenmiş dummy veri" tercih edildi.
+fix@1 and every D1.1 project-level KPI never becomes "real" on any KIO, because
+their real source is the actual real module in question (KIO2/FocusTracer —
+Section 9.7/9.8, `kio2-integration/README.md`; KIO3/KIO4 have no real module
+yet). Until that connection is made, everything produced here stays
+deliberately simulated — "clearly labeled dummy data" was chosen over "empty
+panel while waiting."
 
 Each simulated request also emits a **trace**: a root `kio.request` span with
 sequential child spans — `prepare_prompt` → `llm_call` → `postprocess` (code-analysis
@@ -219,23 +220,25 @@ curl http://localhost:8080/workflow/{session_id}
 # -> {"session": {...}, "lineage": [...]}
 ```
 
-### Orkestrasyon doğrulama
+### Orchestration verification
 
-Yukarıdaki `curl` örneğini elle tekrar tekrar çalıştırmak yerine, tüm zinciri
-(`POST /workflow/run` → NATS JetStream → kio3'ün NATS consumer'ı → `kio.results.kio3`
-→ Planner'ın `run_result_listener`'ı → Postgres lineage) tek seferde doğrulayan bir
-script var, hiçbir ekstra paket kurmadan (stdlib-only):
+Instead of re-running the `curl` example above by hand every time, there's a
+script that verifies the whole chain in one pass (`POST /workflow/run` → NATS
+JetStream → kio3's NATS consumer → `kio.results.kio3` → the Planner's
+`run_result_listener` → Postgres lineage), with no extra packages to install
+(stdlib-only):
 
 ```bash
 docker compose up -d nats orchestrator-postgres workflow-api planner kio3
 python scripts/verify_orchestration.py
 ```
 
-`PASS`/`FAIL` ile çıkar; `FAIL` olursa hangi hop'ta koptuğunu (Workflow API'ye hiç
-ulaşılamıyor / lineage hiç gelmiyor / vb.) ve hangi container'ın loglarına bakılacağını
-yazar. Bu repo'nun geliştirildiği sandbox'ta Docker olmadığı için bu adım hiç gerçek
-NATS/Postgres'e karşı çalıştırılmadı — bu script'i çalıştırmak, README'nin "V2 Guideline
-Değerlendirmesi" bölümünde işaretli son açık doğrulama adımını kapatıyor.
+Exits with `PASS`/`FAIL`; on `FAIL` it prints exactly which hop broke (Workflow
+API unreachable at all / lineage never arrives / etc.) and which container's
+logs to check. This step has never been run against a real NATS/Postgres,
+since the sandbox this repo was developed in has no Docker — running this
+script closes the last open verification item flagged in the "v2 Guideline
+Evaluation" section of this README.
 
 ## Running a KIO on a different machine
 
@@ -246,8 +249,7 @@ push-based by design, so this needs no code change — only pointing
 `OTEL_EXPORTER_OTLP_ENDPOINT` at the central machine. Two scenarios:
 
 - **A different developer's own KIO module** (its own codebase, not our
-  simulator, and **no Docker required**): **[`remote-kio/INTEGRATION.en.md`](remote-kio/INTEGRATION.en.md)**
-  (English) / **[`remote-kio/INTEGRATION.md`](remote-kio/INTEGRATION.md)** (Turkish)
+  simulator, and **no Docker required**): **[`remote-kio/INTEGRATION.md`](remote-kio/INTEGRATION.md)**
   — an end-to-end guide that also documents the exact data/naming contract and
   non-Docker deployment, plus **[`remote-kio/reference-client/`](remote-kio/reference-client/)**,
   a minimal contract-compliant instrumentation helper (`kio_otel.py`), a runnable
@@ -259,59 +261,65 @@ push-based by design, so this needs no code change — only pointing
 Networking (firewall on both sides, static IP, Tailscale) is common to both and
 documented once in **[`remote-kio/NETWORK.md`](remote-kio/NETWORK.md)**.
 
-## Yeni bir KIO (KIOx) sıfırdan nasıl bağlanır
+## How a new KIO (KIOx) connects from scratch
 
-Kendi kod tabanına sahip, bu repodaki `kio-simulator.py`'yi hiç kullanmayacak yeni bir
-KIO ekibi için başlangıç noktası her zaman **[`observability_integration_contract.pdf`](observability_integration_contract.pdf)**
-— rastgele metrik göndermek diye bir şey yok, normatif bir sözleşme var:
+For a new KIO team with their own codebase — one that will never use this
+repo's `kio-simulator.py` — the starting point is always
+**[`observability_integration_contract.pdf`](observability_integration_contract.pdf)**.
+There's no "send whatever metrics you like" here; it's a normative contract:
 
-1. **§1 Onboarding**: OTLP Bearer token + Langfuse proje anahtarları merkezi platform
-   ekibinden istenir; `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_RESOURCE_ATTRIBUTES` /
-   `LANGFUSE_*` ortam değişkenleri set edilir; "doğrulama kapısı" olarak `kio.heartbeat`
-   Grafana'da ve en az bir trace Langfuse'da görünmeden bir KIO onboard sayılmaz. **Bearer
-   token artık gerçekten zorunlu (2026-08, §9.3)** — `OTEL_EXPORTER_OTLP_HEADERS`
-   olmadan collector OTLP çağrısını (gRPC ve HTTP, 4317 ve 4318) reddeder; önceden bu
-   sadece sözleşmesel bir gereksinimdi, teknik olarak zorlanmıyordu.
-2. **§2.1 Zorunlu metrik seti** — 7 metrik, isim/tip/birim/label'larıyla birebir
-   sabit (bkz. "Metrics" bölümü aşağıda): `kio.request.count`,
-   `kio.request.duration_ms`, `kio.request.error_count`, `kio.llm.token_count`,
-   `kio.llm.cost_usd`, `kio.session.active_count`, `kio.heartbeat`. Bunlar pazarlık
-   konusu değil.
-3. **G1–G7 kuralları** — isimlendirme deseni (`kio.<domain>.<metric>`), zorunlu
-   correlation key'ler (`kio.id`, `session.id`), yüksek-kardinaliteli label / PII /
-   secret yasağı. **G7: zorunlu 7'nin ötesindeki metrikler self-service** — bu
-   kurallara uyduğu sürece KIOx kendi domain'ine özgü metriği kendi tanımlayabilir
-   (bu repodaki `kio.llm.tokens_per_second`, `kio.llm.energy_joules`, D1.1 KPI
-   metrikleri hep bu şekilde eklendi — hiçbiri contract'ın zorunlu listesinde değil).
-4. Sözleşmenin ekindeki referans Python implementasyonu (`MeterProvider` kurulumu,
-   instrument tanımları, heartbeat loop) doğrudan kopyalanabilir başlangıç noktası.
+1. **§1 Onboarding**: an OTLP Bearer token + Langfuse project keys are requested
+   from the central platform team; the `OTEL_EXPORTER_OTLP_ENDPOINT` /
+   `OTEL_RESOURCE_ATTRIBUTES` / `LANGFUSE_*` environment variables are set; the
+   "verification gate" is `kio.heartbeat` showing up in Grafana and at least one
+   trace showing up in Langfuse — a KIO isn't considered onboarded until both
+   are visible. **The Bearer token is now genuinely enforced (2026-08, §9.3)**
+   — without `OTEL_EXPORTER_OTLP_HEADERS` the collector rejects the OTLP call
+   outright (both gRPC and HTTP, 4317 and 4318); previously this was only a
+   contractual requirement, not technically enforced.
+2. **§2.1 Mandatory metric set** — 7 metrics, fixed name/type/unit/labels (see
+   "Metrics" below): `kio.request.count`, `kio.request.duration_ms`,
+   `kio.request.error_count`, `kio.llm.token_count`, `kio.llm.cost_usd`,
+   `kio.session.active_count`, `kio.heartbeat`. These are not negotiable.
+3. **The G1–G7 rules** — the naming pattern (`kio.<domain>.<metric>`), mandatory
+   correlation keys (`kio.id`, `session.id`), a ban on high-cardinality labels /
+   PII / secrets. **G7: anything beyond the mandatory 7 is self-service** — as
+   long as a KIOx follows these rules, it can define its own domain-specific
+   metrics (this repo's `kio.llm.tokens_per_second`, `kio.llm.energy_joules`,
+   and the D1.1 KPI metrics were all added this way — none of them are on the
+   contract's mandatory list).
+4. The contract appendix's reference Python implementation (`MeterProvider`
+   setup, instrument definitions, heartbeat loop) is a directly copyable
+   starting point.
 
-**Bu, Planner/NATS'tan tamamen ayrı bir konu.** Sözleşmeye uymak (telemetri göndermek)
-zorunlu; `orchestrator/`'daki Workflow API/Planner/NATS'a kayıt olmak ise **opsiyonel**
-— yalnızca KIO'nuzun bizim `POST /workflow/run` çağrımızla tetiklenmesini istiyorsanız
-gerekir (bkz. yukarıdaki "Orchestration layer" bölümü). İstemiyorsanız (ör. FocusTracer'ın
-CLI tabanlı çalışma modeli gibi, bkz. `kio2-integration/README.md`), hiç kayıt olmadan da
-sözleşmeye uygun telemetri göndermeye devam edebilirsiniz — kio.heartbeat + zorunlu
-metrikler yeterli.
+**This is a completely separate concern from the Planner/NATS.** Complying with
+the contract (sending telemetry) is mandatory; registering with the Workflow
+API/Planner/NATS in `orchestrator/` is **optional** — only needed if you want
+your KIO to be triggerable by our `POST /workflow/run` call (see the
+"Orchestration layer" section above). If you don't need that (e.g. FocusTracer's
+CLI-based execution model — see `kio2-integration/README.md`), you can keep
+sending contract-compliant telemetry without ever registering — `kio.heartbeat`
+plus the mandatory metrics is enough.
 
-Somut örnekler bu repoda: kendi kod tabanınıza sahip bir modülü (başka bir
-makinede olsun ya da olmasın) sıfırdan bağlamak için uçtan uca rehber +
-kopyalanabilir başlangıç kiti `remote-kio/INTEGRATION.md` ve
-`remote-kio/reference-client/` (`kio_otel.py` — yalnızca zorunlu sözleşmeyi
-uygulayan minimal yardımcı, `check_connectivity.py` ön-uçuş testi); bizim hazır
-`kio-simulator.py`'mizi başka bir makinede/VM'de çalıştırmak için
-`remote-kio/README.md`; gerçek FocusTracer modülünü KIO2 kimliğiyle bağlamak için
-satır referanslı bir rehber için `kio2-integration/README.md`.
+Concrete examples in this repo: for connecting a module with your own codebase
+(whether on a different machine or not) from scratch, an end-to-end guide plus
+a copyable starter kit — `remote-kio/INTEGRATION.md` and
+`remote-kio/reference-client/` (`kio_otel.py`, a minimal helper implementing
+only the mandatory contract, plus `check_connectivity.py`, a pre-flight test);
+for running our ready-made `kio-simulator.py` on a different machine/VM,
+`remote-kio/README.md`; for a line-referenced guide to connecting the real
+FocusTracer module under the KIO2 identity, `kio2-integration/README.md`.
 
-## KIO2 gerçek modül entegrasyonu (FocusTracer)
+## KIO2 real-module integration (FocusTracer)
 
-FocusTracer ekibi kendi modülünü tamamladığında bu sisteme nasıl bağlanacağının rehberi
-**[`kio2-integration/README.md`](kio2-integration/README.md)** içinde — FocusTracer'ın
-kendi koduna özel, satır referanslı talimatlar (nereye hangi OTel çağrısı eklenecek,
-`explain`/`slice` komutlarından hangi metriklerin gerçek olarak alınabileceği, fix@1'in
-neden FocusTracer'ın kapsamı dışında kaldığı). `kio2` kimliği artık gerçek modül için
-ayrıldı; eski simülatör `kio2-sim` olarak yeniden adlandırılıp karşılaştırma amacıyla
-paralel çalışmaya devam ediyor (`docker-compose.yml`).
+The guide for how the FocusTracer team connects their own module once it's
+complete lives in **[`kio2-integration/README.md`](kio2-integration/README.md)**
+— instructions specific to FocusTracer's own code, with line references
+(exactly where to add which OTel call, which metrics can be sourced for real
+from the `explain`/`slice` commands, why fix@1 is out of FocusTracer's scope).
+The `kio2` identity is now reserved for the real module; the former simulator
+was renamed to `kio2-sim` and keeps running in parallel for comparison
+(`docker-compose.yml`).
 
 ## Metrics (Integration Contract §2.1 + optional extras)
 
@@ -325,7 +333,7 @@ Mandatory set, all carrying `kio_id`:
 - `kio_session_active_count` (up/down counter)
 - `kio_heartbeat` (counter; ticks every 60s — a KIO silent >120s is "stale", enforced
   by a real Grafana alert rule, see `grafana/provisioning/alerting/rules.yml`, plus a
-  visual "Stale KIO Kontrolü" table on the Overview dashboard — not just a manual check
+  visual "Stale KIO Check" table on the Overview dashboard — not just a manual check
   anymore)
 
 Optional self-service metrics (contract rule G7, meeting requirements):
@@ -346,7 +354,7 @@ Free-form strings (LLM output snippets, analysis notes, failure summaries) are s
 numeric series. They show up in the log panel on the KIO Detail dashboard. Query them
 directly with LogsQL, e.g. `kio.id:kio2` or `_msg:~"coverage"`.
 
-## Traces ("işlem sırası")
+## Traces
 
 Each request's `kio.request` trace (with its `prepare_prompt` / `repo_scan` /
 `llm_call` / `postprocess` children) is exported to **Tempo**. The KIO Detail
@@ -356,112 +364,122 @@ paste a Trace ID from that table into the `trace_id` variable. If the waterfall
 panel ever comes up empty, the same Trace ID can always be opened via
 **Explore → Tempo** in Grafana as a fallback.
 
-## Gerçek proje KPI'ları (D1.1)
+## Real project KPIs (D1.1)
 
-`docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx` — projenin resmi Proje Yönetim El Kitabı'ndan (D1.1)
-alınan tüm KPI'ların (1.1–9.2) ve iş-paketi/görev seviyesi metriklerin tam kataloğu, ve
-hangi KIO'ya hangi KPI'nın bağlı olduğunun haritası.
+`docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx` — the full catalog of every KPI
+(1.1–9.2) and work-package/task-level metric from the project's official
+Project Management Handbook (D1.1), plus the mapping of which KPI belongs to
+which KIO.
 
-D1.1'e göre altı KIO'nun gerçek KPI'ları `KIO_REAL_KPI_ROLE` env değişkeniyle etkinleştirildi
-(`docker-compose.yml`), her biri `kio_simulator.py`'de kendi metrik setini yayınlıyor
-(isim/birim doğrudan D1.1'den, değerler henüz simüle):
+Six KIOs' real D1.1 KPIs are enabled via the `KIO_REAL_KPI_ROLE` env var
+(`docker-compose.yml`), each publishing its own metric set in
+`kio_simulator.py` (names/units taken directly from D1.1, values still
+simulated):
 
-- **kio2-sim** (`KIO_REAL_KPI_ROLE=bugfix`, D1.1'de "Bug Locate & Fix / LLM Debugger" —
-  FocusTracer'ın yaptığı işin ta kendisi):
+- **kio2-sim** (`KIO_REAL_KPI_ROLE=bugfix`, D1.1's "Bug Locate & Fix / LLM
+  Debugger" — exactly the job FocusTracer does):
   - `kio_bugfix_duration_hours` — KPI 6.1 (Bug-fix time)
   - `kio_issue_resolution_hours` — KPI 1.2 (Issue resolution speed)
-  - `kio_slicing_success_rate` — WP3 görev metriği (Dynamic slicing success rate, hedef ≥%85)
+  - `kio_slicing_success_rate` — WP3 task metric (Dynamic slicing success rate, target ≥85%)
   - `kio_issue_customer_reported_count` — KPI 6.2 (Customer-reported issues)
-- **kio3** (`KIO_REAL_KPI_ROLE=nlp-requirements`, D1.1'de "NLP → Formal Requirements"):
+- **kio3** (`KIO_REAL_KPI_ROLE=nlp-requirements`, D1.1's "NLP → Formal Requirements"):
   - `kio_codegen_duration_minutes` — KPI 1.1 (Code generation speed)
   - `kio_code_quality_score_pct` — KPI 3.1 (Code quality improvement)
-- **kio4** (`KIO_REAL_KPI_ROLE=architecture-to-code`, D1.1'de "Architecture-to-Code Planner"):
-  - `kio_codegen_duration_minutes`, `kio_code_quality_score_pct` (kio3 ile aynı, KPI 1.1 + 3.1)
-  - `kio_review_score` — KPI 3.2 (Review score increase, yalnızca KIO4)
-- **kio7** (`KIO_REAL_KPI_ROLE=ai-sysdev`, D1.1'de "AI-SysDev" — çoğu KPI ile ortak (1.1, 1.2,
-  2.x, 3.x, 4.1, 5.1, 6.x, 7.1, 9.x), yalnızca net birincil sahip olduğu ve diğer üç KIO
-  tarafından kapsanmayan beşi simüle edildi):
+- **kio4** (`KIO_REAL_KPI_ROLE=architecture-to-code`, D1.1's "Architecture-to-Code Planner"):
+  - `kio_codegen_duration_minutes`, `kio_code_quality_score_pct` (same as kio3, KPI 1.1 + 3.1)
+  - `kio_review_score` — KPI 3.2 (Review score increase, KIO4 only)
+- **kio7** (`KIO_REAL_KPI_ROLE=ai-sysdev`, D1.1's "AI-SysDev" — shared across most
+  KPIs (1.1, 1.2, 2.x, 3.x, 4.1, 5.1, 6.x, 7.1, 9.x); only the five where KIO7 is
+  a clear primary owner and not already covered by the other three KIOs are simulated):
   - `kio_dev_productivity_features_per_day` — KPI 4.1 (Developer productivity)
   - `kio_time_to_market_days` — KPI 5.1 (Time-to-Market)
   - `kio_cost_saving_pct` — KPI 7.1 (Annual cost saving)
   - `kio_refactoring_hours_per_feature` — KPI 9.1 (Refactoring effort reduction)
   - `kio_tech_debt_hours_per_100loc` — KPI 9.2 (Technical debt reduction)
-- **kio8** (`KIO_REAL_KPI_ROLE=green-deploy`, D1.1'de "Cross-Architecture / Energy-Efficient
-  Deploy" — KPI 2.1/2.2'de KIO7/KIO10 ile ortak, KPI 8.3'te tek sahip):
+- **kio8** (`KIO_REAL_KPI_ROLE=green-deploy`, D1.1's "Cross-Architecture /
+  Energy-Efficient Deploy" — shares KPI 2.1/2.2 with KIO7/KIO10, sole owner of KPI 8.3):
   - `kio_lifecycle_energy_pct_of_baseline` — KPI 2.1 (Lifecycle energy reduction)
   - `kio_deploy_energy_tokens_per_s_per_w` — KPI 2.2 (Deployment energy efficiency)
   - `kio_cross_arch_build_success_count` — KPI 8.3 (Cross-Architecture Build Success Rate)
-- **kio13** (`KIO_REAL_KPI_ROLE=adoption`, D1.1'de "Adoption & Usage Tracking" — D1.1'in
-  hiçbir başka KIO ile paylaşmadığı tek iki KPI'sının sahibi):
+- **kio13** (`KIO_REAL_KPI_ROLE=adoption`, D1.1's "Adoption & Usage Tracking" —
+  owner of the only two D1.1 KPIs not shared with any other KIO):
   - `kio_adoption_active_user_pct` — KPI 8.1 (Adoption rate)
   - `kio_adoption_usage_pct`, `kio_adoption_mos_score` — KPI 8.2 (Active usage & satisfaction)
 
-Not: kio3/kio4'ün `task_type`'ı 2026-08'de (`test-generation`/`debug` → `nlp-requirements`/
-`architecture-to-code`) D1.1'in gerçek KIO3/KIO4 kimlikleriyle eşleşecek şekilde yeniden
-adlandırıldı — D1.1'in KPI atamaları bu gerçek rollere bağlı, simülatörün ilk seçtiği
-gelişigüzel isimlere değil. kio7/kio8/kio13 doğrudan D1.1'in ilgili kimliklerine göre
-eklendi. kio7'nin `ai-sysdev` rolü kasıtlı olarak KPI 2.1/2.2'yi dışarıda bırakmıştı (bkz.
-`kio_simulator.py` yorumu) — bu ikisi burada kio8 altında, D1.1'in daha net/spesifik sahibi
-olarak uygulandı.
+Note: kio3/kio4's `task_type` was renamed in 2026-08 (`test-generation`/`debug`
+→ `nlp-requirements`/`architecture-to-code`) to match D1.1's actual KIO3/KIO4
+identities — D1.1's KPI assignments are keyed to those real roles, not to
+whatever arbitrary name the simulator first picked. kio7/kio8/kio13 were added
+the same way, directly against D1.1's corresponding identities. kio7's
+`ai-sysdev` role deliberately left KPI 2.1/2.2 out (see the comment in
+`kio_simulator.py`) — those two are implemented here under kio8 instead,
+D1.1's clearer/more specific owner.
 
-KIO Detail dashboard'unda "D1.1 Gerçek Proje KPI'ları" bölümleri bu metrikleri gösterir
-(yalnızca ilgili `KIO_REAL_KPI_ROLE`'e sahip KIO seçiliyken veri dolu gelir, diğerlerinde
-"N/A" — bkz. "Gerçek vs Simüle Veri Haritası"). D1.1'de kendisine KPI ataması bulunan tüm
-KIO'ların (KIO2, KIO3, KIO4, KIO7, KIO8, KIO13) tamamı artık entegre; D1.1'in 16 KPI'sının
-(1.1–9.2) tamamı en az bir KIO üzerinden simüle veriyle görünür durumda. Bkz. referans
-dokümanının "Diğer KIO'lar — Durum" bölümü.
+The "D1.1 Real Project KPIs" sections on the KIO Detail dashboard show these
+metrics (populated only when the selected KIO has the matching
+`KIO_REAL_KPI_ROLE`, "N/A" otherwise — see "Real vs. Simulated Data Map"). Every
+KIO D1.1 assigns a KPI to (KIO2, KIO3, KIO4, KIO7, KIO8, KIO13) is now
+integrated; all 16 of D1.1's KPIs (1.1–9.2) are visible via simulated data
+through at least one KIO. See the "Other KIOs — Status" section of the
+reference document.
 
-## Gerçek LLM entegrasyonu (KIO2, opsiyonel — NVIDIA GPU gerekir)
+## Real LLM integration (KIO2, optional — requires an NVIDIA GPU)
 
-KIO2'nin gerçek modülü (FocusTracer) henüz bağlanmadığı için, o bağlanana kadar en
-azından **gerçek bir LLM'i gerçekten çalıştırıp** tokens/sec ve GPU enerjisini gerçek
-ölçmek için bu yol `kio2-sim`'de var. Varsayılan olarak kapalı (`KIO2_REAL_LLM_ENABLED`
-default'u `docker-compose.yml`'de `"false"`) — bu yol FocusTracer bağlantısından bağımsız
-çalıştığı için istendiğinde (ör. bir demo için) `.env`'de `KIO2_REAL_LLM_ENABLED=true`
-yapılıp o handoff beklenmeden açılabilir; sadece host'ta gerçek bir Ollama + GPU
-gerektirdiği için (headless bir uzak test sunucusunda olmayabilir) varsayılan kapalı
-tutuldu. Açıkken değişen şey:
+Since KIO2's real module (FocusTracer) isn't connected yet, this path exists on
+`kio2-sim` to at least **actually run a real LLM** and measure tokens/sec and
+GPU energy for real in the meantime. Off by default (`KIO2_REAL_LLM_ENABLED`
+defaults to `"false"` in `docker-compose.yml`) — since this path runs
+independently of the FocusTracer connection, it can be turned on whenever
+needed (e.g. for a demo) via `KIO2_REAL_LLM_ENABLED=true` in `.env` without
+waiting for that handoff; it defaults off only because it requires a real
+Ollama + GPU on the host (which a headless remote test server may not have).
+What changes when it's on:
 
-- **Gerçek olan:** tokens/sec, input/output token sayısı ve latency (Ollama'nın kendi
-  `eval_count`/`eval_duration`'ından), GPU enerjisi VE GPU sıcaklığı (gerçek NVML
-  okumasının çağrı süresi boyunca integrali / anlık sıcaklık), **ve artık error rate de** — Ollama çağrısı gerçekten
-  başarısız olursa (unreachable/timeout/HTTP hatası) bu, rastgele bir zar değil,
-  `kio.request.error_count`'a gerçek `error_type` ile yazılan gerçek bir hata olarak
-  sayılıyor. Eskiden gerçek yol açıkken bile hata oranı hâlâ `%7` rastgele zardan
-  geliyordu ve gerçek bir Ollama kopması, arkasından sanki hiçbir şey olmamış gibi
-  taze bir sahte "başarılı" istekle örtbas ediliyordu — bu düzeltildi
-  (`_call_ollama_real()` artık başarı/başarısızlığı açıkça ayırt eden bir sözlük
-  döndürüyor, `simulate_request()`'te üç yollu dallanma: gerçek-başarı / gerçek-hata /
-  yol-tamamen-kapalı).
-- **Hâlâ simüle olan:** fix@1 (`kio.fix.attempt_count`, `outcome=success|failure`) —
-  çünkü "doğru düzeltme" için gerçek bir hata + gerçek bir test çalıştırması gerekiyor,
-  bu da FocusTracer'ın işi. FocusTracer hazır olunca `kio_simulator.py`'daki
-  `_evaluate_fix_success()` fonksiyonunun içini değiştirmek yeterli olacak — metrik adı/şekli aynı kalır.
-  Ayrıca `kio.request.accuracy` (genel Contract metriği, D1.1/fix@1'den bağımsız) da aynı
-  sebeple simüle kalıyor — bir LLM cevabının "doğruluğunu" otomatik ölçecek bir referans/test
-  seti yok.
+- **Real:** tokens/sec, input/output token counts, and latency (from Ollama's
+  own `eval_count`/`eval_duration`), GPU energy AND GPU temperature (the
+  integral of a real NVML reading over the call's duration / an instantaneous
+  reading), **and now the error rate too** — if the Ollama call genuinely fails
+  (unreachable/timeout/HTTP error), this is recorded as a real error with a
+  real `error_type` on `kio.request.error_count`, not a random dice roll.
+  Previously, even with the real path on, the error rate still came from the
+  same 7% random dice roll, and a real Ollama outage would be papered over by
+  a fresh fake "successful" request right after, as if nothing had happened —
+  this is fixed (`_call_ollama_real()` now returns a dict that explicitly
+  distinguishes success from failure; `simulate_request()` branches three ways:
+  real-success / real-failure / path-fully-off).
+- **Still simulated:** fix@1 (`kio.fix.attempt_count`, `outcome=success|failure`)
+  — because judging a "correct fix" needs a real bug plus a real test run,
+  which is FocusTracer's job. Once FocusTracer is ready, it will be enough to
+  swap the body of `_evaluate_fix_success()` in `kio_simulator.py` — the metric
+  name/shape stays the same. `kio.request.accuracy` (the general Contract
+  metric, independent of D1.1/fix@1) also stays simulated for the same reason
+  — there's no reference/test set to automatically score an LLM answer's
+  "correctness."
 
-Kurulum (Windows veya Linux host, ikisinde de aynı adımlar):
-1. Bu bilgisayarda (container içinde değil) Ollama kurulu olsun ve model çekilmiş olsun: `ollama pull qwen2.5:3b`
-2. (Opsiyonel, gerçek enerji için) `pip install nvidia-ml-py` sonra `python tools/power_exporter.py` çalıştır — host'ta (Windows veya Linux) NVML'den okuyup `http://localhost:9400/power` üzerinden JSON servis eder (`{"watts": 87.3, "temperature_c": 61.5}` — `temperature_c` 2026-08'de KIO Detail'in GPU sıcaklığı gauge'ı için eklendi, eski exporter/NVML sürümlerinde yoksa sessizce atlanır). Bunu çalıştırmazsan enerji eski tahmini formüle döner, sistem yine de çalışır.
-3. Repo kökünde `.env` dosyasına `KIO2_REAL_LLM_ENABLED=true` ekleyip (yoksa `cp .env.example .env`'den başla) `docker compose up -d --build kio2-sim` ile yeniden başlat; kapatmak için satırı sil veya `false` yap (varsayılan zaten `false`).
+Setup (same steps on a Windows or Linux host):
+1. Have Ollama installed on this machine (not inside a container) with the model already pulled: `ollama pull qwen2.5:3b`
+2. (Optional, for real energy) `pip install nvidia-ml-py`, then run `python tools/power_exporter.py` — reads from NVML on the host (Windows or Linux) and serves JSON over `http://localhost:9400/power` (`{"watts": 87.3, "temperature_c": 61.5}` — `temperature_c` was added in 2026-08 for KIO Detail's GPU temperature gauge; silently omitted on older exporter/NVML versions that don't have it). If you skip this, energy falls back to the old estimated formula and the system still runs fine.
+3. Add `KIO2_REAL_LLM_ENABLED=true` to a `.env` file at the repo root (start from `cp .env.example .env` if you don't have one), then restart with `docker compose up -d --build kio2-sim`; to turn it off again, delete the line or set it to `false` (the default is already `false`).
 
-Neden bu yol (container'a GPU passthrough değil, host'ta native Ollama + ayrı bir
-power-exporter script'i)? Çünkü Linux container'ların host'un GPU'suna
-görünürlüğü yok (passthrough ayrıca kurulmadıkça — Linux'ta `nvidia-container-toolkit`
-ile mümkün ama burada tercih edilmedi); Ollama zaten host'ta (Windows veya Linux fark
-etmez) GPU'yu doğrudan kullanabiliyor, bu yüzden en az sürtünmeli yol bu.
-`_read_gpu_power_watts()` önce `GPU_POWER_EXPORTER_URL`'i, sonra (varsa) container'ın
-kendi NVML'ini dener, ikisi de yoksa sessizce eski tahmini değere düşer — hiçbir
-durumda simülatör çökmez.
+Why this approach (native Ollama on the host + a separate power-exporter
+script, instead of GPU passthrough into the container)? Linux containers have
+no visibility into the host's GPU unless passthrough is separately configured
+(possible on Linux via `nvidia-container-toolkit`, but not used here); Ollama
+already runs natively on the host (Windows or Linux, doesn't matter) and can
+use the GPU directly, which is the lowest-friction path.
+`_read_gpu_power_watts()` tries `GPU_POWER_EXPORTER_URL` first, then the
+container's own NVML if available, and silently falls back to the old
+estimated value if neither works — the simulator never crashes either way.
 
-**Windows/Linux farkı — `host.docker.internal`:** `OLLAMA_ENDPOINT` ve
-`GPU_POWER_EXPORTER_URL` container'dan host'a bu DNS adıyla ulaşır. Docker Desktop
-(Windows/Mac) bunu otomatik çözer; native Linux Docker Engine'de (ör. Ubuntu sunucuda
-Docker Desktop olmadan kurulu Docker) otomatik çözülmez — bu yüzden `docker-compose.yml`'de
-`kio2-sim` servisine `extra_hosts: ["host.docker.internal:host-gateway"]` eklendi
-(Docker Engine 20.10+ gerektirir). Bu satır Docker Desktop'ta da zararsızdır, aynı adrese
-çözülür — tek bir `docker-compose.yml` hem Windows hem Linux'ta değişiklik gerekmeden çalışır.
+**Windows/Linux difference — `host.docker.internal`:** `OLLAMA_ENDPOINT` and
+`GPU_POWER_EXPORTER_URL` reach the host from inside the container via this DNS
+name. Docker Desktop (Windows/Mac) resolves it automatically; native Linux
+Docker Engine (e.g. Docker installed on an Ubuntu server without Docker
+Desktop) does not — which is why `docker-compose.yml` adds
+`extra_hosts: ["host.docker.internal:host-gateway"]` to the `kio2-sim` service
+(requires Docker Engine 20.10+). This line is harmless on Docker Desktop too,
+resolving to the same address — a single `docker-compose.yml` works on both
+Windows and Linux with no changes needed.
 
 ## Langfuse (LLM-specific tracing)
 
@@ -477,22 +495,22 @@ Self-hosted via `LANGFUSE_INIT_*` "headless initialization" env vars on
 `langfuse-web`, so the org/project/API-keys exist automatically on first boot —
 no manual UI setup step, no copy-pasting keys before the KIOs can connect.
 
-**Remote Ubuntu sunucuda çalıştırıp başka bir makineden bağlanıyorsan** (ör.
-`docker compose up` bir Ubuntu sunucuda, tarayıcı senin Windows makinende):
-`NEXTAUTH_URL` ve `LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT` varsayılan olarak
-`localhost`'a işaret eder, bu da sadece Docker'ın çalıştığı makinenin
-kendisinden erişimde doğru sonuç verir. Repo kökünde bir `.env` dosyası
-oluşturup (`.env.example`'dan kopyala) `PUBLIC_HOST=<sunucunun IP/hostname'i>`
-ayarla — aksi halde Langfuse girişi (NextAuth yönlendirmesi yanlış host'a
-gider) ve multi-modal medya önizlemeleri (presigned URL'ler yanlış host'a
-işaret eder) bozulur. Core OTel telemetri (Grafana/traces/metrics/logs) ve
-Langfuse'un trace/cost verisi bundan etkilenmez — onlar zaten
-`otel-collector`/`minio` gibi Docker-internal adresler kullanıyor. Yerel
-kullanımda (Docker hangi OS'ta çalışıyorsa tarayıcı da orada açılıyorsa,
-Windows ya da Linux fark etmez) hiçbir şey yapmana gerek yok, varsayılan
-`localhost` zaten doğru.
+**If you're running this on a remote Ubuntu server and connecting from a
+different machine** (e.g. `docker compose up` runs on an Ubuntu server, but
+the browser is on your Windows machine): `NEXTAUTH_URL` and
+`LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT` default to `localhost`, which only
+resolves correctly from the machine Docker itself is running on. Create a
+`.env` file at the repo root (copy from `.env.example`) and set
+`PUBLIC_HOST=<the server's IP/hostname>` — otherwise Langfuse login (NextAuth
+redirects to the wrong host) and multi-modal media previews (presigned URLs
+pointing at the wrong host) break. Core OTel telemetry (Grafana/traces/
+metrics/logs) and Langfuse's own trace/cost data are unaffected either way —
+they already use Docker-internal addresses like `otel-collector`/`minio`. For
+local use (Docker and the browser on the same machine, whichever OS — Windows
+or Linux doesn't matter) you don't need to do anything, the default
+`localhost` is already correct.
 
-## V2 Guideline Değerlendirmesi (2026-07-23)
+## V2 Guideline Evaluation (2026-07-23)
 
 A candidate engineer's proposed **v2 Observability Integration Guide** was reviewed
 against this implementation. It is a candidate's proposal, not a finalized
@@ -524,7 +542,7 @@ contract — the decisions below are ours, made after comparing the two document
   to it; kio2-sim stays on its internal timer so the real-Ollama demo isn't
   disrupted. A live `docker compose up` pass against the real NATS/Postgres is
   the remaining verification step — run `python scripts/verify_orchestration.py`
-  after bringing the stack up (see "Orkestrasyon doğrulama" below); it drives
+  after bringing the stack up (see "Orchestration verification" below); it drives
   the whole round trip (`POST /workflow/run` -> NATS -> kio3 -> `kio.results.kio3`
   -> Planner -> Postgres lineage) and prints exactly which hop failed if it doesn't.
 - **Confirmed already-compliant, no change needed:** the 7 mandatory metrics
@@ -544,13 +562,14 @@ contract — the decisions below are ours, made after comparing the two document
   rule) — the new variable only filters the log/trace panels, matching v2's own
   metric-label rules.
 
-## Testler (pytest)
+## Tests (pytest)
 
-`tests/` altında `kio-simulator/kio_simulator.py` (D1.1 KPI emisyonu her rol için,
-gerçek GPU sıcaklığı okumasının 3 fallback kademesi, NATS görev handler'ı,
-`simulate_request()`'in simüle/gerçek-başarı/gerçek-hata dallanmaları) ve
-`orchestrator/` (Planner'ın yönlendirme tablosu + dispatch, Session Manager'ın
-SQLite üzerinden test edilen CRUD'ı) için kalıcı bir pytest paketi var:
+There's a permanent pytest suite under `tests/` covering
+`kio-simulator/kio_simulator.py` (D1.1 KPI emission for every role, the 3
+fallback tiers of the real GPU temperature reading, the NATS task handler,
+`simulate_request()`'s simulated/real-success/real-failure branches) and
+`orchestrator/` (the Planner's routing table + dispatch, the Session Manager's
+CRUD tested via SQLite):
 
 ```bash
 pip install -r kio-simulator/requirements.txt -r orchestrator/requirements.txt \
@@ -558,9 +577,9 @@ pip install -r kio-simulator/requirements.txt -r orchestrator/requirements.txt \
 pytest
 ```
 
-Gerçek bir OTel collector/NATS/Postgres gerektirmez — tüm dış bağımlılıklar
-(OTLP exporter'lar sessizce erişilemez uca düşer, NATS bir fake `nc` ile,
-Postgres `sqlite:///:memory:` ile) taklit edilmiştir.
+No real OTel collector/NATS/Postgres is required — every external dependency
+is faked (the OTLP exporters silently fall back when the endpoint is
+unreachable, NATS via a fake `nc`, Postgres via `sqlite:///:memory:`).
 
 ## Design notes & decisions
 
@@ -608,12 +627,12 @@ observability/
 ├── grafana/
 │   ├── provisioning/datasources/datasources.yml
 │   ├── provisioning/dashboards/dashboards.yml
-│   ├── provisioning/alerting/rules.yml       # Stale KIO alert (Sözleşme §2.3)
+│   ├── provisioning/alerting/rules.yml       # Stale KIO alert (Contract §2.3)
 │   └── dashboards/{ai4sweng-overview,ai4sweng-kio}.json
 ├── kio-simulator/{kio_simulator.py,requirements.txt,Dockerfile}
 ├── orchestrator/{planner.py,session_manager.py,workflow_api.py,envelope.py}
 ├── remote-kio/                              # connect a KIO from another machine
-│   ├── {README.md,INTEGRATION.md,INTEGRATION.en.md,NETWORK.md}   # hub / own-module guide (TR+EN) / networking
+│   ├── {README.md,INTEGRATION.md,NETWORK.md}   # hub / own-module guide / networking
 │   ├── {docker-compose.yml,.env.example}       # run OUR simulator remotely
 │   └── reference-client/{kio_otel.py,example_kio.py,check_connectivity.py,requirements.txt,.env.example}
 ├── tests/{conftest.py,requirements-test.txt,kio_simulator/,orchestrator/}

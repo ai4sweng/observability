@@ -6,8 +6,8 @@
 #
 # Bring up:   docker compose up -d --build
 # Grafana:    http://localhost:3000  (browse anonymously as Viewer; admin login
-#             is "admin" / GF_SECURITY_ADMIN_PASSWORD below, rotate before any
-#             real/shared deployment)
+#             is "admin" / the rotated GF_SECURITY_ADMIN_PASSWORD default below —
+#             NOT "admin". Override via .env for any real/shared deployment.)
 # Langfuse:   http://localhost:3001  (see LANGFUSE_INIT_USER_EMAIL / _PASSWORD below)
 # Tear down:  docker compose down -v
 #
@@ -525,64 +525,64 @@ services:
       - nats
     restart: unless-stopped
 
-  # kio8 = D1.1's KIO8 (Cross-Architecture / Energy-Efficient Deploy). D1.1
-  # ties KIO8 to KPI 2.1/2.2 (energy, shared with KIO7/KIO10) and uniquely to
-  # KPI 8.3 (Cross-Architecture Build Success Rate). Pure D1.1-KPI simulator
-  # like kio7 — NATS left off since there's no real dispatch target behind it
-  # yet (see orchestrator's task_type routing table).
-  kio8:
-    build: ./kio-simulator
-    container_name: ai4sweng-kio8
-    environment:
-      KIO_ID: kio8
-      KIO_LLM: "gemini-1.5-pro"
-      KIO_TASK_TYPE: green-deploy
-      SERVICE_VERSION: "0.3.0"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
-      # otel-collector/config.yaml) or every OTLP export gets rejected.
-      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
-      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
-      REQUEST_INTERVAL_S: "${KIO8_REQUEST_INTERVAL_S:-5}"
-      # D1.1 KPI 2.1 (Lifecycle energy reduction), 2.2 (Deployment energy
-      # efficiency), 8.3 (Cross-Architecture Build Success Rate), simulated —
-      # see docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
-      KIO_REAL_KPI_ROLE: "green-deploy"
-      LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
-      LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
-      LANGFUSE_BASE_URL: "http://langfuse-web:3000"
-    depends_on:
-      - otel-collector
-    restart: unless-stopped
+  # # kio8 = D1.1's KIO8 (Cross-Architecture / Energy-Efficient Deploy). D1.1
+  # # ties KIO8 to KPI 2.1/2.2 (energy, shared with KIO7/KIO10) and uniquely to
+  # # KPI 8.3 (Cross-Architecture Build Success Rate). Pure D1.1-KPI simulator
+  # # like kio7 — NATS left off since there's no real dispatch target behind it
+  # # yet (see orchestrator's task_type routing table).
+  # kio8:
+  #   build: ./kio-simulator
+  #   container_name: ai4sweng-kio8
+  #   environment:
+  #     KIO_ID: kio8
+  #     KIO_LLM: "gemini-1.5-pro"
+  #     KIO_TASK_TYPE: green-deploy
+  #     SERVICE_VERSION: "0.3.0"
+  #     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  #     # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+  #     # otel-collector/config.yaml) or every OTLP export gets rejected.
+  #     OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+  #     EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
+  #     HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+  #     REQUEST_INTERVAL_S: "${KIO8_REQUEST_INTERVAL_S:-5}"
+  #     # D1.1 KPI 2.1 (Lifecycle energy reduction), 2.2 (Deployment energy
+  #     # efficiency), 8.3 (Cross-Architecture Build Success Rate), simulated —
+  #     # see docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
+  #     KIO_REAL_KPI_ROLE: "green-deploy"
+  #     LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
+  #     LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
+  #     LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+  #   depends_on:
+  #     - otel-collector
+  #   restart: unless-stopped
 
-  # kio13 = D1.1's KIO13 (Adoption & Usage Tracking) — the sole owner of KPI
-  # 8.1 (Adoption rate) and KPI 8.2 (Active usage & satisfaction), D1.1's
-  # only two KPIs mapped to a single KIO with no co-owner.
-  kio13:
-    build: ./kio-simulator
-    container_name: ai4sweng-kio13
-    environment:
-      KIO_ID: kio13
-      KIO_LLM: "gpt-4o-mini"
-      KIO_TASK_TYPE: adoption
-      SERVICE_VERSION: "0.3.0"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
-      # otel-collector/config.yaml) or every OTLP export gets rejected.
-      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
-      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
-      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
-      REQUEST_INTERVAL_S: "${KIO13_REQUEST_INTERVAL_S:-5}"
-      # D1.1 KPI 8.1 (Adoption rate), 8.2 (Active usage & satisfaction),
-      # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
-      KIO_REAL_KPI_ROLE: "adoption"
-      LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
-      LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
-      LANGFUSE_BASE_URL: "http://langfuse-web:3000"
-    depends_on:
-      - otel-collector
-    restart: unless-stopped
+  # # kio13 = D1.1's KIO13 (Adoption & Usage Tracking) — the sole owner of KPI
+  # # 8.1 (Adoption rate) and KPI 8.2 (Active usage & satisfaction), D1.1's
+  # # only two KPIs mapped to a single KIO with no co-owner.
+  # kio13:
+  #   build: ./kio-simulator
+  #   container_name: ai4sweng-kio13
+  #   environment:
+  #     KIO_ID: kio13
+  #     KIO_LLM: "gpt-4o-mini"
+  #     KIO_TASK_TYPE: adoption
+  #     SERVICE_VERSION: "0.3.0"
+  #     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  #     # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+  #     # otel-collector/config.yaml) or every OTLP export gets rejected.
+  #     OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+  #     EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
+  #     HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+  #     REQUEST_INTERVAL_S: "${KIO13_REQUEST_INTERVAL_S:-5}"
+  #     # D1.1 KPI 8.1 (Adoption rate), 8.2 (Active usage & satisfaction),
+  #     # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx.
+  #     KIO_REAL_KPI_ROLE: "adoption"
+  #     LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
+  #     LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
+  #     LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+  #   depends_on:
+  #     - otel-collector
+  #   restart: unless-stopped
 
 volumes:
   vmdata:

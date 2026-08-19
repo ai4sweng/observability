@@ -1,240 +1,249 @@
-# Ağ Kurulumu — Uzak bir KIO'yu merkezi platforma bağlama
+# Network Setup — Connecting a Remote KIO to the Central Platform
 
-Bu döküman, **başka bir makinede çalışan bir KIO'nun** merkezi observability
-yığınına (OTel Collector → VictoriaMetrics/VictoriaLogs/Tempo → Grafana) ağ
-üzerinden nasıl ulaşacağını anlatır. Hem "kendi kodunu bağlayan" (bkz.
-[`INTEGRATION.md`](INTEGRATION.md)) hem de "bizim simülatörü uzakta çalıştıran"
-(bkz. [`README.md`](README.md)) senaryolar aynı ağ modelini kullanır — fark
-yalnızca hangi kodun çalıştığıdır, ağ tarafı ikisinde de birebir aynıdır.
+This document explains how **a KIO running on a different machine** reaches
+the central observability stack (OTel Collector → VictoriaMetrics/
+VictoriaLogs/Tempo → Grafana) over the network. Both the "connecting your own
+code" scenario (see [`INTEGRATION.md`](INTEGRATION.md)) and the "running our
+simulator remotely" scenario (see [`README.md`](README.md)) use the exact same
+network model — the only difference is which code runs; the networking side is
+identical in both.
 
-Bu döküman boyunca:
-- **Merkez makine (B)** = ana `docker compose`'un (collector + veritabanları +
-  Grafana) çalıştığı bilgisayar.
-- **Uzak makine** = KIO modülünün çalıştığı, farklı bilgisayar.
+Throughout this document:
+- **Central machine (B)** = the computer running the main `docker compose`
+  (collector + databases + Grafana).
+- **Remote machine** = the different computer running the KIO module.
 
 ---
 
-## 1. Temel fikir: push tabanlı, tek yönlü
+## 1. The basic idea: push-based, one direction
 
-Mimari **push tabanlıdır**. KIO, telemetrisini merkezi collector'a **kendisi
-iter**; merkez makine KIO'ya doğru hiçbir bağlantı açmaz, KIO'yu "scrape"
-etmez. Yani gereken tek şey:
+The architecture is **push-based**. The KIO **pushes** its own telemetry to the
+central collector; the central machine never opens a connection toward the
+KIO, and never "scrapes" it. So the only thing required is:
 
-> Uzak makine → Merkez makine `:4317` (OTLP/gRPC) yönünde **giden** bir TCP
-> bağlantısı kurabilmeli.
+> The remote machine must be able to open an **outbound** TCP connection
+> toward the central machine's `:4317` (OTLP/gRPC).
 
-Bunun pratik sonucu: KIO'nun nerede çalıştığı (aynı LAN, başka şehir, NAT
-arkası) fark etmez — collector'a ulaşabildiği sürece çalışır. Bu yüzden
-"uzaklaştırma" için **kod değişmez**, sadece bir ortam değişkeni
-(`OTEL_EXPORTER_OTLP_ENDPOINT`) değişir.
+The practical consequence: it doesn't matter where the KIO runs (same LAN, a
+different city, behind NAT) — it works as long as it can reach the collector.
+That's why "moving it remote" requires **no code change**, only one
+environment variable (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 
-### Portlar
+### Ports
 
-| Port | Protokol | Ne için | Kim kullanır |
+| Port | Protocol | For | Used by |
 |------|----------|---------|--------------|
-| **4317** | OTLP/**gRPC** | Metrikler + loglar + trace'ler | Bu repodaki tüm KIO'lar (varsayılan) |
-| 4318 | OTLP/**HTTP** | Aynı üç sinyal, HTTP taşıması | gRPC yerine HTTP tercih eden istemciler |
-| 3000 | HTTP | Grafana arayüzü | Dashboard'ları uzaktan açmak isteyen kişi |
-| 3001 | HTTP | Langfuse arayüzü + API | (Opsiyonel) Langfuse akışını kullanan KIO'lar |
+| **4317** | OTLP/**gRPC** | Metrics + logs + traces | Every KIO in this repo (default) |
+| 4318 | OTLP/**HTTP** | The same three signals, over HTTP transport | Clients that prefer HTTP over gRPC |
+| 3000 | HTTP | Grafana UI | Anyone opening the dashboards remotely |
+| 3001 | HTTP | Langfuse UI + API | (Optional) KIOs using the Langfuse stream |
 
-> **En sık hata:** endpoint'i `:4318`'e ayarlamak. Bu repodaki istemciler
-> **gRPC** kullanır → port **4317** olmalı. 4318 HTTP içindir ve gRPC
-> istemcisi oraya bağlanınca sessizce "No data" alırsınız.
+> **Most common mistake:** setting the endpoint to `:4318`. The clients in
+> this repo use **gRPC** → it must be port **4317**. 4318 is for HTTP, and if
+> a gRPC client connects there you'll silently get "No data."
 
 ---
 
-## 2. Merkez makine (B) tarafında yapılması gerekenler
+## 2. What needs to happen on the central machine (B) side
 
-İyi haber: **collector kodu zaten uzak bağlantıya hazır.** Aşağıdaki iki şey
-zaten yerinde:
+Good news: **the collector code is already ready for remote connections.**
+The following two things are already in place:
 
-1. Collector her iki OTLP portunu da tüm arayüzlerden dinliyor —
-   `otel-collector/config.yaml` içinde `endpoint: 0.0.0.0:4317` /
-   `0.0.0.0:4318` (yalnızca `127.0.0.1` değil).
-2. `docker-compose.yml`, bu portları host'a yayınlıyor (`"4317:4317"`,
-   `"4318:4318"`) — Docker bunları varsayılan olarak `0.0.0.0` üzerinde açar,
-   yani LAN'dan erişilebilir.
+1. The collector listens on both OTLP ports on all interfaces —
+   `endpoint: 0.0.0.0:4317` / `0.0.0.0:4318` in `otel-collector/config.yaml`
+   (not just `127.0.0.1`).
+2. `docker-compose.yml` publishes these ports to the host (`"4317:4317"`,
+   `"4318:4318"`) — Docker exposes them on `0.0.0.0` by default, i.e. reachable
+   from the LAN.
 
-Geriye tek bir şey kalıyor: **güvenlik duvarında gelen (inbound) portu açmak.**
-Bu, "No data" sorununun en yaygın nedenidir.
+Only one thing is left: **opening the inbound port on the firewall.** This is
+the most common cause of "No data."
 
-### 2a. Windows 11 (Docker Desktop) — güvenlik duvarı kuralı
+### 2a. Windows 11 (Docker Desktop) — firewall rule
 
-Merkez makine Windows ise, PowerShell'i **Yönetici** olarak açıp:
+If the central machine is Windows, open PowerShell as **Administrator**:
 
 ```powershell
 New-NetFirewallRule -DisplayName "AI4SWENG OTLP gRPC" -Direction Inbound -LocalPort 4317 -Protocol TCP -Action Allow
 New-NetFirewallRule -DisplayName "AI4SWENG OTLP HTTP" -Direction Inbound -LocalPort 4318 -Protocol TCP -Action Allow
 ```
 
-Grafana veya Langfuse'a da başka makineden erişilecekse (opsiyonel):
+If Grafana or Langfuse also need to be reachable from another machine (optional):
 
 ```powershell
 New-NetFirewallRule -DisplayName "AI4SWENG Grafana"  -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
 New-NetFirewallRule -DisplayName "AI4SWENG Langfuse" -Direction Inbound -LocalPort 3001 -Protocol TCP -Action Allow
 ```
 
-Kuralı geri almak için: `Remove-NetFirewallRule -DisplayName "AI4SWENG OTLP gRPC"`.
+To remove a rule: `Remove-NetFirewallRule -DisplayName "AI4SWENG OTLP gRPC"`.
 
 ### 2b. Linux (native Docker Engine)
 
-`ufw` kullanıyorsanız:
+If you use `ufw`:
 
 ```bash
 sudo ufw allow 4317/tcp
 sudo ufw allow 4318/tcp
-# opsiyonel: sudo ufw allow 3000/tcp ; sudo ufw allow 3001/tcp
+# optional: sudo ufw allow 3000/tcp ; sudo ufw allow 3001/tcp
 ```
 
-`firewalld` kullanıyorsanız:
+If you use `firewalld`:
 
 ```bash
 sudo firewall-cmd --permanent --add-port=4317/tcp --add-port=4318/tcp
 sudo firewall-cmd --reload
 ```
 
-### 2c. Merkez makinenin adresini öğrenme
+### 2c. Finding the central machine's address
 
-Uzak makinenin `OTEL_EXPORTER_OTLP_ENDPOINT`'ine yazacağınız adres budur.
+This is the address you'll put in the remote machine's
+`OTEL_EXPORTER_OTLP_ENDPOINT`.
 
-- **Windows:** `ipconfig` → "IPv4 Address" (ör. `192.168.1.50`). Ya da:
+- **Windows:** `ipconfig` → "IPv4 Address" (e.g. `192.168.1.50`). Or:
   ```powershell
   (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.PrefixOrigin -ne 'WellKnown' }).IPAddress
   ```
-- **Linux:** `ip -4 addr show` ya da `hostname -I`.
-- **Tailscale kuruluysa:** `tailscale ip -4` (ör. `100.101.102.103` — bu adres
-  hiç değişmez, bkz. §3c).
+- **Linux:** `ip -4 addr show` or `hostname -I`.
+- **If Tailscale is installed:** `tailscale ip -4` (e.g. `100.101.102.103` —
+  this address never changes, see §3c).
 
 ---
 
-## 3. Bağlantı seçenekleri — hangisini seçmeli?
+## 3. Connection options — which one should I pick?
 
-Üç yol var. Aynı ağdaysanız §3a en basit; farklı ağlardaysanız §3c önerilir.
+There are three paths. If you're on the same network, §3a is simplest; if
+you're on different networks, §3c is recommended.
 
-### 3a. Aynı LAN (aynı ev/ofis ağı) — en basit
+### 3a. Same LAN (same home/office network) — simplest
 
-İki makine aynı yerel ağdaysa hiçbir VPN gerekmez. Uzak makinede:
+If both machines are on the same local network, no VPN is needed. On the
+remote machine:
 
 ```
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<merkez-LAN-IP>:4317
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-LAN-IP>:4317
 ```
 
-> **Statik IP tavsiyesi:** LAN IP'leri DHCP ile zamanla değişebilir. Merkez
-> makine yeniden başlayınca IP değişirse tüm uzak KIO'lar "No data"ya düşer.
-> Bunu önlemenin en temiz yolu, router'ınızda merkez makinenin MAC adresine
-> **DHCP rezervasyonu** (sabit IP ataması) yapmaktır — böylece adres kalıcı
-> olur, uzak KIO'ların `.env`'ine dokunmanız gerekmez. Alternatif: merkez
-> makineye işletim sisteminden statik IP vermek.
+> **Static IP recommendation:** LAN IPs can change over time via DHCP. If the
+> central machine's IP changes on a reboot, every remote KIO drops to "No
+> data." The cleanest fix is a **DHCP reservation** (fixed IP assignment) on
+> your router, keyed to the central machine's MAC address — the address stays
+> permanent and you never need to touch remote KIOs' `.env` files. Alternative:
+> assign the central machine a static IP at the OS level.
 
-### 3b. Statik / genel (public) IP + port yönlendirme — dikkatli olun
+### 3b. Static / public IP + port forwarding — be careful
 
-Makineler farklı ağlardaysa ve elinizde gerçek bir statik/genel IP varsa,
-router'da `4317` portunu merkez makineye **yönlendirebilirsiniz** (port
-forwarding). Ancak bu, portu **genel internete açar**.
+If the machines are on different networks and you have a real static/public
+IP, you can **forward** port `4317` to the central machine on your router
+(port forwarding). But this **opens the port to the public internet**.
 
-> ⚠️ Bu paket varsayılan olarak **kimlik doğrulamasız (insecure)** dinler.
-> 4317'yi doğrudan internete açmak, isteyen herkesin sahte metrik
-> gönderebilmesi demektir. Genel internete açacaksanız **önce** §4'teki
-> TLS + Bearer token adımını uygulayın. Genelde §3c (VPN) daha güvenli ve daha
-> az uğraştırıcıdır — hiçbir portu internete açmadan çalışır.
+> ⚠️ This package listens **without authentication (insecure)** by default.
+> Opening 4317 directly to the internet means anyone can send fake metrics.
+> If you're opening it to the public internet, apply the TLS + Bearer token
+> steps in §4 **first**. §3c (VPN) is generally safer and less work — it works
+> without opening any port to the internet.
 
-### 3c. Tailscale / ZeroTier (VPN) — farklı ağlar için önerilen ✅
+### 3c. Tailscale / ZeroTier (VPN) — recommended for different networks ✅
 
-Tailscale (veya ZeroTier), her iki makineyi **aynı sanal ağda**ymış gibi
-gösterir. Her cihaza NAT/router arkasında olsa bile kalıcı, değişmeyen bir
-`100.x.y.z` adresi verir; port yönlendirmeye, statik/genel IP satın almaya
-gerek kalmaz ve trafik uçtan uca şifrelidir.
+Tailscale (or ZeroTier) makes both machines behave as if they were **on the
+same virtual network**. It gives every device a permanent, unchanging
+`100.x.y.z` address even behind NAT/a router, with no port forwarding or
+static/public IP purchase needed, and traffic is encrypted end to end.
 
-**"Aynı ağ" derdine gerek yok — statik IP de gerekmez.** Tailscale'in tüm amacı
-budur.
+**No need to worry about "same network," and no static IP needed either.**
+That's the entire point of Tailscale.
 
-Kurulum:
-1. Her iki makineye Tailscale kurun ve aynı hesap/tailnet'e giriş yapın.
-2. Merkez makinede adresi öğrenin: `tailscale ip -4` → ör. `100.101.102.103`.
-3. Uzak makinede:
+Setup:
+1. Install Tailscale on both machines and log into the same account/tailnet.
+2. Find the address on the central machine: `tailscale ip -4` → e.g.
+   `100.101.102.103`.
+3. On the remote machine:
    ```
    OTEL_EXPORTER_OTLP_ENDPOINT=http://100.101.102.103:4317
    ```
-   (Tailscale IP'si değişmediği için bunu bir daha güncellemeniz gerekmez.
-   Tailscale içi trafik zaten şifreli olduğundan LAN'daki gibi `http://` +
-   insecure yeterlidir; §4'teki ek TLS şart değildir.)
+   (Since the Tailscale IP never changes, you won't need to update this again.
+   Traffic inside Tailscale is already encrypted, so `http://` + insecure is
+   sufficient just like on a LAN; the extra TLS in §4 isn't required.)
 
-Bir KIO sahibini eklemenin iki yolu:
-- **Tam tailnet üyeliği** ("Invite") — ekip arkadaşınızsa mantıklı; ACL'lerle
-  hangi cihazları görebileceğini sınırlayabilirsiniz.
-- **Tek cihaz paylaşımı** ("Share" — admin panelinde merkez makinenizin
-  yanında) — dış bir kişiye tüm tailnet'i açmadan yalnızca o tek makineyi
-  paylaşır. Tek seferlik/dış bir alıcı için en az yetkiyi veren yol, muhtemelen
-  aradığınız budur.
+Two ways to add a KIO owner:
+- **Full tailnet membership** ("Invite") — sensible if they're a teammate; you
+  can limit which devices they can see with ACLs.
+- **Single-device sharing** ("Share" — in the admin panel, next to your
+  central machine) — shares just that one machine with an outside person
+  without opening your whole tailnet to them. For a one-off/external
+  recipient, this is the least-privilege path, and probably what you want.
 
-> Tailscale'de firewall açmanıza bile gerek olmayabilir: trafik `tailscale0`
-> arayüzünden gelir. Yine de bağlantı kurulamıyorsa merkez makinede §2'deki
-> kuralın Tailscale arayüzünü de kapsadığından emin olun.
+> With Tailscale you may not even need to open a firewall port: traffic
+> arrives via the `tailscale0` interface. If the connection still doesn't
+> work, make sure the rule in §2 on the central machine also covers the
+> Tailscale interface.
 
 ---
 
-## 4. Güvenlik / TLS (üretim veya internete açık kurulum)
+## 4. Security / TLS (production or internet-facing setups)
 
-Varsayılan kurulum, güvenilir bir ağ (aynı LAN veya VPN) içindeki testler için
-**kimlik doğrulamasız** çalışır — tıpkı yerel kurulum gibi. Trafiği güvenilir
-olmayan bir ağdan geçireceksiniz (§3b) veya üretime alacaksanız:
+The default setup runs **without authentication**, adequate for tests within a
+trusted network (same LAN or VPN) — just like the local setup. If you're
+routing traffic over an untrusted network (§3b) or moving to production:
 
-1. **Merkez collector'a** bir `bearertokenauth` extension'ı ekleyin ve OTLP
-   receiver'ında TLS'i etkinleştirin (`otel-collector/config.yaml`).
-2. **Uzak KIO'da** endpoint'i `https://...:4317` yapın ve token'ı ekleyin:
+1. Add a `bearertokenauth` extension to the **central collector** and enable
+   TLS on the OTLP receiver (`otel-collector/config.yaml`).
+2. On the **remote KIO**, change the endpoint to `https://...:4317` and add
+   the token:
    ```
-   OTEL_EXPORTER_OTLP_ENDPOINT=https://<merkez-adres>:4317
+   OTEL_EXPORTER_OTLP_ENDPOINT=https://<central-address>:4317
    OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <TOKEN>
    ```
-   OpenTelemetry SDK bu iki ortam değişkenini otomatik okur — **KIO kodunda
-   ekstra değişiklik gerekmez** (`https://` şeması TLS'i açar, header yetkilendirir).
+   The OpenTelemetry SDK reads both of these environment variables
+   automatically — **no extra change is needed in the KIO's code** (the
+   `https://` scheme turns TLS on, the header handles authorization).
 
-Bu, Integration Contract §1.2'nin resmi/normatif yoludur; yerel/LAN kurulumu
-onun `insecure` gevşetilmiş halidir.
+This is the official/normative path from Integration Contract §1.2; the
+local/LAN setup is its relaxed `insecure` variant.
 
 ---
 
-## 5. Doğrulama — bağlanabiliyor muyum?
+## 5. Verification — can I actually connect?
 
-Sırasıyla:
+In order:
 
-**a) Port açık mı? (hızlı TCP testi)**
+**a) Is the port open? (quick TCP test)**
 
-- Uzak makine Windows ise:
+- If the remote machine is Windows:
   ```powershell
-  Test-NetConnection <merkez-adres> -Port 4317
+  Test-NetConnection <central-address> -Port 4317
   ```
-  `TcpTestSucceeded : True` görmelisiniz.
-- Uzak makine Linux ise:
+  You should see `TcpTestSucceeded : True`.
+- If the remote machine is Linux:
   ```bash
-  nc -zv <merkez-adres> 4317
+  nc -zv <central-address> 4317
   ```
 
-**b) Uçtan uca akıyor mu? (gerçek export testi)**
+**b) Does it flow end to end? (real export test)**
 
-`reference-client/check_connectivity.py` hem TCP'yi hem de gerçek bir OTLP
-export'unu (tek bir `kio.heartbeat`) dener ve nerede takıldığını net söyler:
+`reference-client/check_connectivity.py` tries both the TCP connection and a
+real OTLP export (a single `kio.heartbeat`), and tells you clearly where it
+got stuck:
 
 ```bash
 cd reference-client
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<merkez-adres>:4317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:4317 python check_connectivity.py
 ```
 
-Başarılıysa Grafana → **KIO Detail** → `KIO` açılır menüsünde `kio-preflight`
-(ya da verdiğiniz `KIO_ID`) ~30-60 saniye içinde görünür.
+If it succeeds, `kio-preflight` (or whatever `KIO_ID` you gave it) appears in
+Grafana → **KIO Detail** → the `KIO` dropdown within ~30-60 seconds.
 
 ---
 
-## 6. Sorun giderme (hızlı tablo)
+## 6. Troubleshooting (quick table)
 
-| Belirti | Olası neden | Çözüm |
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| `check_connectivity.py` **[1/2] FAIL** | Yanlış IP / firewall kapalı / farklı ağ | §2 (firewall), §2c (doğru adres), §3 (aynı ağ/VPN) |
-| **[1/2] OK ama [2/2] FAIL** | Port açık ama collector export'u reddediyor (ör. TLS/auth gerekli) | §4 (TLS + token) veya endpoint şemasını (`http` vs `https`) kontrol et |
-| TCP başarılı, Grafana'da yine "No data" | Endpoint `:4318`'e (HTTP) ayarlı, istemci gRPC | Portu **4317** yap |
-| Bir süre çalıştı, sonra kesildi | Merkez makinenin LAN IP'si DHCP ile değişti | §3a statik IP / DHCP rezervasyonu |
-| KIO görünüyor ama seri karışık | Aynı `kio.id` iki kaynaktan gönderiyor | Benzersiz `kio.id` kullan (bkz. INTEGRATION.md / README) |
-| KIO "stale" işaretlendi | Heartbeat >120s kesildi (KIO durdu ya da ağ koptu) | KIO'nun ayakta ve export ediyor olduğunu doğrula |
+| `check_connectivity.py` **[1/2] FAIL** | Wrong IP / firewall closed / different network | §2 (firewall), §2c (correct address), §3 (same network/VPN) |
+| **[1/2] OK but [2/2] FAIL** | Port is open but the collector rejects the export (e.g. TLS/auth required) | §4 (TLS + token), or check the endpoint scheme (`http` vs `https`) |
+| TCP succeeds, still "No data" in Grafana | Endpoint set to `:4318` (HTTP), client uses gRPC | Change the port to **4317** |
+| Worked for a while, then dropped | The central machine's LAN IP changed via DHCP | §3a static IP / DHCP reservation |
+| KIO appears but the series looks scrambled | Two sources sending the same `kio.id` | Use a unique `kio.id` (see INTEGRATION.md / README) |
+| KIO marked "stale" | Heartbeat has been silent for >120s (KIO stopped or the network dropped) | Verify the KIO is up and exporting |
 
-Ayrıntılı entegrasyon adımları için → [`INTEGRATION.md`](INTEGRATION.md).
+For detailed integration steps → [`INTEGRATION.md`](INTEGRATION.md).

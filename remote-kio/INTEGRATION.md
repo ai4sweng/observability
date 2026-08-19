@@ -1,485 +1,482 @@
-# Kendi KIO Modülünü Bağlama — Sıfırdan Kapsamlı Rehber
+# Connecting Your KIO Module — Complete Integration Guide
 
-*Dil: **Türkçe** · [English](INTEGRATION.en.md)*
+This guide is for a developer who has written their **own KIO module** (their own
+codebase, most likely running on a different machine) and needs to connect it to
+the AI4SWENG central observability platform. It assumes **no prior knowledge** of
+this system, OpenTelemetry, or Grafana.
 
-Bu döküman, **bu observability sistemini hiç bilmeyen** ama kendi KIO modülünü
-(kendi kod tabanı, muhtemelen başka bir bilgisayarda) yazmış bir yazılımcının,
-o modülü AI4SWENG merkezi platformuna bağlaması için gereken **her adımı**
-baştan sona anlatır. Önceden OpenTelemetry, Grafana ya da bu repo hakkında bir
-şey bilmenize gerek yok.
+You do **not** need Docker, and you do **not** have to use Python — this guide
+covers both the Python helper we ship and the raw data contract for any language
+or runtime. Read top to bottom and your module will show up live in the central
+Grafana. Estimated time: **15–30 minutes** if the network is ready.
 
-Baştan sona okuyup uygularsanız, modülünüz merkezi Grafana'da canlı görünür.
-Tahmini süre: **15–30 dakika** (ağ hazırsa).
+> This document is self-contained. For deep networking (firewall, static IP,
+> Tailscale) see [`NETWORK.md`](NETWORK.md); for the normative rules see the
+> [Integration Contract PDF](../observability_integration_contract.pdf). You do
+> not need to leave this page to follow the flow.
 
-> **Bu döküman kendi kendine yeter.** Ağ ayrıntısına inmeniz gerekirse
-> [`NETWORK.md`](NETWORK.md)'ye, resmî/normatif kurallar için
-> [`../observability_integration_contract.pdf`](../observability_integration_contract.pdf)'ye
-> yönlendirileceksiniz; ama akışı takip etmek için başka dosyaya geçmeniz şart değil.
-
-İçindekiler:
-1. [Bu sistem nedir? (5 dakikalık kavram turu)](#1-bu-sistem-nedir-5-dakikalık-kavram-turu)
-2. [Büyük resim: neyi değiştireceksiniz, neye asla dokunmayacaksınız](#2-büyük-resim-neyi-değiştireceksiniz-neye-asla-dokunmayacaksınız)
-3. [Ön koşullar](#3-ön-koşullar)
-4. [Adım adım kurulum](#4-adım-adım-kurulum)
-5. [Kodunuzun şekline göre entegrasyon](#5-kodunuzun-şekline-göre-entegrasyon)
-6. [7 zorunlu metrik ve kurallar](#6-7-zorunlu-metrik-ve-kurallar)
-7. [Ortam değişkenleri — tam referans](#7-ortam-değişkenleri--tam-referans)
-8. [Python değilseniz](#8-python-kullanmıyorsanız)
-9. [Opsiyonel akışlar](#9-opsiyonel-akışlar-gerekmiyorsa-hiç-dokunmayın)
-10. [Sık sorulan sorular (SSS)](#10-sık-sorulan-sorular-sss)
-11. [Sorun giderme](#11-sorun-giderme)
+**Contents**
+1. [What this system is (5-minute concept tour)](#1-what-this-system-is-5-minute-concept-tour)
+2. [What you change vs. never touch](#2-what-you-change-vs-never-touch)
+3. [The data & naming contract](#3-the-data--naming-contract-read-this-for-non-python--non-docker) ← for non-Python / non-Docker
+4. [Prerequisites](#4-prerequisites)
+5. [Step-by-step setup](#5-step-by-step-setup)
+6. [Deployment without Docker](#6-deployment-without-docker)
+7. [Integration by code shape](#7-integration-by-code-shape)
+8. [Not using Python?](#8-not-using-python)
+9. [Optional streams](#9-optional-streams)
+10. [FAQ](#10-faq)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
-## 1. Bu sistem nedir? (5 dakikalık kavram turu)
+## 1. What this system is (5-minute concept tour)
 
-**Observability**, bir yazılımın çalışırken ürettiği ölçümleri (kaç istek işledi,
-ne kadar sürdü, hata oldu mu, kaç token harcadı…) merkezî bir yerde toplayıp
-grafiklerle izlemektir. Bizim sistemde parçalar şöyle:
+**Observability** means collecting the numbers a program produces while running
+(how many requests it handled, how long they took, whether they errored, how many
+tokens it spent…) into one central place and viewing them as charts. The pieces:
 
 ```
-   SİZİN MAKİNENİZ                        MERKEZ MAKİNE (B)
+   YOUR MACHINE                          CENTRAL MACHINE (B)
  ┌────────────────┐   OTLP/gRPC     ┌──────────────────────────────────────┐
- │  KIO modülünüz │  ── :4317 ───▶  │  OTel Collector  (giriş kapısı)      │
- │  + kio_otel.py │   (siz itersiniz)│      │                              │
- └────────────────┘                  │      ├─▶ VictoriaMetrics  (metrik)  │
-                                     │      ├─▶ VictoriaLogs     (log)     │
-                                     │      └─▶ Tempo            (trace)   │
+ │  Your KIO      │  ── :4317 ───▶  │  OTel Collector  (ingestion gateway) │
+ │  + kio_otel.py │  (you push)     │      │                              │
+ └────────────────┘                  │      ├─▶ VictoriaMetrics  (metrics) │
+                                     │      ├─▶ VictoriaLogs     (logs)    │
+                                     │      └─▶ Tempo            (traces)  │
                                      │              │                      │
                                      │              ▼                      │
-                                     │           Grafana  (dashboard'lar)  │
+                                     │           Grafana  (dashboards)     │
                                      └──────────────────────────────────────┘
 ```
 
-Bilmeniz gereken üç şey:
+Three things to know:
 
-1. **Push tabanlıdır.** Veriyi siz merkeze **itersiniz**. Merkez sizden veri
-   çekmez, sizi taramaz, size bağlanmaz. Gereken tek ağ izni: sizden merkeze
-   doğru, `:4317` portuna **giden** bir bağlantı.
-2. **Konum önemsizdir.** KIO'nuz aynı odada da olabilir başka şehirde de —
-   collector'a ulaşabildiği sürece fark etmez. Bu yüzden "yerelde test → LAN →
-   uzak ağ" geçişi **kod değil, tek bir adres (`OTEL_EXPORTER_OTLP_ENDPOINT`)**
-   değişikliğidir.
-3. **Standart araç kullanılır.** Telemetriyi **OpenTelemetry (OTel)** denen
-   endüstri standardı SDK üretir. Siz sıfırdan bir şey icat etmezsiniz; hazır
-   SDK'yı yapılandırıp 7 standart ölçümü yayınlarsınız. Bu repo size bunu tek
-   dosyada hazır veriyor: [`reference-client/kio_otel.py`](reference-client/kio_otel.py).
+1. **It is push-based.** *You* push data to the center. The center never pulls
+   from you, never scrapes you, never connects to you. The only network permission
+   needed: an **outbound** connection from you to the center's `:4317`.
+2. **Location is irrelevant.** Your KIO can be in the same room or another city —
+   as long as it can reach the collector, it works. So moving from "local test →
+   LAN → remote network" is **not a code change**, only a change of one address
+   (`OTEL_EXPORTER_OTLP_ENDPOINT`).
+3. **It uses a standard tool.** Telemetry is produced by **OpenTelemetry (OTel)**,
+   the industry-standard SDK. You do not invent a wire format; you configure the
+   SDK and emit 7 standard measurements. This repo hands you that in one file:
+   [`reference-client/kio_otel.py`](reference-client/kio_otel.py).
 
-**"Telemetri" üç türden oluşur** (üçü de aynı `:4317`'den gider):
-- **Metrikler** — sayısal zaman serileri (istek sayısı, süre, token…). *Zorunlu.*
-- **Trace'ler** — bir isteğin adım adım zaman çizelgesi ("işlem sırası"). *Önerilir, kolay.*
-- **Loglar** — serbest metin satırları. *Opsiyonel.*
+**Telemetry has three kinds** (all travel over the same `:4317`):
+- **Metrics** — numeric time series (request count, duration, tokens…). *Required.*
+- **Traces** — the step-by-step timeline of one request. *Recommended, easy.*
+- **Logs** — free-text lines. *Optional.*
 
-Bu rehber, zorunlu metrikleri + heartbeat'i + basit bir trace'i çalıştırır; gerisi
-opsiyoneldir (§9).
+This guide gets the required metrics + heartbeat + a simple trace flowing; the
+rest is optional (§9).
 
 ---
 
-## 2. Büyük resim: neyi değiştireceksiniz, neye asla dokunmayacaksınız
+## 2. What you change vs. never touch
 
-Yeni gelenlerin en büyük endişesi "ne kadar çok şeyi kendime göre değiştireceğim"
-olur. Cevap: **çok az**. Değiştirme yüzeyi bilinçli olarak küçük ve sınırlıdır.
+The most common worry for a newcomer is "how much will I have to customize?" The
+answer: **very little**. The change surface is deliberately small and bounded.
 
-| Ne | Kim sahibi | Siz değiştirir misiniz? |
+| Thing | Owner | Do you change it? |
 |---|---|---|
-| **Kendi modül kodunuz** (LLM çağrınız, analiziniz, işiniz) | Siz | ✅ Zaten tamamen sizin |
-| **Ortam değişkenleri** (endpoint, `kio.id`, sürüm…) | Siz | ✅ Evet — kurulumunuza göre 3–4 satır |
-| **Entegrasyon noktası**: işleyicinizi `with kio.request()` ile sarmak | Siz | ✅ Evet — genelde tek yerde, birkaç satır |
-| [`reference-client/kio_otel.py`](reference-client/kio_otel.py) | Referans kit | ⛔ Genelde hayır — olduğu gibi kopyalayın |
-| **7 zorunlu metriğin ismi/tipi/birimi** | Sözleşme (§6) | ⛔ Hayır — sabittir, dashboard'lar bunlara bağlı |
-| **Merkezî collector / veritabanları / Grafana** | Merkez ekip | ⛔ Hayır — dokunmayın, zaten hazır |
-| `remote-kio/docker-compose.yml` ve `.env.example` | Simülatör paketi | ⛔ **Kendi kodunuzu bağlıyorsanız KULLANMAYIN** (bkz. not) |
+| **Your own module code** (your LLM call, analysis, work) | You | ✅ It's yours already |
+| **Environment variables** (endpoint, `kio.id`, version…) | You | ✅ Yes — 3–4 lines for your setup |
+| **Integration point**: wrapping your handler in `with kio.request()` | You | ✅ Yes — usually one place, a few lines |
+| [`reference-client/kio_otel.py`](reference-client/kio_otel.py) | Reference kit | ⛔ Usually no — copy it as-is |
+| **The 7 mandatory metric names/types/units** | Contract (§3) | ⛔ No — fixed; dashboards depend on them |
+| **Central collector / databases / Grafana** | Central team | ⛔ No — don't touch; already running |
+| `remote-kio/docker-compose.yml` and `.env.example` | Simulator package | ⛔ **Do NOT use it for your own module** (see note) |
+| **Docker itself** | — | ⛔ Not required at all — see §6 |
 
-> **Önemli ayrım:** `remote-kio/` klasöründeki `docker-compose.yml` + kök
-> `README.md`, **bizim hazır simülatörümüzü** başka bir makinede çalıştırmak
-> içindir. Sizin gerçek modülünüz için bunlara ihtiyacınız yok. Siz yalnızca
-> **[`reference-client/`](reference-client/)** klasörünü ve bu rehberi
-> kullanırsınız. (Bu ayrım, "çok şey değiştirmem gerekecek" hissinin asıl
-> kaynağıdır — simülatör paketini gerçek modül sanmak.)
-
----
-
-## 3. Ön koşullar
-
-Başlamadan önce elinizde olması gerekenler:
-
-1. **Çalışan bir KIO modülü** — LLM çağıran / kod analiz eden / bir iş yapan kendi
-   kodunuz. (Bu rehber Python varsayar; başka dil için §8.)
-2. **Python 3.9+** ve `pip` (Python modülü için).
-3. **Merkez makinenin adresi** — merkez ekipten alın (ör. `192.168.1.50` veya bir
-   Tailscale IP'si). Buna `:4317` ekleyerek endpoint'i oluşturacaksınız.
-4. **Size atanmış bir `kio.id`** — merkez ekipten alın. **Tüm çalışan KIO'lar
-   arasında benzersiz olmalı** (yerel + uzak). Kendiniz uydurmayın; çakışırsa iki
-   KIO'nun verisi Grafana'da iç içe girer. (Sözleşme §1.1)
-5. *(Opsiyonel)* Kurulum güvenli/uzaksa bir **OTLP Bearer token**; Langfuse akışını
-   da kullanacaksanız **Langfuse anahtarları** — ikisi de merkez ekipten.
+> **Key distinction:** the `docker-compose.yml` + root `README.md` in `remote-kio/`
+> exist to run **our simulator** on another machine. For your real module you do
+> not need them. You only use **[`reference-client/`](reference-client/)** and this
+> guide. (Mistaking the simulator package for the real integration is the usual
+> source of the "I'll have to change a lot" feeling — you won't.)
 
 ---
 
-## 4. Adım adım kurulum
+## 3. The data & naming contract (read this for non-Python / non-Docker)
 
-### Adım 1 — Kod yazmadan ÖNCE: merkeze erişimi doğrulayın
+This is the exact, language- and runtime-agnostic contract of **what goes on the
+wire and under what names**. `kio_otel.py` produces all of this for you; you need
+this section only if you implement it yourself (another language, or you want to
+know precisely what you are emitting).
 
-"No data" sorunlarının çoğu ağ kaynaklıdır ve koda hiç dokunmadan çözülür. Önce
-merkeze ulaşabildiğinizi kanıtlayın:
+### 3.1 Transport
+
+- Protocol: **OTLP** (OpenTelemetry Protocol).
+- Default: **gRPC on port 4317** — this is what `kio_otel.py` and every KIO in this
+  repo use. Point your exporter's endpoint at `http://<central>:4317`.
+- Alternative: **OTLP/HTTP on port 4318** — the collector also accepts it, at path
+  `/v1/metrics` (metrics), `/v1/traces`, `/v1/logs`. Use this only if your language's
+  SDK prefers HTTP. **Do not hand-roll OTLP by hand** — use a real OTel SDK for your
+  language; it is far less error-prone.
+- Security: a plain `http://` endpoint connects **insecure** (fine on a trusted LAN
+  or Tailscale/VPN, and is the default). An `https://` endpoint uses TLS; see §9 /
+  [`NETWORK.md`](NETWORK.md) §4.
+
+### 3.2 Resource attributes (identity — attached to every signal)
+
+Set once, via the `OTEL_RESOURCE_ATTRIBUTES` environment variable as
+`key=value,key=value`. These identify who is sending, and the collector promotes
+them to metric **labels** (dots become underscores — see 3.4).
+
+| Attribute key | Required | Example | Becomes label |
+|---|---|---|---|
+| `service.name` | ✅ | `kio1` | `service_name` |
+| `service.version` | ✅ | `1.0.0` | `service_version` |
+| `kio.id` | ✅ | `kio1` | `kio_id` |
+| `deployment.environment` | ✅ | `production` | `deployment_environment` |
+| `llm` | optional | `claude-sonnet` | `llm` |
+| `task_type` | optional | `code-analysis` | `task_type` |
+
+`kio.id` **must be unique** across all running KIOs and should be assigned by the
+central team (Contract §1.1).
+
+### 3.3 The 7 mandatory metrics (Contract §2.1) — names/types/units are fixed
+
+Every metric also carries `kio.id` (via the resource above). Metric-level labels
+listed below are the ones that vary per data point.
+
+| Metric name (OTLP) | Type | Unit | Extra labels (allowed values) | Meaning |
+|---|---|---|---|---|
+| `kio.request.count` | Counter | `1` | `status` = `ok` \| `error` | Requests processed |
+| `kio.request.duration_ms` | Histogram | `ms` | — | End-to-end latency distribution |
+| `kio.request.error_count` | Counter | `1` | `error_type` = bounded enum¹ | Errors by category |
+| `kio.llm.token_count` | Counter | `tokens` | `direction` = `input` \| `output` | LLM token usage |
+| `kio.llm.cost_usd` | Counter | `USD` | — | Estimated total LLM cost |
+| `kio.session.active_count` | UpDownCounter | `1` | — | In-flight sessions (goes up and down) |
+| `kio.heartbeat` | Counter | `1` | — | Liveness, incremented every 60s |
+
+¹ `error_type` must be a **small, bounded set** of strings you define (e.g.
+`timeout`, `internal`, `rate_limit`). Never put unbounded values (IDs, messages)
+there — see rule G3.
+
+> **The heartbeat is critical.** A KIO that does not emit `kio.heartbeat` for more
+> than **120 seconds** is flagged **stale** in the central registry — a Grafana
+> alert rule and an Overview panel show this automatically. `kio_otel.py` handles
+> it via `start_heartbeat()`.
+
+### 3.4 How names appear in Grafana / PromQL
+
+VictoriaMetrics is Prometheus-compatible, so when you query in Grafana:
+- Dots in metric and label names become **underscores**:
+  `kio.request.count` → `kio_request_count`, `kio.id` → `kio_id`.
+- There is **no `_total` suffix** (the collector is configured with
+  `add_metric_suffixes: false`).
+- Histograms expand into three series: `kio_request_duration_ms_bucket`,
+  `kio_request_duration_ms_sum`, `kio_request_duration_ms_count`.
+
+Example PromQL a dashboard uses: `sum(rate(kio_request_count{kio_id="kio1"}[5m]))`.
+
+### 3.5 Rules (Contract Appendix G1–G7) — summary
+
+- **G1** Names follow `kio.<domain>.<metric>` and are **permanent** once released.
+- **G2** Every metric/trace carries `kio.id` (traces also `session.id`).
+- **G3** **No high-cardinality labels**: no unique IDs / URLs / emails as label
+  values; use bounded enums. (`session.id` is trace/log metadata, **not** a metric label.)
+- **G4** **No secrets / PII** in labels or traces.
+- **G5** Bump `service.version` on every release.
+- **G6** Mandatory metrics are governed by the central team.
+- **G7** **Anything beyond the mandatory 7 is self-service** — define your own metric
+  as long as it obeys G1–G5.
+
+---
+
+## 4. Prerequisites
+
+1. **A working KIO module** — your own code that calls an LLM / analyzes code / does
+   some job. (This guide assumes Python; for other languages see §8.)
+2. **Python 3.9+** and `pip` (for the Python helper). **No Docker required** (§6).
+3. **The central machine's address** — from the central team (e.g. `192.168.1.50`
+   or a Tailscale IP). You'll append `:4317`.
+4. **An assigned `kio.id`** — from the central team. Must be **unique** across all
+   running KIOs; don't make one up (collisions merge two KIOs' series in Grafana).
+5. *(Optional)* an **OTLP Bearer token** if the setup is secured/remote; **Langfuse
+   keys** if you'll also use that stream — both from the central team.
+
+---
+
+## 5. Step-by-step setup
+
+### Step 1 — BEFORE writing code: verify you can reach the center
+
+Most "No data" problems are network problems, fixable without touching code. Prove
+reachability first:
 
 ```bash
 cd reference-client
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<merkez-adres>:4317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:4317 python check_connectivity.py
 ```
 
-Bu script iki şeyi test eder: (1) porta TCP ile ulaşılıyor mu, (2) gerçek bir
-`kio.heartbeat` export'u collector tarafından kabul ediliyor mu. `RESULT: PASS`
-görene kadar **devam etmeyin** — bu bir ağ/firewall sorunuysa kodda çözemezsiniz.
+It checks (1) TCP reachability to the port, and (2) that a real `kio.heartbeat`
+export is accepted by the collector. **Do not continue until you see `RESULT: PASS`** —
+if it's a network/firewall issue, no code change will fix it. On `FAIL`, it's almost
+always that **port 4317 is closed by the firewall** on the central machine, or you're
+**not on the same network**. Fixes in [`NETWORK.md`](NETWORK.md).
 
-`FAIL` alırsanız neredeyse her zaman ya merkez makinede **4317 firewall'da
-kapalıdır**, ya **aynı ağda değilsinizdir**. Çözümü [`NETWORK.md`](NETWORK.md)'de:
-firewall açma komutları (Windows/Linux), doğru adresi bulma, aynı LAN / statik IP /
-Tailscale seçenekleri.
-
-### Adım 2 — Bağımlılıkları kurun ve `kio_otel.py`'yi projenize alın
-
-Referans kit üç Python paketine ihtiyaç duyar (metrik + trace exporter'ları):
+### Step 2 — Install dependencies and take `kio_otel.py`
 
 ```bash
 pip install opentelemetry-api==1.44.0 opentelemetry-sdk==1.44.0 opentelemetry-exporter-otlp-proto-grpc==1.44.0
+cp reference-client/kio_otel.py <your-project>/
 ```
 
-Sonra tek dosyayı kendi projenize kopyalayın:
+You do **not** edit `kio_otel.py` — use it as-is.
+
+### Step 3 — Set environment variables
 
 ```bash
-cp reference-client/kio_otel.py <sizin-projeniz>/
-```
+# REQUIRED: central collector address (gRPC, port 4317)
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://<central-address>:4317"
 
-`kio_otel.py`'yi düzenlemeniz **gerekmez** — olduğu gibi kullanılır. (İçini merak
-ederseniz ~250 satır, yorumlu; ama dokunmadan çalışır.)
-
-### Adım 3 — Ortam değişkenlerini ayarlayın
-
-Modülünüz bu değişkenleri ortamdan okuyacak. En azından ikisi zorunlu:
-
-```bash
-# ZORUNLU: merkez collector'ın adresi (gRPC, port 4317)
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://<merkez-adres>:4317"
-
-# ZORUNLU: kimliğiniz (merkez ekipten aldığınız benzersiz id)
+# REQUIRED: your identity (the unique id assigned by the central team)
 export OTEL_RESOURCE_ATTRIBUTES="service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production"
 ```
 
-`kio1`'i size atanan id ile, `1.0.0`'ı modülünüzün sürümüyle değiştirin. Tam liste
-ve alternatif (tek tek `KIO_ID=...` gibi) değişkenler için §7'ye bakın. Windows
-PowerShell'de `export` yerine `$env:AD="değer"` kullanılır; container'da ise bunları
-normal container env değişkeni olarak verirsiniz.
+Full list in §3.2 and the [`.env.example`](reference-client/.env.example). On Windows
+PowerShell use `$env:NAME="value"`; in a container, pass these as normal env vars.
 
-### Adım 4 — Kendi kodunuza bağlayın (asıl iş, birkaç satır)
+### Step 4 — Wire it into your code (the actual work — a few lines)
 
-Üç şey eklersiniz: **(a)** başlangıçta bir `KIOTelemetry` örneği + heartbeat,
-**(b)** her iş biriminizi `with kio.request()` ile sarmak, **(c)** çıkışta flush.
+Three additions: **(a)** an instance + heartbeat at startup, **(b)** wrap each unit
+of work in `with kio.request()`, **(c)** flush on exit.
 
 ```python
 from kio_otel import KIOTelemetry
 
-# (a) Uygulama BAŞLANGICINDA, yalnızca BİR kez:
-kio = KIOTelemetry()        # OTEL_* / KIO_* ortam değişkenlerini kendisi okur
-kio.start_heartbeat()       # 60 sn'de bir canlılık sinyali (zorunlu, §6)
+# (a) At application STARTUP, exactly ONCE:
+kio = KIOTelemetry()        # reads OTEL_* / KIO_* env vars itself
+kio.start_heartbeat()       # 60s liveness signal (required, §3)
 
-# (b) Her "istek" / iş birimi için işleyicinizi sarın:
-with kio.request(session_id=gelen_id) as req:
-    cikti = benim_gercek_islemim(...)          # ← SİZİN kodunuz, aynen kalır
-    req.record_tokens(input=girdi_tok, output=cikti_tok)   # gerçek token sayılarınız
-    # req.record_cost_usd(0.0012)              # LLM'inizin $ maliyeti varsa
+# (b) Around each "request" / unit of work:
+with kio.request(session_id=incoming_id) as req:
+    output = my_real_work(...)                     # ← YOUR code, unchanged
+    req.record_tokens(input=in_tok, output=out_tok)   # your real token counts
+    # req.record_cost_usd(0.0012)                  # if your LLM has a $ cost
 
-# (c) Süreç bitmeden, MUTLAKA:
-kio.shutdown()              # tamponlanan son veriyi gönderir; atlanırsa son veri kaybolur
+# (c) Before the process exits, MANDATORY:
+kio.shutdown()              # flushes the last buffered data; skip it and you lose it
 ```
 
-`with` bloğu şunları **otomatik** yapar, siz uğraşmazsınız:
-- aktif oturum sayacı (`kio.session.active_count`, +1 / −1),
-- istek süresi (`kio.request.duration_ms`),
-- başarı/hata sayımı (`kio.request.count`, `status=ok|error`),
-- blok içinden bir **exception** çıkarsa: gerçek bir hata olarak kaydı
-  (`kio.request.error_count`, hata tipiyle) ve exception'ı olduğu gibi yeniden
-  fırlatma — yani telemetri, kodunuzun akışını değiştirmez.
+The `with` block automatically handles the active-session counter, request duration,
+ok/error counting, and — if an exception escapes the block — records it as a real
+error (`kio.request.error_count`, with a bounded `error_type`) and re-raises it, so
+telemetry never changes your control flow. All you do inside is report your real
+token counts. Not using an LLM? Drop those lines — metrics still flow. Runnable
+example: [`reference-client/example_kio.py`](reference-client/example_kio.py).
 
-Tek yapmanız gereken, bloğun **içinde** gerçek token sayılarınızı `req` üzerine
-bildirmek. LLM kullanmıyorsanız bu satırları atlayın — metrik yine akar.
+### Step 5 — Run and verify (the acceptance gate)
 
-### Adım 5 — Çalıştırın ve Grafana'da doğrulayın (kabul kapısı)
-
-Modülünüzü başlatın. ~30–60 saniye içinde:
-
-1. **Metrik kapısı:** merkez Grafana → **KIO Detail** dashboard'u → sağ üstteki
-   `KIO` açılır menüsünde **sizin `kio.id`'niz görünmeli**; `kio.heartbeat` tikleyip
-   panelleriniz dolmaya başlamalı.
-2. *(Langfuse kullanıyorsanız)* **Trace kapısı:** Langfuse projenizde en az bir
-   trace `kio.id` + `session.id` ile görünmeli.
-
-Bu ikisi görünene kadar KIO **"onboard" sayılmaz** (Sözleşme §1.5). Görünmüyorsa
-§11'e / [`NETWORK.md`](NETWORK.md) §6'ya bakın.
+Start your module. Within ~30–60s: central Grafana → **KIO Detail** dashboard → the
+`KIO` dropdown should show **your `kio.id`**, the heartbeat should tick, and your
+panels should start filling. Until it appears, the KIO is **not "onboarded"**
+(Contract §1.5). If it doesn't show, see §11.
 
 ---
 
-## 5. Kodunuzun şekline göre entegrasyon
+## 6. Deployment without Docker
 
-Adım 4'teki üç parça (kur / sar / flush) her mimaride aynıdır; sadece **nereye**
-koyduğunuz değişir. En yaygın üç şekil:
+**Docker is not required anywhere in this integration.** `kio_otel.py` is plain
+Python; your KIO runs however you already run it. Options:
 
-### A) Web servisi (FastAPI / Flask / vb.)
+**A) Bare process.** Set the env vars, then just run it:
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://192.168.1.50:4317"
+export OTEL_RESOURCE_ATTRIBUTES="service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production"
+python your_kio.py
+```
 
-Servis sürekli ayakta; `KIOTelemetry` **uygulama başlangıcında bir kez** kurulur
-(her istekte değil), her endpoint çağrısı bir `request()` olur, flush ise uygulama
-kapanışında yapılır:
+**B) venv + systemd service (Linux) — recommended for a long-running KIO.**
+Create `/etc/systemd/system/kio1.service`:
+```ini
+[Unit]
+Description=KIO1 telemetry module
+After=network-online.target
+Wants=network-online.target
 
+[Service]
+WorkingDirectory=/opt/kio1
+Environment=OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.1.50:4317
+Environment=OTEL_RESOURCE_ATTRIBUTES=service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production
+ExecStart=/opt/kio1/venv/bin/python /opt/kio1/your_kio.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+Then `sudo systemctl enable --now kio1`. (`Restart=always` gives you the same
+"stays up / recovers" behavior Docker's `restart: unless-stopped` would.)
+
+**C) Windows.** Run it in a terminal, as a Scheduled Task (at logon / startup), or
+as a service via NSSM. Set env vars with `$env:NAME="value"` or in the task/service
+definition.
+
+**D) Process managers.** supervisor, pm2, runit, etc. all work — they just need to
+run your Python entrypoint with the env vars set.
+
+**E) Still want a container?** You may use Docker/Podman/nerdctl if you prefer — the
+integration doesn't care. There's just no requirement to.
+
+Whatever you choose, the only hard requirements are: the 3 pip packages installed,
+the env vars set, and outbound reachability to `:4317`.
+
+---
+
+## 7. Integration by code shape
+
+The three parts (set up / wrap / flush) are identical everywhere; only *where* you
+put them changes.
+
+**A) Web service (FastAPI / Flask / …)** — construct once at startup, wrap each
+endpoint, flush on shutdown:
 ```python
-from kio_otel import KIOTelemetry
-kio = KIOTelemetry()          # modül yüklenirken bir kez
+kio = KIOTelemetry()          # once, when the module loads
 kio.start_heartbeat()
 
 @app.post("/solve")
 async def solve(body):
     with kio.request(session_id=body.session_id) as req:
-        result = await benim_llm_isim(body)
+        result = await my_llm_work(body)
         req.record_tokens(input=result.in_tok, output=result.out_tok)
         return result
 
-@app.on_event("shutdown")   # Flask'ta atexit.register(kio.shutdown)
+@app.on_event("shutdown")     # Flask: atexit.register(kio.shutdown)
 def _flush():
     kio.shutdown()
 ```
 
-### B) CLI / tek seferlik process (her çağrı ayrı süreç)
-
-Süreç kısa ömürlü; kurulum ve flush aynı `main()` içinde olur. **`shutdown()`
-burada kritik** — export aralığını beklemeden çıkarsanız son veri gider. Kısa
-komutlar için `EXPORT_INTERVAL_MS`'i düşük tutun (ör. 1000).
-
+**B) CLI / one-shot process (each call is a new process)** — set up and flush in the
+same `main()`. `shutdown()` is critical here; lower `EXPORT_INTERVAL_MS` (e.g. 1000)
+for short commands:
 ```python
 def main():
     kio = KIOTelemetry()
     kio.start_heartbeat()
     try:
         with kio.request() as req:
-            out = isini_yap()
+            out = do_the_job()
             req.record_tokens(input=..., output=...)
     finally:
-        kio.shutdown()        # flush — kısa ömürlü süreçte şart
+        kio.shutdown()        # flush — mandatory in a short-lived process
 ```
+(A real, line-referenced CLI example — FocusTracer/KIO2 — is in
+[`../kio2-integration/README.md`](../kio2-integration/README.md).)
 
-> Gerçek, satır referanslı bir CLI örneği (FocusTracer/KIO2, tam bu modelde):
-> [`../kio2-integration/README.md`](../kio2-integration/README.md).
-
-### C) Sürekli worker / kuyruk tüketici
-
-Bir döngü/kuyruktan iş alıyorsanız, her iş bir `request()`'tir:
-
+**C) Continuous worker / queue consumer** — each job is one `request()`:
 ```python
-kio = KIOTelemetry()
-kio.start_heartbeat()
+kio = KIOTelemetry(); kio.start_heartbeat()
 try:
-    for task in kuyruk:
+    for task in queue:
         with kio.request(session_id=task.session_id) as req:
-            out = task_isle(task)
+            out = handle(task)
             req.record_tokens(input=..., output=...)
 finally:
     kio.shutdown()
 ```
 
-> **Ortak kural:** `KIOTelemetry()` küresel OTel sağlayıcılarını kurar; **süreç
-> başına yalnızca bir örnek** oluşturun ve `start_heartbeat()`'i bir kez çağırın.
-
-### Docker olmadan çalıştırma (alternatifler)
-
-**Bu entegrasyonun hiçbir yerinde Docker zorunlu değildir.** `kio_otel.py` düz
-Python'dur; KIO'nuzu zaten nasıl çalıştırıyorsanız öyle çalıştırırsınız. Tek katı
-gereksinim: 3 pip paketi kurulu olsun, ortam değişkenleri set edilsin ve `:4317`'ye
-giden erişim olsun. Seçenekler:
-
-- **Düz süreç:** env değişkenlerini verip `python your_kio.py`.
-- **venv + systemd (Linux, uzun süreli KIO için önerilir):** bir `.service` dosyası
-  yazıp `Restart=always` ile Docker'ın `restart: unless-stopped` davranışını
-  alırsınız. Örnek unit dosyası İngilizce rehberde:
-  [`INTEGRATION.en.md` §6](INTEGRATION.en.md#6-deployment-without-docker).
-- **Windows:** terminalde, Görev Zamanlayıcı ile ya da NSSM üzerinden servis olarak.
-- **Süreç yöneticileri:** supervisor, pm2, runit vb. — Python girişini env'lerle
-  çalıştırmaları yeter.
-- **Yine de container istiyorsanız:** Docker/Podman/nerdctl kullanabilirsiniz;
-  entegrasyon umursamaz — sadece zorunlu değildir.
+> **Common rule:** `KIOTelemetry()` installs global OTel providers — create **one
+> instance per process** and call `start_heartbeat()` once.
 
 ---
 
-## 6. 7 zorunlu metrik ve kurallar
+## 8. Not using Python?
 
-`kio_otel.py` bunların hepsini sizin için oluşturur; bu bölüm **ne yayınladığınızı
-anlamanız** ve başka dil kullanıyorsanız (§8) elle kurmanız içindir.
+`kio_otel.py` is a convenience, not a requirement. The contract is language-agnostic
+and OpenTelemetry exists for Go, Java, JS/TS, .NET, Rust, and more. In any language:
 
-### Zorunlu kimlik (Resource attribute'ları)
+1. Configure an OTLP metric exporter (gRPC → `:4317`, or HTTP → `:4318`, §3.1) at
+   `OTEL_EXPORTER_OTLP_ENDPOINT`.
+2. Load `Resource` attributes from `OTEL_RESOURCE_ATTRIBUTES` (§3.2).
+3. Create the **7 mandatory instruments with the exact names/types/units** in §3.3.
+4. Run a background task that increments `kio.heartbeat` every 60s.
+5. Per request: active count +1/−1, duration, `status=ok|error` count, `error_count`
+   with a bounded `error_type` on failure.
 
-`OTEL_RESOURCE_ATTRIBUTES` ile verilir (Adım 3). Collector bunları otomatik olarak
-metrik etiketlerine çevirir; dashboard'lar bunlara göre filtreler.
+A working Python reference (the manual-setup pattern) is in the
+[Integration Contract PDF](../observability_integration_contract.pdf) (Appendix —
+Reference Implementation); `kio_otel.py` follows the same pattern and is a good model
+to port.
 
-| Attribute | Örnek | Not |
+---
+
+## 9. Optional streams (skip unless you need them)
+
+`kio_otel.py` deliberately implements only the required OTel stream (metrics + a
+simple trace + heartbeat). These are all optional:
+
+- **Free-text logs → VictoriaLogs.** LLM output summaries, analysis notes, etc.,
+  sent as OTLP logs. Setup pattern: the logger block in `../kio-simulator/kio_simulator.py`.
+- **Langfuse (LLM prompt/completion/cost).** A separate, parallel HTTPS stream; only
+  if you want prompt-level replay/cost analysis. Keys from the central team. Pattern:
+  `kio_simulator.py` `emit_langfuse_trace()`.
+- **Rich traces (child spans / step waterfall).** `kio_otel.py` emits one root span
+  per request; for a `prepare_prompt → llm_call → postprocess` waterfall, see
+  `kio_simulator.py` `emit_trace()`.
+- **NATS-driven dispatch (orchestration layer).** Completely separate from telemetry;
+  only if your KIO should be triggered by the central `POST /workflow/run`. See the
+  main [`../README.md`](../README.md) "Orchestration layer".
+- **TLS + Bearer auth** (for untrusted networks / production): `https://` endpoint +
+  `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token>`. The SDK reads both env
+  vars automatically — no code change. See [`NETWORK.md`](NETWORK.md) §4.
+
+---
+
+## 10. FAQ
+
+**Will I have to change my module a lot?** No — your code stays; you add 3 parts (§5):
+one object at startup, a `with` around your handler, one `shutdown()` at exit. You
+don't touch metric names, the collector, or docker-compose.
+
+**Do I have to use Docker?** No — §6. Bare process, systemd, Windows service, any
+process manager. Only the 3 pip packages + env vars + reachability to `:4317`.
+
+**My module isn't Python.** Fine — §8. The contract is language-agnostic.
+
+**I don't call an LLM / have no token counts.** Drop the `req.record_tokens(...)`
+lines. Request/duration/error/heartbeat metrics still flow; LLM metrics stay at zero.
+
+**What exactly do I send, and under what names?** §3 — that's the full data & naming
+contract (metric names, label keys, allowed values, how they appear in Grafana).
+
+**Port 4317 or 4318?** The Python client uses **gRPC → 4317**. 4318 is OTLP/HTTP, for
+SDKs that prefer HTTP. Pointing a gRPC client at 4318 gives a silent "No data".
+
+**Do I set up Grafana?** No. Grafana, the collector, and the databases already run on
+the central machine. You only send data; the dashboards are ready.
+
+**My process is short-lived; heartbeat never reaches 60s.** Fine — in the CLI model
+each call is one "request"; what matters is `shutdown()` to flush (§7-B). A
+long-running service heartbeats normally.
+
+---
+
+## 11. Troubleshooting
+
+| Symptom | Likely cause | Fix |
 |---|---|---|
-| `service.name` | `kio1` | Genelde `kio.id` ile aynı |
-| `service.version` | `1.0.0` | Her sürümde güncelleyin (kural G5) |
-| `kio.id` | `kio1` | **Benzersiz**, merkez ekiple koordine |
-| `deployment.environment` | `production` | `production` / `staging` / `development` |
-| `llm` *(ops.)* | `claude-sonnet` | Dashboard'ın modele göre dilimlemesi için |
-| `task_type` *(ops.)* | `code-analysis` | Serbest metin; sınırlı bir enum tutun (G3) |
+| `check_connectivity.py` **[1/2] FAIL** | Wrong IP / firewall closed / different network | [`NETWORK.md`](NETWORK.md) §2 (firewall), §2c (address), §3 (network/VPN) |
+| **[1/2] OK but [2/2] FAIL** | Port open, collector rejects export (e.g. TLS/auth) | [`NETWORK.md`](NETWORK.md) §4; check `http` vs `https` scheme |
+| Test PASS but "No data" in Grafana | Endpoint set to `:4318` (HTTP), client is gRPC | Use port **4317** |
+| KIO shows up but series look mixed | Same `kio.id` sent from two sources | Get a unique `kio.id` (§4) |
+| Runs briefly, then stops reporting | `shutdown()` not called in a short-lived process | §7-B: `finally: kio.shutdown()` |
+| KIO flagged "stale" | Heartbeat gap >120s (process stopped / network dropped) | Verify the process is up and exporting |
 
-### 7 zorunlu metrik (Sözleşme §2.1) — isim/tip/birim sabittir
-
-| Metrik | Tip | Birim | Ek etiket | Açıklama |
-|---|---|---|---|---|
-| `kio.request.count` | Counter | 1 | `status` (ok/error) | İşlenen istek sayısı |
-| `kio.request.duration_ms` | Histogram | ms | — | Uçtan uca gecikme dağılımı |
-| `kio.request.error_count` | Counter | 1 | `error_type` | Sınırlı türlerle hatalar |
-| `kio.llm.token_count` | Counter | tokens | `direction` (input/output) | LLM token kullanımı |
-| `kio.llm.cost_usd` | Counter | USD | — | Tahmini toplam LLM maliyeti |
-| `kio.session.active_count` | UpDownCounter | 1 | — | Anlık aktif oturum sayısı |
-| `kio.heartbeat` | Counter | 1 | — | 60 sn'de bir artan canlılık sinyali |
-
-> **Heartbeat neden kritik?** 120 saniyeden uzun süre `kio.heartbeat` göndermeyen
-> KIO merkezî kayıtta **"stale" (bayat)** işaretlenir — Grafana Alerting'de bir
-> alarm ve Overview dashboard'unda görsel bir tablo bunu otomatik gösterir.
-> `kio_otel.py`'de `start_heartbeat()` bunu arka planda hallediyor.
-
-### Kurallar (Sözleşme Appendix G1–G7) — özet
-
-- **G1** İsimler `kio.<domain>.<metric>` deseninde ve **kalıcı** (yayınlandıktan sonra değişmez).
-- **G2** Her metrik/trace `kio.id` (trace'lerde ayrıca `session.id`) taşır.
-- **G3** **Yüksek kardinaliteli etiket yok**: benzersiz id / URL / e-posta etiket
-  değeri olmaz; sınırlı enum kullanın. (`session.id` metrik etiketi *değil*, yalnızca
-  trace/log metadatasıdır.)
-- **G4** **Sır/PII yok**: API anahtarı, parola, e-posta trace'e/etikete sızmaz.
-- **G5** Her sürümde `service.version` güncellenir.
-- **G6** Zorunlu metrikleri merkez ekip standardize eder.
-- **G7** **Zorunlu 7'nin ötesi self-service**: G1–G5'e uyduğu sürece kendi metriğinizi
-  ekleyebilirsiniz. `kio_otel.py`'de `kio.meter` ve `kio.base_labels` üzerinden ham
-  instrument'lara erişip tanımlarsınız. (Örnek: bu repodaki `kio.llm.tokens_per_second`,
-  `kio.llm.energy_joules` hep G7 ile eklendi.)
+One-stop for all network/firewall/port issues → [`NETWORK.md`](NETWORK.md) §6.
 
 ---
 
-## 7. Ortam değişkenleri — tam referans
+## Related documents
 
-`kio_otel.py` ve preflight bu değişkenleri okur. Bir `.env` şablonu:
-[`reference-client/.env.example`](reference-client/.env.example).
-
-| Değişken | Zorunlu? | Varsayılan | Açıklama |
-|---|---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | ✅ | `http://localhost:4317` | Merkez collector, **gRPC port 4317** (4318 değil!). `http://` = insecure (LAN/VPN için uygun), `https://` = TLS. |
-| `OTEL_RESOURCE_ATTRIBUTES` | ✅¹ | — | `service.name=…,service.version=…,kio.id=…,deployment.environment=…`. Sözleşme-standardı, **öncelikli** biçim. |
-| `KIO_ID` | ✅¹ | `kioX` | `OTEL_RESOURCE_ATTRIBUTES` yoksa kimlik bundan kurulur (kolaylık için). |
-| `SERVICE_VERSION` | ⬜ | `0.0.0` | Modül sürümünüz. |
-| `KIO_LLM` | ⬜ | — | Kullandığınız model adı (`llm` etiketi). |
-| `KIO_TASK_TYPE` | ⬜ | — | Görev tipi (`task_type` etiketi). |
-| `DEPLOYMENT_ENVIRONMENT` | ⬜ | `production` | Ortam adı. |
-| `OTEL_EXPORTER_OTLP_HEADERS` | ⬜ | — | Auth açıksa: `Authorization=Bearer <token>`. SDK otomatik okur. |
-| `EXPORT_INTERVAL_MS` | ⬜ | `5000` | Metrik export sıklığı. Kısa ömürlü CLI için düşürün. |
-| `HEARTBEAT_INTERVAL_S` | ⬜ | `60` | Heartbeat sıklığı. **60'ı geçmeyin** (>120 sn sessizlik = stale). |
-| `REQUEST_INTERVAL_S` | ⬜ | `3` | Yalnızca `example_kio.py` kullanır; kendi kodunuzda gereksiz. |
-
-¹ `OTEL_RESOURCE_ATTRIBUTES` **veya** `KIO_ID`'den (en az) biri. İkisi de varsa
-`OTEL_RESOURCE_ATTRIBUTES` kazanır (sözleşme onu otoriter kabul eder).
-
----
-
-## 8. Python kullanmıyorsanız
-
-`kio_otel.py` bir kolaylıktır, zorunluluk değil. Sözleşme dil-bağımsızdır ve
-OpenTelemetry tüm büyük dillerde (Go, Java, JS/TS, .NET, Rust…) mevcuttur. Başka
-bir dilde şunları yaparsınız:
-
-1. OTLP/**gRPC** metric exporter'ı `OTEL_EXPORTER_OTLP_ENDPOINT`'e yönlendirin.
-2. `Resource` attribute'larını `OTEL_RESOURCE_ATTRIBUTES`'tan yükleyin (§6).
-3. §6'daki **7 zorunlu instrument'ı birebir aynı isim/tip/birimle** oluşturun.
-4. `kio.heartbeat`'i 60 sn'de bir artıran bir arka plan görevi çalıştırın.
-5. Her istek için: aktif oturum +1/−1, süre, `status=ok|error` sayımı, hatada
-   `error_count`.
-
-Çalışan bir Python referans implementasyonu (elle kurulum deseni) sözleşmenin
-ekindedir: [`../observability_integration_contract.pdf`](../observability_integration_contract.pdf)
-(Appendix — Reference Implementation). `kio_otel.py` da aynı deseni izler; başka
-dile çevirirken model olarak kullanabilirsiniz.
-
----
-
-## 9. Opsiyonel akışlar (gerekmiyorsa hiç dokunmayın)
-
-`kio_otel.py` bilinçli olarak yalnızca zorunlu OTel akışını (metrics + basit trace +
-heartbeat) uygular. Aşağıdakiler tamamen opsiyoneldir:
-
-- **Serbest metin loglar → VictoriaLogs.** LLM çıktı özeti / analiz notu gibi
-  yapısal olmayan metinler OTLP logs olarak gider. Kurulum deseni:
-  `../kio-simulator/kio_simulator.py`'deki logger bloğu.
-- **Langfuse (LLM prompt/completion/cost).** OTel'den ayrı, paralel bir HTTPS akışı;
-  yalnızca prompt seviyesinde replay/maliyet analizi istiyorsanız gerekir. Anahtarları
-  merkez ekipten alın. Desen: `kio_simulator.py` `emit_langfuse_trace()`.
-- **Zengin trace'ler (çocuk span'ler / "işlem sırası").** `kio_otel.py` istek başına
-  tek kök span üretir. Adım adım şelale (`prepare_prompt → llm_call → postprocess`)
-  isterseniz `kio_simulator.py` `emit_trace()` desenine bakın.
-- **NATS ile tetiklenme (orkestrasyon katmanı).** Telemetriden **tamamen ayrıdır**;
-  yalnızca KIO'nuzun merkezî `POST /workflow/run` ile tetiklenmesini istiyorsanız
-  gerekir. Ayrıntı: ana [`../README.md`](../README.md) "Orchestration layer".
-
----
-
-## 10. Sık sorulan sorular (SSS)
-
-**Modülümü çok mu değiştireceğim?**
-Hayır. Kendi kodunuz aynı kalır; eklediğiniz şey 3 parça (§4): başlangıçta bir
-nesne, işleyiciyi saran bir `with`, çıkışta bir `shutdown()`. Metrik isimlerine,
-collector'a, docker-compose'a **dokunmazsınız**.
-
-**Modülüm Python değil.** Sorun değil — §8. Sözleşme dil-bağımsızdır.
-
-**LLM kullanmıyorum / token sayım yok.** `req.record_tokens(...)` satırlarını
-atlayın. İstek/süre/hata/heartbeat metrikleri yine akar; LLM metrikleri sıfır kalır.
-
-**`kio.id` ne olmalı?** Merkez ekipten alın; kendiniz uydurmayın. Benzersiz olmalı;
-çakışırsa iki KIO'nun serileri Grafana'da iç içe girer.
-
-**`http://` mü `https://` mi?** Aynı LAN veya Tailscale/VPN içindeyseniz `http://`
-(insecure) yeterlidir ve varsayılandır. Trafiği güvenilmeyen bir ağdan
-geçireceksiniz/üretimse `https://` + Bearer token; detay [`NETWORK.md`](NETWORK.md) §4.
-
-**Port 4317 mi 4318 mi?** Bu istemci **gRPC** kullanır → **4317**. 4318 HTTP
-içindir; oraya bağlanırsanız sessizce "No data" alırsınız.
-
-**Grafana'yı ben mi kuracağım?** Hayır. Grafana, collector, veritabanları merkez
-makinede zaten çalışıyor. Siz sadece veri gönderirsiniz; dashboard'lar hazır.
-
-**Süreç kısa ömürlü, heartbeat 60 sn'yi görmeden bitiyor.** Sorun değil — CLI
-modelinde her çağrı bir "istek"tir; süreklilik yerine `shutdown()` ile flush
-önemlidir (§5-B). Sürekli ayakta bir servisseniz heartbeat normal işler.
-
-**Verilerim ne kadar saklanıyor?** Metrikler/loglar/trace'ler merkezde 30 gün
-tutulur (retention). Bu sizin tarafınızı ilgilendirmez.
-
----
-
-## 11. Sorun giderme
-
-| Belirti | Olası neden | Çözüm |
-|---|---|---|
-| `check_connectivity.py` **[1/2] FAIL** | Yanlış IP / firewall kapalı / farklı ağ | [`NETWORK.md`](NETWORK.md) §2 (firewall), §2c (adres), §3 (ağ/VPN) |
-| **[1/2] OK ama [2/2] FAIL** | Port açık, collector export'u reddediyor (ör. TLS/auth) | [`NETWORK.md`](NETWORK.md) §4; endpoint şemasını (`http`/`https`) kontrol et |
-| Test PASS ama Grafana'da "No data" | Endpoint `:4318`'e (HTTP) ayarlı, istemci gRPC | Portu **4317** yap |
-| KIO görünüyor ama seri karışık | Aynı `kio.id` iki kaynaktan gönderiyor | Benzersiz `kio.id` alın (§3) |
-| Kısa süre çalışıp kesiliyor | Kısa ömürlü süreçte `shutdown()` çağrılmıyor | §5-B: `finally: kio.shutdown()` |
-| KIO "stale" işaretlendi | Heartbeat >120 sn kesildi (süreç durdu / ağ koptu) | Süreç ayakta ve export ediyor mu doğrula |
-
-Ağ/firewall/port kaynaklı her şey için tek durak → [`NETWORK.md`](NETWORK.md) §6.
-
----
-
-## İlgili dökümanlar
-
-| Döküman | Ne için |
+| Document | For |
 |---|---|
-| [`reference-client/`](reference-client/) | Kopyalanabilir minimal kit: `kio_otel.py`, örnek, preflight |
-| [`NETWORK.md`](NETWORK.md) | Ağ / firewall / statik IP / Tailscale (derin dalış) |
-| [`README.md`](README.md) | Bizim **simülatörümüzü** uzak makinede çalıştırmak (farklı senaryo) |
-| [`../kio2-integration/README.md`](../kio2-integration/README.md) | Gerçek FocusTracer (KIO2) modülüne özel, satır referanslı örnek |
-| [`../observability_integration_contract.pdf`](../observability_integration_contract.pdf) | Normatif sözleşme (7 metrik, kurallar, referans kod) |
+| [`reference-client/`](reference-client/) | Copyable minimal kit: `kio_otel.py`, example, preflight |
+| [`NETWORK.md`](NETWORK.md) | Networking / firewall / static IP / Tailscale (deep dive) |
+| [`README.md`](README.md) | Running **our simulator** on a remote machine (different scenario) |
+| [`../kio2-integration/README.md`](../kio2-integration/README.md) | Worked, line-referenced example for the real FocusTracer (KIO2) module |
+| [Integration Contract PDF](../observability_integration_contract.pdf) | Normative contract (7 metrics, rules, reference code) |
