@@ -81,7 +81,7 @@ Three things to know:
 3. **It uses a standard tool.** Telemetry is produced by **OpenTelemetry (OTel)**,
    the industry-standard SDK. You do not invent a wire format; you configure the
    SDK and emit 7 standard measurements. This repo hands you that in one file:
-   [`reference-client/kio_otel.py`](reference-client/kio_otel.py).
+   [`with_script/kio_otel.py`](with_script/kio_otel.py).
 
 **Telemetry has three kinds** (all travel over the same `:4317`):
 - **Metrics** — numeric time series (request count, duration, tokens…). *Required.*
@@ -103,17 +103,15 @@ answer: **very little**. The change surface is deliberately small and bounded.
 | **Your own module code** (your LLM call, analysis, work) | You | ✅ It's yours already |
 | **Environment variables** (endpoint, `kio.id`, version…) | You | ✅ Yes — 3–4 lines for your setup |
 | **Integration point**: wrapping your handler in `with kio.request()` | You | ✅ Yes — usually one place, a few lines |
-| [`reference-client/kio_otel.py`](reference-client/kio_otel.py) | Reference kit | ⛔ Usually no — copy it as-is |
+| [`with_script/kio_otel.py`](with_script/kio_otel.py) | Reference kit | ⛔ Usually no — copy it as-is |
 | **The 7 mandatory metric names/types/units** | Contract (§3) | ⛔ No — fixed; dashboards depend on them |
 | **Central collector / databases / Grafana** | Central team | ⛔ No — don't touch; already running |
-| `remote-kio/docker-compose.yml` and `.env.example` | Simulator package | ⛔ **Do NOT use it for your own module** (see note) |
 | **Docker itself** | — | ⛔ Not required at all — see §6 |
 
-> **Key distinction:** the `docker-compose.yml` + root `README.md` in `remote-kio/`
-> exist to run **our simulator** on another machine. For your real module you do
-> not need them. You only use **[`reference-client/`](reference-client/)** and this
-> guide. (Mistaking the simulator package for the real integration is the usual
-> source of the "I'll have to change a lot" feeling — you won't.)
+> **Two ready examples:** [`with_script/`](with_script/) (plain Python) and
+> [`with_docker/`](with_docker/) (containerized) each run a small demo KIO that
+> pushes the mandatory telemetry from `.env`. Run one to see it work, then copy
+> `kio_otel.py` into your own module — that's the path this guide describes.
 
 ---
 
@@ -227,7 +225,7 @@ Most "No data" problems are network problems, fixable without touching code. Pro
 reachability first:
 
 ```bash
-cd reference-client
+cd with_script
 pip install -r requirements.txt
 OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:4317 python check_connectivity.py
 ```
@@ -242,7 +240,7 @@ always that **port 4317 is closed by the firewall** on the central machine, or y
 
 ```bash
 pip install opentelemetry-api==1.44.0 opentelemetry-sdk==1.44.0 opentelemetry-exporter-otlp-proto-grpc==1.44.0
-cp reference-client/kio_otel.py <your-project>/
+cp with_script/kio_otel.py <your-project>/
 ```
 
 You do **not** edit `kio_otel.py` — use it as-is.
@@ -257,7 +255,7 @@ export OTEL_EXPORTER_OTLP_ENDPOINT="http://<central-address>:4317"
 export OTEL_RESOURCE_ATTRIBUTES="service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production"
 ```
 
-Full list in §3.2 and the [`.env.example`](reference-client/.env.example). On Windows
+Full list in §3.2 and the [`.env.example`](with_script/.env.example). On Windows
 PowerShell use `$env:NAME="value"`; in a container, pass these as normal env vars.
 
 ### Step 4 — Wire it into your code (the actual work — a few lines)
@@ -287,7 +285,7 @@ ok/error counting, and — if an exception escapes the block — records it as a
 error (`kio.request.error_count`, with a bounded `error_type`) and re-raises it, so
 telemetry never changes your control flow. All you do inside is report your real
 token counts. Not using an LLM? Drop those lines — metrics still flow. Runnable
-example: [`reference-client/example_kio.py`](reference-client/example_kio.py).
+example: [`with_script/main.py`](with_script/main.py).
 
 ### Step 5 — Run and verify (the acceptance gate)
 
@@ -494,7 +492,7 @@ One-stop for all network/firewall/port issues → [`NETWORK.md`](NETWORK.md) §6
 
 | Document | For |
 |---|---|
-| [`reference-client/`](reference-client/) | Copyable minimal kit: `kio_otel.py`, example, preflight |
+| [`with_script/`](with_script/) | Copyable minimal kit: `kio_otel.py`, example, preflight |
 | [`NETWORK.md`](NETWORK.md) | Networking / firewall / static IP / Tailscale (deep dive) |
 | [`README.md`](README.md) | Running **our simulator** on a remote machine (different scenario) |
 | [`../kio2-integration/README.md`](../kio2-integration/README.md) | Worked, line-referenced example for the real FocusTracer (KIO2) module |

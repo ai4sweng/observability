@@ -246,17 +246,16 @@ The `remote-kio/` folder is the single home for connecting a KIO that runs on a
 **separate machine** (same LAN, or a different network via Tailscale/VPN) while
 the rest of the stack keeps running wherever it already is. The architecture is
 push-based by design, so this needs no code change — only pointing
-`OTEL_EXPORTER_OTLP_ENDPOINT` at the central machine. Two scenarios:
+`OTEL_EXPORTER_OTLP_ENDPOINT` at the central machine.
 
-- **A different developer's own KIO module** (its own codebase, not our
-  simulator, and **no Docker required**): **[`remote-kio/INTEGRATION.md`](remote-kio/INTEGRATION.md)**
-  — an end-to-end guide that also documents the exact data/naming contract and
-  non-Docker deployment, plus **[`remote-kio/reference-client/`](remote-kio/reference-client/)**,
-  a minimal contract-compliant instrumentation helper (`kio_otel.py`), a runnable
-  example, and a connectivity preflight (`check_connectivity.py`) to drop into
-  their code.
-- **Our simulator on another box** (test/demo): **[`remote-kio/README.md`](remote-kio/README.md)**,
-  a copy-paste-ready package.
+A different developer connecting **their own KIO module** (its own codebase, not
+our simulator, and **no Docker required**) starts at
+**[`remote-kio/INTEGRATION.md`](remote-kio/INTEGRATION.md)** — an end-to-end guide
+that also documents the exact data/naming contract and non-Docker deployment —
+plus two copy-and-edit examples that each push the mandatory telemetry from
+`.env`: **[`remote-kio/with_script/`](remote-kio/with_script/)** (plain Python)
+and **[`remote-kio/with_docker/`](remote-kio/with_docker/)** (containerized),
+each with a `check_connectivity.py` preflight.
 
 Networking (firewall on both sides, static IP, Tailscale) is common to both and
 documented once in **[`remote-kio/NETWORK.md`](remote-kio/NETWORK.md)**.
@@ -303,12 +302,12 @@ plus the mandatory metrics is enough.
 
 Concrete examples in this repo: for connecting a module with your own codebase
 (whether on a different machine or not) from scratch, an end-to-end guide plus
-a copyable starter kit — `remote-kio/INTEGRATION.md` and
-`remote-kio/reference-client/` (`kio_otel.py`, a minimal helper implementing
-only the mandatory contract, plus `check_connectivity.py`, a pre-flight test);
-for running our ready-made `kio-simulator.py` on a different machine/VM,
-`remote-kio/README.md`; for a line-referenced guide to connecting the real
-FocusTracer module under the KIO2 identity, `kio2-integration/README.md`.
+two copyable, runnable examples — `remote-kio/INTEGRATION.md` and
+`remote-kio/with_script/` (plain Python) / `remote-kio/with_docker/`
+(containerized), each shipping `kio_otel.py` (a minimal helper implementing only
+the mandatory contract) and `check_connectivity.py` (a pre-flight test); for a
+line-referenced guide to connecting the real FocusTracer module under the KIO2
+identity, `kio2-integration/README.md`.
 
 ## KIO2 real-module integration (FocusTracer)
 
@@ -551,7 +550,7 @@ contract — the decisions below are ours, made after comparing the two document
   specifies), and the metrics+traces-over-OTLP/gRPC transport.
 - **Adopted (2026-08):** v2's 15s metric export interval (was 5s — bumped across
   all 6 KIO simulators' `EXPORT_INTERVAL_MS` default in `docker-compose.yml`/
-  `.env.example`/`remote-kio/.env.example`/`kio_simulator.py`'s own fallback; no
+  `.env.example`/`kio_simulator.py`'s own fallback; no
   panel changes needed, existing `rate(...[15m])` windows comfortably contain
   multiple 15s samples) and a `$session_id` Grafana dashboard filter variable
   (textbox, regex, default `.*` = all — wired into the log-stream panel via
@@ -633,8 +632,8 @@ observability/
 ├── orchestrator/{planner.py,session_manager.py,workflow_api.py,envelope.py}
 ├── remote-kio/                              # connect a KIO from another machine
 │   ├── {README.md,INTEGRATION.md,NETWORK.md}   # hub / own-module guide / networking
-│   ├── {docker-compose.yml,.env.example}       # run OUR simulator remotely
-│   └── reference-client/{kio_otel.py,example_kio.py,check_connectivity.py,requirements.txt,.env.example}
+│   ├── with_script/{main.py,kio_otel.py,check_connectivity.py,requirements.txt,.env.example}
+│   └── with_docker/{Dockerfile,docker-compose.yml,main.py,kio_otel.py,check_connectivity.py,…}
 ├── tests/{conftest.py,requirements-test.txt,kio_simulator/,orchestrator/}
 └── docs/AI4SWENG_Observability_Teknik_Rapor.docx
 ```

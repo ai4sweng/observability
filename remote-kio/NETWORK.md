@@ -220,12 +220,12 @@ In order:
 
 **b) Does it flow end to end? (real export test)**
 
-`reference-client/check_connectivity.py` tries both the TCP connection and a
+`with_script/check_connectivity.py` tries both the TCP connection and a
 real OTLP export (a single `kio.heartbeat`), and tells you clearly where it
 got stuck:
 
 ```bash
-cd reference-client
+cd with_script
 pip install -r requirements.txt
 OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:4317 python check_connectivity.py
 ```
