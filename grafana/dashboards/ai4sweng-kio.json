@@ -35,7 +35,7 @@
       {
         "name": "session_id",
         "type": "textbox",
-        "label": "Session ID (regex, varsayılan .* = tümü)",
+        "label": "Session ID (regex, default .* = all)",
         "query": ".*",
         "current": {
           "value": ".*",
@@ -45,7 +45,7 @@
       {
         "name": "trace_id",
         "type": "textbox",
-        "label": "Trace ID (aşağıdaki tablodan kopyala)",
+        "label": "Trace ID (copy from the table below)",
         "query": "",
         "current": {
           "value": "",
@@ -422,7 +422,7 @@
         },
         "textMode": "auto"
       },
-      "description": "fix@1 yerine geçen kio.request.accuracy — HER ZAMAN source=simulated (gerçek bir doğrulama yolu yok, bkz. Bölüm 9.4/9.7/9.8)."
+      "description": "kio.request.accuracy stands in for fix@1 — ALWAYS source=simulated (no real validation path yet, see Section 9.4/9.7/9.8)."
     },
     {
       "id": 7,
@@ -747,7 +747,7 @@
     },
     {
       "id": 14,
-      "title": "Code-analysis'e Özel İstatistikler (yalnızca kio2-sim'de veri var)",
+      "title": "Code-Analysis-Specific Statistics (data only in kio2-sim)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -798,7 +798,7 @@
               }
             ]
           },
-          "noValue": "N/A (code-analysis değil)"
+          "noValue": "N/A (not code-analysis)"
         },
         "overrides": []
       },
@@ -814,7 +814,7 @@
         },
         "textMode": "auto"
       },
-      "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
+      "description": "Only emitted by KIOs with TASK_TYPE=code-analysis (currently kio2-sim only). Seeing 'N/A' on these panels while another KIO like kio3/kio4 is selected is expected behavior — not an error; that KIO never produces this metric."
     },
     {
       "id": 16,
@@ -856,7 +856,7 @@
               }
             ]
           },
-          "noValue": "N/A (code-analysis değil)"
+          "noValue": "N/A (not code-analysis)"
         },
         "overrides": []
       },
@@ -872,7 +872,7 @@
         },
         "textMode": "auto"
       },
-      "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
+      "description": "Only emitted by KIOs with TASK_TYPE=code-analysis (currently kio2-sim only). Seeing 'N/A' on these panels while another KIO like kio3/kio4 is selected is expected behavior — not an error; that KIO never produces this metric."
     },
     {
       "id": 17,
@@ -914,7 +914,7 @@
               }
             ]
           },
-          "noValue": "N/A (code-analysis değil)"
+          "noValue": "N/A (not code-analysis)"
         },
         "overrides": []
       },
@@ -930,7 +930,7 @@
         },
         "textMode": "auto"
       },
-      "description": "Yalnızca TASK_TYPE=code-analysis olan KIO'larda emit edilir (şu an sadece kio2-sim). kio3/kio4 gibi başka bir KIO seçiliyken bu panellerde 'N/A' görmek beklenen davranıştır — hata değildir, o KIO bu metriği hiç üretmez."
+      "description": "Only emitted by KIOs with TASK_TYPE=code-analysis (currently kio2-sim only). Seeing 'N/A' on these panels while another KIO like kio3/kio4 is selected is expected behavior — not an error; that KIO never produces this metric."
     },
     {
       "id": 18,
@@ -977,11 +977,11 @@
         "enableLogDetails": true,
         "dedupStrategy": "none"
       },
-      "description": " Session ID regex filtresi eklendi (v2 guideline); VictoriaLogs LogsQL regex sözdizimi (field:~\"regex\") canlı ortamda ilk kullanımda doğrulanmalı."
+      "description": " Session ID regex filter added (v2 guideline); VictoriaLogs LogsQL regex syntax (field:~\"regex\") should be verified on first use in a live environment."
     },
     {
       "id": 20,
-      "title": "İşlem Sıraları (Trace / Tempo)",
+      "title": "Trace Waterfalls (Trace / Tempo)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -994,7 +994,7 @@
     },
     {
       "id": 21,
-      "title": "Nasıl kullanılır",
+      "title": "How to use",
       "type": "text",
       "gridPos": {
         "h": 3,
@@ -1004,7 +1004,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "Aşağıdaki tablo, seçili KIO'nun son isteklerine ait trace'leri listeler (Trace ID, süre, kök span). Bir satırdaki **Trace ID** değerini kopyalayıp yukarıdaki **Trace ID** kutusuna yapıştırın — altındaki panel o işlemin adım adım sırasını (repo_scan → prepare_prompt → llm_call → postprocess) şelale görünümüyle gösterir. Panel boş kalırsa aynı Trace ID ile Explore → Tempo üzerinden de açılabilir."
+        "content": "The table below lists traces for the selected KIO's recent requests (Trace ID, duration, root span). Copy a row's **Trace ID** value and paste it into the **Trace ID** box above — the panel below then shows that request's step-by-step sequence (repo_scan → prepare_prompt → llm_call → postprocess) as a waterfall view. If the panel stays empty, the same Trace ID can also be opened via Explore → Tempo."
       }
     },
     {
@@ -1045,11 +1045,11 @@
       "options": {
         "showHeader": true
       },
-      "description": "Session ID regex filtresi eklendi (v2 guideline); TraceQL =~ regex operatörü kullanılıyor."
+      "description": "Session ID regex filter added (v2 guideline); uses the TraceQL =~ regex operator."
     },
     {
       "id": 23,
-      "title": "Seçili trace'in şelale görünümü ($trace_id)",
+      "title": "Waterfall view of the selected trace ($trace_id)",
       "type": "traces",
       "datasource": {
         "type": "tempo",
@@ -1076,7 +1076,7 @@
     },
     {
       "id": 24,
-      "title": "D1.1 Gerçek Proje KPI'ları — kio2-sim (bugfix rolü, hepsi SİMÜLE)",
+      "title": "D1.1 Real Project KPIs — kio2-sim (bugfix role, all SIMULATED)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -1089,7 +1089,7 @@
     },
     {
       "id": 25,
-      "title": "Bug-fix time (KPI 6.1, simüle)",
+      "title": "Bug-fix time (KPI 6.1, simulated)",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -1135,7 +1135,7 @@
               }
             ]
           },
-          "noValue": "N/A (bugfix rolü yok)"
+          "noValue": "N/A (no bugfix role)"
         },
         "overrides": []
       },
@@ -1151,11 +1151,11 @@
         },
         "textMode": "auto"
       },
-      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+      "description": "Always source=simulated: this D1.1 project-management KPI has no real measurement path yet — it will become real once FocusTracer is connected (Section 9.8). Produced via KIO_REAL_KPI_ROLE=bugfix (kio2-sim only)."
     },
     {
       "id": 26,
-      "title": "Issue resolution time (KPI 1.2, simüle)",
+      "title": "Issue resolution time (KPI 1.2, simulated)",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -1201,7 +1201,7 @@
               }
             ]
           },
-          "noValue": "N/A (bugfix rolü yok)"
+          "noValue": "N/A (no bugfix role)"
         },
         "overrides": []
       },
@@ -1217,11 +1217,11 @@
         },
         "textMode": "auto"
       },
-      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+      "description": "Always source=simulated: this D1.1 project-management KPI has no real measurement path yet — it will become real once FocusTracer is connected (Section 9.8). Produced via KIO_REAL_KPI_ROLE=bugfix (kio2-sim only)."
     },
     {
       "id": 27,
-      "title": "Dynamic slicing success rate (WP3, hedef ≥%85, simüle)",
+      "title": "Dynamic slicing success rate (WP3, target ≥85%, simulated)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -1269,7 +1269,7 @@
               }
             ]
           },
-          "noValue": "N/A (bugfix rolü yok)"
+          "noValue": "N/A (no bugfix role)"
         },
         "overrides": []
       },
@@ -1284,11 +1284,11 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+      "description": "Always source=simulated: this D1.1 project-management KPI has no real measurement path yet — it will become real once FocusTracer is connected (Section 9.8). Produced via KIO_REAL_KPI_ROLE=bugfix (kio2-sim only)."
     },
     {
       "id": 28,
-      "title": "Customer-reported issues (KPI 6.2, simüle)",
+      "title": "Customer-reported issues (KPI 6.2, simulated)",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -1326,7 +1326,7 @@
               }
             ]
           },
-          "noValue": "N/A (bugfix rolü yok)"
+          "noValue": "N/A (no bugfix role)"
         },
         "overrides": []
       },
@@ -1342,11 +1342,11 @@
         },
         "textMode": "auto"
       },
-      "description": "Her zaman source=simulated: bu D1.1 proje-yönetimi KPI'sinin gerçek bir ölçüm yolu henüz yok — FocusTracer bağlandığında (Bölüm 9.8) gerçek hale gelecek. KIO_REAL_KPI_ROLE=bugfix ile (yalnızca kio2-sim'de) üretiliyor."
+      "description": "Always source=simulated: this D1.1 project-management KPI has no real measurement path yet — it will become real once FocusTracer is connected (Section 9.8). Produced via KIO_REAL_KPI_ROLE=bugfix (kio2-sim only)."
     },
     {
       "id": 29,
-      "title": "Bug-fix / Issue resolution time trendi (saat, simüle)",
+      "title": "Bug-fix / Issue resolution time trend (hours, simulated)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -1411,7 +1411,7 @@
     },
     {
       "id": 30,
-      "title": "Dynamic slicing success rate trendi (simüle)",
+      "title": "Dynamic slicing success rate trend (simulated)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -1468,7 +1468,7 @@
     },
     {
       "id": 31,
-      "title": "Model Karşılaştırması & Veri Kaynağı (idt4gdc-grafana-demo tarzından uyarlandı)",
+      "title": "Model Comparison & Data Source (adapted from the idt4gdc-grafana-demo style)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -1481,9 +1481,9 @@
     },
     {
       "id": 32,
-      "title": "Veri kaynağı (tok/s) — REAL vs SIMULATED",
+      "title": "Data source (tok/s) — REAL vs SIMULATED",
       "type": "stat",
-      "description": "KIO2_REAL_LLM_ENABLED açıkken gerçek Ollama çağrısı başarılıysa 'real', Ollama'ya ulaşılamayıp simülasyona düşüldüyse 'simulated' sayılır. Son 30 dakikada hangi kaynaktan kaç istek geldiğini gösterir.",
+      "description": "Counted as 'real' when KIO2_REAL_LLM_ENABLED is on and the real Ollama call succeeds; counted as 'simulated' when Ollama is unreachable and it falls back to simulation. Shows how many requests came from each source in the last 30 minutes.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -1572,7 +1572,7 @@
     {
       "id": 33,
       "title": "Energy Consumption by Model",
-      "description": "idt4gdc-grafana-demo'daki aynı isimli panelden esinlenildi. Postgres+rawSql yerine bizim PromQL/VictoriaMetrics verimizle: tüm KIO'ların (llm etiketine göre) enerji tüketim oranı karşılaştırması ($kio_id filtresi yok, kasıtlı — model bazlı kıyaslama).",
+      "description": "Inspired by the same-named panel in idt4gdc-grafana-demo. Uses our PromQL/VictoriaMetrics data instead of Postgres+rawSql: compares energy consumption rate across all KIOs (grouped by the llm label) ($kio_id filter intentionally omitted — this is a model-based comparison).",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",
@@ -1626,7 +1626,7 @@
     {
       "id": 34,
       "title": "Accuracy (fix@1) vs Energy Trade-off — by model",
-      "description": "idt4gdc-grafana-demo'daki 'Accuracy vs Energy Trade-off' panelinden uyarlandı. KIO2 (bugfix rolü) için fix@1 başarı oranı ile enerji tüketim oranını yan yana gösterir. fix@1 henüz FocusTracer'a bağlı değil, yer tutucu değer — bkz. docs/AI4SWENG_KPI_Metrik_Referansi. Sadece bugfix rolündeki KIO'larda (şu an KIO2) veri olur.",
+      "description": "Adapted from the 'Accuracy vs Energy Trade-off' panel in idt4gdc-grafana-demo. Shows the fix@1 success rate for KIO2 (bugfix role) side by side with its energy consumption rate. fix@1 is not yet connected to FocusTracer and is a placeholder value — see docs/AI4SWENG_KPI_Metrik_Referansi. Only KIOs in the bugfix role (currently KIO2) have data.",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",
@@ -1717,7 +1717,7 @@
     },
     {
       "id": 35,
-      "title": "Gösterge Görünümü — Hata, Verim, Doğruluk (gauge)",
+      "title": "Gauge View — Error, Throughput, Accuracy (gauge)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -1730,7 +1730,7 @@
     },
     {
       "id": 36,
-      "title": "Error rate % (gösterge)",
+      "title": "Error rate % (gauge)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -1795,7 +1795,7 @@
     },
     {
       "id": 37,
-      "title": "Avg tokens/sec (gösterge)",
+      "title": "Avg tokens/sec (gauge)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -1860,7 +1860,7 @@
     },
     {
       "id": 38,
-      "title": "Avg accuracy (gösterge)",
+      "title": "Avg accuracy (gauge)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -1922,11 +1922,11 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "description": "fix@1 (kio.request.accuracy) hâlâ simüle bir değer — bkz. Bölüm 9.4/9.7 (KIO7 kapsamı)."
+      "description": "fix@1 (kio.request.accuracy) is still a simulated value — see Section 9.4/9.7 (KIO7 scope)."
     },
     {
       "id": 39,
-      "title": "Güç, Verimlilik ve Karbon (tahmini)",
+      "title": "Power, Efficiency & Carbon (estimated)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -1939,7 +1939,7 @@
     },
     {
       "id": 40,
-      "title": "Anlık Güç (W)",
+      "title": "Instantaneous Power (W)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -2001,7 +2001,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "description": "kio.llm.energy_joules'un rate'i zaten J/s = Watt; gerçek modda gerçek GPU gücü, simüle modda model-başı sabit katsayıdan."
+      "description": "The rate of kio.llm.energy_joules is already J/s = Watt; real GPU power in real mode, a fixed per-model coefficient in simulated mode."
     },
     {
       "id": 41,
@@ -2067,11 +2067,11 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "description": "Ortalama tok/s ÷ Watt — 'performance per watt' kavramının bizim veriyle karşılığı. Yeni bir ölçüm gerekmez, saf PromQL türetmesi."
+      "description": "Average tok/s ÷ Watt — our data's equivalent of the 'performance per watt' concept. No new measurement needed, a pure PromQL derivation."
     },
     {
       "id": 42,
-      "title": "Kümülatif Karbon (kg CO2e, tahmini)",
+      "title": "Cumulative Carbon (kg CO2e, estimated)",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -2125,11 +2125,11 @@
         },
         "textMode": "auto"
       },
-      "description": "0.4 kg CO2e/kWh sabit bir grid-ortalama varsayımıyla enerjiden türetilmiş TAHMİNİ değer — gerçek bir karbon ölçümü değil. Kümülatif (süreç başından beri) olduğu için sağlık eşiği yok, nötr renk."
+      "description": "An ESTIMATED value derived from energy using a fixed grid-average assumption of 0.4 kg CO2e/kWh — not a real carbon measurement. No health threshold since it is cumulative (since process start), hence the neutral color."
     },
     {
       "id": 43,
-      "title": "GPU Sıcaklığı (gerçek — yalnızca kio2-sim gerçek modda)",
+      "title": "GPU Temperature (real — kio2-sim in real mode only)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -2142,7 +2142,7 @@
     },
     {
       "id": 44,
-      "title": "GPU Sıcaklığı (°C)",
+      "title": "GPU Temperature (°C)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -2204,11 +2204,11 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "description": "Yalnızca KIO2_REAL_LLM_ENABLED=true iken VE power-exporter/NVML gerçekten erişilebilirken veri üretir (kio.llm.gpu_temperature_celsius, source=real). Kapalıyken veya kaynak yokken bu panelde 'No data' görmek beklenen davranıştır — hiçbir zaman uydurulmaz."
+      "description": "Only produces data when KIO2_REAL_LLM_ENABLED=true AND power-exporter/NVML is actually reachable (kio.llm.gpu_temperature_celsius, source=real). Seeing 'No data' on this panel when disabled or unavailable is expected behavior — it is never faked."
     },
     {
       "id": 45,
-      "title": "Gerçek vs Simüle Karşılaştırması (Before/After)",
+      "title": "Real vs Simulated Comparison (Before/After)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -2221,7 +2221,7 @@
     },
     {
       "id": 46,
-      "title": "Enerji oranı: Simulated vs Real (W)",
+      "title": "Energy rate: Simulated vs Real (W)",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",
@@ -2271,7 +2271,7 @@
           "placement": "bottom"
         }
       },
-      "description": "source=real|simulated etiketine göre kırılmış ortalama güç — kio2-sim'in gerçek modu açıkken bile, geçmişte simüle modda toplanan veri varsa iki bar birden görünebilir."
+      "description": "Average power broken down by the source=real|simulated label — even with kio2-sim's real mode on, both bars can appear if simulated-mode data was collected previously."
     },
     {
       "id": 47,
@@ -2381,7 +2381,7 @@
     },
     {
       "id": 49,
-      "title": "D1.1 Gerçek Proje KPI'ları — kio3/kio4 (nlp-requirements / architecture-to-code, hepsi SİMÜLE)",
+      "title": "D1.1 Real Project KPIs — kio3/kio4 (nlp-requirements / architecture-to-code, all SIMULATED)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -2394,9 +2394,9 @@
     },
     {
       "id": 50,
-      "title": "Code generation speed (KPI 1.1, simüle)",
+      "title": "Code generation speed (KPI 1.1, simulated)",
       "type": "stat",
-      "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; kio2-sim'de rol farklı olduğu için N/A beklenir.",
+      "description": "Produced in the kio3 (nlp-requirements) and kio4 (architecture-to-code) roles; N/A is expected on kio2-sim since its role differs.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2422,7 +2422,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "m",
-          "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
+          "noValue": "N/A (no nlp-requirements/architecture-to-code role)",
           "color": {
             "mode": "thresholds"
           },
@@ -2460,9 +2460,9 @@
     },
     {
       "id": 51,
-      "title": "Code quality improvement (KPI 3.1, simüle)",
+      "title": "Code quality improvement (KPI 3.1, simulated)",
       "type": "stat",
-      "description": "kio3 (nlp-requirements) ve kio4 (architecture-to-code) rollerinde üretilir; düşük yüzde = baseline'a göre daha az kalite sorunu (D1.1 tanımı böyle).",
+      "description": "Produced in the kio3 (nlp-requirements) and kio4 (architecture-to-code) roles; a lower percentage means fewer quality issues relative to baseline (per the D1.1 definition).",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2488,7 +2488,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "noValue": "N/A (nlp-requirements/architecture-to-code rolü yok)",
+          "noValue": "N/A (no nlp-requirements/architecture-to-code role)",
           "color": {
             "mode": "thresholds"
           },
@@ -2526,9 +2526,9 @@
     },
     {
       "id": 52,
-      "title": "Review score (KPI 3.2, simüle, yalnızca KIO4)",
+      "title": "Review score (KPI 3.2, simulated, KIO4 only)",
       "type": "gauge",
-      "description": "Yalnızca architecture-to-code rolünde (kio4) üretilir; kio2-sim ve kio3'te N/A beklenen davranıştır.",
+      "description": "Only produced in the architecture-to-code role (kio4); N/A is expected behavior on kio2-sim and kio3.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2556,7 +2556,7 @@
           "unit": "short",
           "min": 0,
           "max": 5,
-          "noValue": "N/A (yalnızca architecture-to-code rolünde)",
+          "noValue": "N/A (architecture-to-code role only)",
           "color": {
             "mode": "thresholds"
           },
@@ -2593,7 +2593,7 @@
     },
     {
       "id": 53,
-      "title": "D1.1 Gerçek Proje KPI'ları — kio7 (ai-sysdev, hepsi SİMÜLE)",
+      "title": "D1.1 Real Project KPIs — kio7 (ai-sysdev, all SIMULATED)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -2606,9 +2606,9 @@
     },
     {
       "id": 54,
-      "title": "Developer productivity (KPI 4.1, simüle)",
+      "title": "Developer productivity (KPI 4.1, simulated)",
       "type": "stat",
-      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; diğer KIO'larda N/A beklenen davranıştır.",
+      "description": "Only produced in the ai-sysdev role (kio7); N/A is expected behavior on other KIOs.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2634,7 +2634,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "N/A (ai-sysdev rolü yok)",
+          "noValue": "N/A (no ai-sysdev role)",
           "color": {
             "mode": "thresholds"
           },
@@ -2672,9 +2672,9 @@
     },
     {
       "id": 55,
-      "title": "Time-to-market (KPI 5.1, simüle)",
+      "title": "Time-to-market (KPI 5.1, simulated)",
       "type": "stat",
-      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~30-45 gün, düşük değer iyi.",
+      "description": "Only produced in the ai-sysdev role (kio7); baseline ~30-45 days, lower is better.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2700,7 +2700,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "d",
-          "noValue": "N/A (ai-sysdev rolü yok)",
+          "noValue": "N/A (no ai-sysdev role)",
           "color": {
             "mode": "thresholds"
           },
@@ -2738,9 +2738,9 @@
     },
     {
       "id": 56,
-      "title": "Annual cost saving (KPI 7.1, simüle)",
+      "title": "Annual cost saving (KPI 7.1, simulated)",
       "type": "stat",
-      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir.",
+      "description": "Only produced in the ai-sysdev role (kio7).",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2766,7 +2766,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "noValue": "N/A (ai-sysdev rolü yok)",
+          "noValue": "N/A (no ai-sysdev role)",
           "color": {
             "mode": "thresholds"
           },
@@ -2804,9 +2804,9 @@
     },
     {
       "id": 57,
-      "title": "Refactoring effort reduction (KPI 9.1, simüle)",
+      "title": "Refactoring effort reduction (KPI 9.1, simulated)",
       "type": "stat",
-      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~4-6 saat/özellik, düşük değer iyi.",
+      "description": "Only produced in the ai-sysdev role (kio7); baseline ~4-6 hours/feature, lower is better.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2832,7 +2832,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "h",
-          "noValue": "N/A (ai-sysdev rolü yok)",
+          "noValue": "N/A (no ai-sysdev role)",
           "color": {
             "mode": "thresholds"
           },
@@ -2870,9 +2870,9 @@
     },
     {
       "id": 58,
-      "title": "Technical debt reduction (KPI 9.2, simüle)",
+      "title": "Technical debt reduction (KPI 9.2, simulated)",
       "type": "stat",
-      "description": "Yalnızca ai-sysdev rolünde (kio7) üretilir; baseline ~3-5 saat/100 satır, düşük değer iyi.",
+      "description": "Only produced in the ai-sysdev role (kio7); baseline ~3-5 hours/100 lines, lower is better.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2898,7 +2898,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "h",
-          "noValue": "N/A (ai-sysdev rolü yok)",
+          "noValue": "N/A (no ai-sysdev role)",
           "color": {
             "mode": "thresholds"
           },
@@ -2936,7 +2936,7 @@
     },
     {
       "id": 59,
-      "title": "D1.1 Gerçek Proje KPI'ları — kio8 (green-deploy, hepsi SİMÜLE)",
+      "title": "D1.1 Real Project KPIs — kio8 (green-deploy, all SIMULATED)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -2949,9 +2949,9 @@
     },
     {
       "id": 60,
-      "title": "Lifecycle energy reduction (KPI 2.1, simüle)",
+      "title": "Lifecycle energy reduction (KPI 2.1, simulated)",
       "type": "stat",
-      "description": "Yalnızca green-deploy rolünde (kio8) üretilir; baseline 100%, hedef <=85% (>=%15 azalma), düşük değer iyi.",
+      "description": "Only produced in the green-deploy role (kio8); baseline 100%, target <=85% (>=15% reduction), lower is better.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -2977,7 +2977,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "noValue": "N/A (green-deploy rolü yok)",
+          "noValue": "N/A (no green-deploy role)",
           "color": {
             "mode": "thresholds"
           },
@@ -3015,9 +3015,9 @@
     },
     {
       "id": 61,
-      "title": "Deployment energy efficiency (KPI 2.2, simüle)",
+      "title": "Deployment energy efficiency (KPI 2.2, simulated)",
       "type": "stat",
-      "description": "Yalnızca green-deploy rolünde (kio8) üretilir; birim tokens/s/W, varsayılan optimize edilmemiş baseline ~7.5, hedef >=%15 iyileşme (~8.6+), yüksek değer iyi.",
+      "description": "Only produced in the green-deploy role (kio8); unit tokens/s/W, default un-optimized baseline ~7.5, target >=15% improvement (~8.6+), higher is better.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -3043,7 +3043,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "N/A (green-deploy rolü yok)",
+          "noValue": "N/A (no green-deploy role)",
           "color": {
             "mode": "thresholds"
           },
@@ -3081,9 +3081,9 @@
     },
     {
       "id": 62,
-      "title": "Cross-Architecture Build Success (KPI 8.3, simüle)",
+      "title": "Cross-Architecture Build Success (KPI 8.3, simulated)",
       "type": "stat",
-      "description": "Yalnızca green-deploy rolünde (kio8) üretilir; hedef >=1 doğrulanmış heterojen hedef (FPGA/ARM/RISC-V), seçili zaman aralığındaki toplam.",
+      "description": "Only produced in the green-deploy role (kio8); target >=1 verified heterogeneous target (FPGA/ARM/RISC-V), total over the selected time range.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -3109,7 +3109,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "N/A (green-deploy rolü yok)",
+          "noValue": "N/A (no green-deploy role)",
           "color": {
             "mode": "thresholds"
           },
@@ -3139,7 +3139,7 @@
     },
     {
       "id": 63,
-      "title": "D1.1 Gerçek Proje KPI'ları — kio13 (adoption, hepsi SİMÜLE)",
+      "title": "D1.1 Real Project KPIs — kio13 (adoption, all SIMULATED)",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -3152,9 +3152,9 @@
     },
     {
       "id": 64,
-      "title": "Adoption rate (KPI 8.1, simüle)",
+      "title": "Adoption rate (KPI 8.1, simulated)",
       "type": "stat",
-      "description": "Yalnızca adoption rolünde (kio13) üretilir; baseline 0%, hedef >=%50 (2 pilot sprint içinde), yüksek değer iyi.",
+      "description": "Only produced in the adoption role (kio13); baseline 0%, target >=50% (within 2 pilot sprints), higher is better.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -3180,7 +3180,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "noValue": "N/A (adoption rolü yok)",
+          "noValue": "N/A (no adoption role)",
           "color": {
             "mode": "thresholds"
           },
@@ -3218,9 +3218,9 @@
     },
     {
       "id": 65,
-      "title": "Active usage (KPI 8.2, simüle)",
+      "title": "Active usage (KPI 8.2, simulated)",
       "type": "stat",
-      "description": "Yalnızca adoption rolünde (kio13) üretilir; baseline ~0%, hedef >=%60, yüksek değer iyi.",
+      "description": "Only produced in the adoption role (kio13); baseline ~0%, target >=60%, higher is better.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -3246,7 +3246,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "noValue": "N/A (adoption rolü yok)",
+          "noValue": "N/A (no adoption role)",
           "color": {
             "mode": "thresholds"
           },
@@ -3284,9 +3284,9 @@
     },
     {
       "id": 66,
-      "title": "Satisfaction — MOS (KPI 8.2, simüle)",
+      "title": "Satisfaction — MOS (KPI 8.2, simulated)",
       "type": "gauge",
-      "description": "Yalnızca adoption rolünde (kio13) üretilir; baseline ~3.0/5, hedef >=4.0/5.",
+      "description": "Only produced in the adoption role (kio13); baseline ~3.0/5, target >=4.0/5.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -3314,7 +3314,7 @@
           "unit": "short",
           "min": 0,
           "max": 5,
-          "noValue": "N/A (adoption rolü yok)",
+          "noValue": "N/A (no adoption role)",
           "color": {
             "mode": "thresholds"
           },

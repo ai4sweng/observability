@@ -1,24 +1,24 @@
 apiVersion: 1
 
-# Sözleşme §2.3: her KIO 60s'de bir heartbeat (kio.heartbeat) yayınlamak
-# zorunda. Bu kural, herhangi bir kio_id için son heartbeat örneğinden bu yana
-# geçen sürenin 120s'yi (2x heartbeat aralığı) aşmasını "stale" (donmuş /
-# çökmüş / bağlantısı kopmuş) olarak işaretler.
+# Contract §2.3: every KIO must publish a heartbeat (kio.heartbeat) every
+# 60s. This rule flags a kio_id as "stale" (frozen / crashed / disconnected)
+# once the time since its last heartbeat sample exceeds 120s (2x the
+# heartbeat interval).
 #
-# Bilinçli tasarım kararları:
-#  - Eşik 120s: HEARTBEAT_INTERVAL_S=60 (docker-compose.yml, tüm KIO'lar) —
-#    120s, tek bir kaçırılan heartbeat'e karşı toleranslı, iki ardışık
-#    kaçırılan heartbeat'te tetiklenir.
-#  - `for: 1m` — tek bir gecikmeli scrape'te yanlış alarm vermemek için en az
-#    1 dakika sürekli ihlal şartı.
-#  - Bildirim (contact point / notification policy) burada AYRICA
-#    tanımlanmadı: Grafana'nın yerleşik varsayılan policy'si zaten
-#    "grafana-default-email" contact point'ine yönlendirir. Bu demo/pilot
-#    ortamında gerçek bir SMTP/Slack hedefi olmadığından, kural yalnızca
-#    Grafana Alerting UI'da "Firing" durumuna geçer (bu, panel/tablo
-#    üzerinden görsel takip ile aynı amaca hizmet eder) — gerçek bir
-#    bildirim kanalı bağlanırsa (Slack/e-posta), bu kural değişiklik
-#    gerektirmeden otomatik olarak oraya da bildirim gönderir.
+# Deliberate design decisions:
+#  - Threshold 120s: HEARTBEAT_INTERVAL_S=60 (docker-compose.yml, all KIOs) —
+#    120s tolerates a single missed heartbeat and fires on two consecutive
+#    missed heartbeats.
+#  - `for: 1m` — requires at least 1 minute of continuous violation so a
+#    single delayed scrape doesn't false-alarm.
+#  - No contact point / notification policy is defined here SEPARATELY:
+#    Grafana's built-in default policy already routes to the
+#    "grafana-default-email" contact point. Since this demo/pilot
+#    environment has no real SMTP/Slack target, the rule only flips to
+#    "Firing" in the Grafana Alerting UI (which serves the same purpose as
+#    visual tracking via the panel/table) — if a real notification channel
+#    is connected later (Slack/email), this rule sends notifications there
+#    too automatically, with no changes required.
 groups:
   - orgId: 1
     name: ai4sweng-stale-kio
@@ -26,7 +26,7 @@ groups:
     interval: 1m
     rules:
       - uid: ai4sweng-stale-kio-heartbeat
-        title: "Stale KIO — heartbeat sessizliği > 120s (Sözleşme §2.3)"
+        title: "Stale KIO — heartbeat silence > 120s (Contract §2.3)"
         condition: C
         data:
           - refId: A
@@ -57,5 +57,5 @@ groups:
           severity: warning
           contract_ref: "§2.3"
         annotations:
-          summary: "{{ $labels.kio_id }} son 120 saniyedir heartbeat yayınlamıyor (Sözleşme §2.3 kontrolü)."
-          description: "kio.heartbeat metriği bu kio_id için beklenen 60s aralığın iki katından uzun süredir görülmedi. Kapsayıcı çökmüş, ağ bağlantısı kopmuş veya NATS/timer döngüsü durmuş olabilir."
+          summary: "{{ $labels.kio_id }} has not published a heartbeat for the last 120 seconds (Contract §2.3 check)."
+          description: "The kio.heartbeat metric has not been seen for this kio_id for longer than twice the expected 60s interval. The container may have crashed, lost network connectivity, or its NATS/timer loop may have stopped."

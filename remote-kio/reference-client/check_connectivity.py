@@ -95,7 +95,7 @@ def check_export(endpoint: str) -> bool:
         return True
     print("      FAIL — export did not complete (collector unreachable or rejecting).")
     print("      The TCP check may still pass while the collector rejects the export,")
-    print("      e.g. if TLS/auth is required — see NETWORK.md 'Güvenlik / TLS'.\n")
+    print("      e.g. if TLS/auth is required — see NETWORK.md 'Security / TLS'.\n")
     return False
 
 

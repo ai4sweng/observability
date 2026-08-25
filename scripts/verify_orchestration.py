@@ -5,7 +5,7 @@ listener -> Session Manager -> Postgres lineage).
 
 This is the "live docker compose up pass against the real NATS/Postgres"
 verification step flagged as still-open in README.md's "V2 Guideline
-Değerlendirmesi" section — it was only ever tested at the logic level (fake
+Evaluation" section — it was only ever tested at the logic level (fake
 pub/sub + SQLite) in the sandbox this repo was built in, which has no Docker.
 Run this against a real `docker compose up -d` stack to close that gap.
 

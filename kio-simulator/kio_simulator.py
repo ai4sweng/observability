@@ -10,7 +10,7 @@ Emits contract-compliant dummy telemetry over OTLP/gRPC for a single KIO:
   * a trace per request: a root "kio.request" span with nested child spans
     (prepare_prompt -> llm_call -> postprocess; code-analysis KIOs additionally
     emit a leading repo_scan span) so Grafana/Tempo can show the step-by-step
-    sequence of an operation ("işlem sırası").
+    sequence of an operation (the "Trace Waterfalls" panel).
 
 Real LLMs are NOT invoked by default; values are randomly generated. One KIO
 of type "code-analysis" additionally reports real line/directory counts of a
@@ -491,8 +491,8 @@ logger.addHandler(logging.StreamHandler())
 
 # --------------------------------------------------------------------------- #
 # Traces pipeline — one trace per simulated request, nested spans show the
-# step-by-step sequence of the operation ("işlem sırası" in the KIO Detail
-# dashboard, via Tempo).
+# step-by-step sequence of the operation (the "Trace Waterfalls" panel in the
+# KIO Detail dashboard, via Tempo).
 # --------------------------------------------------------------------------- #
 trace_provider = TracerProvider(resource=resource)
 trace_provider.add_span_processor(
@@ -745,7 +745,7 @@ def simulate_request(session_id: str | None = None):
 
         # "source" reflects which MODE this KIO is running in (real Ollama
         # attempted vs fully simulated) — not whether this one call happened
-        # to succeed. See KIO Detail's "Veri Kaynağı" panel.
+        # to succeed. See KIO Detail's "Data source" panel.
         data_source = "real" if KIO2_REAL_LLM_ENABLED else "simulated"
         labels_src = {**labels, "source": data_source}
 
@@ -825,7 +825,7 @@ def simulate_request(session_id: str | None = None):
             # unlike tok/s/energy/error-rate above, accuracy (fix@1 stand-in)
             # has no real measurement path yet at all (would need FocusTracer
             # to actually run/verify a fix) — tagging it "real" just because
-            # the Ollama call itself was real would be misleading. See Bölüm
+            # the Ollama call itself was real would be misleading. See Section
             # 9.7/9.8 for why this stays a placeholder.
             accuracy_hist.record(round(random.uniform(0.6, 0.99), 3), {**labels_src, "source": "simulated"})
             if real_result is not None and real_result.get("ok") and real_result.get("text"):

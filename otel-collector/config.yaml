@@ -3,7 +3,7 @@
 
 # Bearer token auth on the OTLP receiver (contract/v2 guideline §1/§9.3).
 # Real TLS is still deferred to a real remote/production deployment (see
-# README's "V2 Guideline Değerlendirmesi" — this closes the "Bearer" half of
+# README's "V2 Guideline Evaluation" — this closes the "Bearer" half of
 # "TLS + Bearer token", not the TLS half). Every KIO must now send
 # OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>" matching
 # OTLP_BEARER_TOKEN below or the collector rejects the call. Token value

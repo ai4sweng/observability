@@ -160,7 +160,7 @@ class KIOTelemetry:
         self._active_sessions = meter.create_up_down_counter("kio.session.active_count", unit="1")
         self._heartbeat = meter.create_counter("kio.heartbeat", unit="1")
 
-        # --- Optional traces pipeline (powers the "işlem sırası" waterfall) ---
+        # --- Optional traces pipeline (powers the trace waterfall view) ---
         self._tracer = None
         self._tracer_provider = None
         if enable_traces:

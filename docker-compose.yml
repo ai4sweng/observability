@@ -281,7 +281,7 @@ services:
 
   # ===========================================================================
   # Orchestration layer (v2 guideline, now implemented — see
-  # "V2 Guideline Değerlendirmesi" in README.md for the scope/decisions).
+  # "V2 Guideline Evaluation" in README.md for the scope/decisions).
   # Workflow API -> Session Manager (Postgres) -> Planner -> NATS JetStream ->
   # worker KIO -> NATS (result) -> Planner -> Session Manager (lineage).
   # This is how KIOs get *triggered*; it is deliberately separate from, and
@@ -356,7 +356,7 @@ services:
   # Each now dual-writes: OTel (metrics/traces/logs) + Langfuse (LLM-specific).
   #
   # kio3/kio4 ALSO consume dispatched tasks from NATS (NATS_ENABLED=true) — see
-  # "NATS tüketici modu" in kio_simulator.py — but this is now an ADDITIONAL
+  # the NATS consumer in kio_simulator.py — but this is now an ADDITIONAL
   # trigger path on top of their own internal timer, not a replacement for it.
   # First cut of the NATS integration made it either/or: with nothing actually
   # calling the Workflow API, kio3/kio4 went completely silent ("No data" on
@@ -365,8 +365,8 @@ services:
   #
   # Every KIO here is simulated/dummy by default (source=simulated) EXCEPT
   # kio2-sim's LLM-performance metrics when KIO2_REAL_LLM_ENABLED=true (real
-  # Ollama + real GPU energy/temperature, source=real) — see the "Veri
-  # kaynağı" panel and README's real-vs-simulated data map for the full
+  # Ollama + real GPU energy/temperature, source=real) — see the "Data
+  # source" panel and README's real-vs-simulated data map for the full
   # picture, metric by metric.
   # ---------------------------------------------------------------------------
   # kio2-sim: the ORIGINAL simulator, kept running in parallel as a contract
@@ -449,7 +449,7 @@ services:
       NATS_ENABLED: "true"
       NATS_URL: "nats://nats:4222"
       # D1.1 KPI 1.1 (Code generation speed) + 3.1 (Code quality improvement),
-      # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx Bölüm 5.
+      # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx Section 5.
       KIO_REAL_KPI_ROLE: "nlp-requirements"
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
