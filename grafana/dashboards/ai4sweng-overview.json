@@ -325,7 +325,7 @@
     },
     "textMode": "auto"
    },
-   "description": "Süreç başlangıcından beri kümülatif toplam (bir rate değil) — sürekli büyür, bu yüzden yeşil/sarı/kırmızı sağlık eşiği anlamlı değil; bilinçli olarak nötr (mavi) bırakıldı."
+   "description": "Cumulative total since process start (not a rate) — it keeps growing, so a green/yellow/red health threshold isn't meaningful; deliberately left neutral (blue)."
   },
   {
    "id": 6,
@@ -383,7 +383,7 @@
     },
     "textMode": "auto"
    },
-   "description": "Süreç başlangıcından beri kümülatif toplam (bir rate değil) — sürekli büyür, bu yüzden yeşil/sarı/kırmızı sağlık eşiği anlamlı değil; bilinçli olarak nötr (mavi) bırakıldı."
+   "description": "Cumulative total since process start (not a rate) — it keeps growing, so a green/yellow/red health threshold isn't meaningful; deliberately left neutral (blue)."
   },
   {
    "id": 7,
@@ -904,7 +904,7 @@
   },
   {
    "id": 19,
-   "title": "Stale KIO Kontrolü (Sözleşme §2.3)",
+   "title": "Stale KIO Check (Contract §2.3)",
    "type": "row",
    "collapsed": false,
    "gridPos": {
@@ -917,9 +917,9 @@
   },
   {
    "id": 20,
-   "title": "Son heartbeat'ten bu yana geçen süre (saniye)",
+   "title": "Time since last heartbeat (seconds)",
    "type": "table",
-   "description": "Her KIO 60s'de bir heartbeat yayınlamalı (Sözleşme §2.3). 120s'yi (2x aralık) aşan değerler kırmızı — bkz. grafana/provisioning/alerting/rules.yml'deki 'Stale KIO' alert kuralı, aynı eşiği Alerting sekmesinde de tetikler.",
+   "description": "Every KIO must publish a heartbeat every 60s (Contract §2.3). Values exceeding 120s (2x the interval) turn red — see the 'Stale KIO' alert rule in grafana/provisioning/alerting/rules.yml, which fires on the same threshold in the Alerting tab.",
    "datasource": {
     "type": "prometheus",
     "uid": "victoriametrics"
@@ -948,7 +948,7 @@
      "options": {
       "renameByName": {
        "kio_id": "KIO",
-       "Value": "Son heartbeat (s önce)"
+       "Value": "Last heartbeat (s ago)"
       },
       "excludeByName": {
        "Time": true
