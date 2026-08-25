@@ -1028,7 +1028,7 @@
             "uid": "tempo"
           },
           "queryType": "traceql",
-          "query": "{resource.service.name=\"$kio_id\" && session.id=~\"$session_id\"}",
+          "query": "{resource.service.name=\"$kio_id\" && span.session.id=~\"$session_id\"}",
           "limit": 20,
           "tableType": "traces",
           "refId": "A"
