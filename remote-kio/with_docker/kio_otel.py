@@ -1,30 +1,27 @@
 #!/usr/bin/env python3
 """
-kio_otel — minimal, contract-faithful OpenTelemetry helper for a REAL KIO.
+kio_otel — minimal, contract-faithful OpenTelemetry helper for a real KIO.
 
-This is a drop-in starting point for a KIO team that has its OWN codebase and
-wants to push telemetry to the AI4SWENG central platform (OTel Collector ->
-VictoriaMetrics/VictoriaLogs/Tempo -> Grafana). It is deliberately small: it
-implements ONLY the mandatory metric set from the Integration Contract (§2.1)
-plus the 60s heartbeat (§2.3) and an optional per-request trace — nothing from
-the internal simulator (no Langfuse, no NATS, no D1.1 KPIs, no random data).
+A drop-in starting point for a KIO team that has its OWN code and wants to push
+telemetry to the AI4SWENG central platform (OTel Collector -> VictoriaMetrics /
+VictoriaLogs / Tempo -> Grafana). It implements ONLY the mandatory metric set
+from the Integration Guide (§5), the 60s heartbeat, an optional per-request
+trace, and an optional log stream — nothing else (no Langfuse, no NATS, no
+random data).
 
-Copy this single file into your project and wrap your real request handler with
-`with kio.request(...) as req:` — see example_kio.py. Everything is configured
-from environment variables, exactly the ones the contract lists, so pointing a
-KIO at a different machine is a config change, never a code change:
+Everything is configured from environment variables, so pointing a KIO at a
+different machine is a config change, never a code change:
 
     OTEL_EXPORTER_OTLP_ENDPOINT   e.g. http://192.168.1.50:4317  (gRPC, port 4317)
     OTEL_RESOURCE_ATTRIBUTES      e.g. service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production
-    OTEL_EXPORTER_OTLP_HEADERS    e.g. Authorization=Bearer <token>   (only if the collector has auth enabled)
+    OTEL_EXPORTER_OTLP_HEADERS    e.g. Authorization=Bearer <token>   (the central collector requires this)
 
-As a convenience for local/LAN testing, the resource attributes can instead be
-given as discrete vars (KIO_ID / KIO_LLM / KIO_TASK_TYPE / SERVICE_VERSION);
-OTEL_RESOURCE_ATTRIBUTES, when present, takes precedence and is authoritative
-(that is what the contract standardizes on).
+As a convenience the resource attributes can instead be given as discrete vars
+(KIO_ID / KIO_LLM / KIO_TASK_TYPE / SERVICE_VERSION); OTEL_RESOURCE_ATTRIBUTES,
+when present, wins.
 
 Requires: opentelemetry-api, opentelemetry-sdk, opentelemetry-exporter-otlp-proto-grpc
-(see requirements.txt — pinned to the same versions the rest of the repo uses).
+(see requirements.txt).
 """
 from __future__ import annotations
 
@@ -36,7 +33,7 @@ import uuid
 from contextlib import contextmanager
 from typing import Optional
 
-from opentelemetry import metrics, trace
+from opentelemetry import metrics, trace, _logs
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
@@ -44,17 +41,18 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.trace import Status, StatusCode
 
 _log = logging.getLogger("kio_otel")
 
 
 def _parse_resource_attributes() -> dict:
-    """Build the OTel Resource attribute dict.
-
-    Precedence (later wins): discrete convenience vars (KIO_ID, ...) are the
-    base; OTEL_RESOURCE_ATTRIBUTES (the contract-standard var) is layered on
-    top so it stays authoritative when both are set."""
+    """Build the OTel Resource attribute dict. Discrete convenience vars
+    (KIO_ID, ...) are the base; OTEL_RESOURCE_ATTRIBUTES (the guide-standard
+    var) is layered on top so it stays authoritative when both are set."""
     attrs = {}
 
     kio_id = os.environ.get("KIO_ID")
@@ -70,7 +68,6 @@ def _parse_resource_attributes() -> dict:
     if os.environ.get("KIO_TASK_TYPE"):
         attrs["task_type"] = os.environ["KIO_TASK_TYPE"]
 
-    # Contract-standard var: "k1=v1,k2=v2". Authoritative — overrides the above.
     raw = os.environ.get("OTEL_RESOURCE_ATTRIBUTES", "")
     for pair in raw.split(","):
         pair = pair.strip()
@@ -87,55 +84,48 @@ def _parse_resource_attributes() -> dict:
 
 class _Request:
     """Handle yielded by KIOTelemetry.request(); the caller records LLM usage
-    on it. Duration, request/error counting and the trace status are handled
-    automatically by the context manager."""
+    on it. Duration, request/error counting and trace status are automatic."""
 
     def __init__(self, telemetry: "KIOTelemetry", session_id: str):
         self._t = telemetry
         self.session_id = session_id
 
     def record_tokens(self, *, input: int = 0, output: int = 0) -> None:
-        """kio.llm.token_count — direction=input|output (Contract §2.1)."""
+        """kio.llm.token_count — direction=input|output."""
         if input:
             self._t._llm_tokens.add(int(input), {**self._t._base, "direction": "input"})
         if output:
             self._t._llm_tokens.add(int(output), {**self._t._base, "direction": "output"})
 
     def record_cost_usd(self, amount: float) -> None:
-        """kio.llm.cost_usd — estimated LLM cost in USD (Contract §2.1)."""
+        """kio.llm.cost_usd — estimated LLM cost in USD."""
         if amount:
             self._t._llm_cost.add(float(amount), self._t._base)
 
 
 class KIOTelemetry:
-    """One instance per KIO process. Sets up the OTel metrics (and, optionally,
-    traces) pipeline, exposes the mandatory instruments, and runs the heartbeat.
+    """One instance per KIO process. Sets up metrics (+ optional traces/logs),
+    exposes the mandatory instruments, and runs the heartbeat.
 
-    Typical lifecycle:
         kio = KIOTelemetry()
         kio.start_heartbeat()
-        ...
         with kio.request() as req:
-            ...                 # your real work + req.record_tokens(...)
-        ...
-        kio.shutdown()          # flush before exit (critical for short-lived processes)
+            ...                 # your work + req.record_tokens(...)
+            kio.log("did a thing")
+        kio.shutdown()          # flush before exit
     """
 
-    def __init__(self, *, enable_traces: bool = True):
+    def __init__(self, *, enable_traces: bool = True, enable_logs: bool = True):
         endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
         export_interval_ms = int(os.environ.get("EXPORT_INTERVAL_MS", "5000"))
         self.heartbeat_interval_s = int(os.environ.get("HEARTBEAT_INTERVAL_S", "60"))
-        # TLS off for plain http:// endpoints (LAN / Tailscale insecure mode);
-        # https:// keeps TLS on. Same rule the rest of the repo uses.
+        # TLS off for plain http:// (LAN / Tailscale / VPN); https:// keeps TLS on.
         insecure = endpoint.startswith("http://")
 
         attrs = _parse_resource_attributes()
         self.kio_id = attrs["kio.id"]
         resource = Resource.create(attrs)
 
-        # Base labels attached to every metric. kio.id / llm / task_type are
-        # also promoted from the Resource by the collector, but including them
-        # here keeps the series identical whichever path a value arrives by.
         self._base = {"kio.id": self.kio_id}
         if "llm" in attrs:
             self._base["llm"] = attrs["llm"]
@@ -151,7 +141,7 @@ class KIOTelemetry:
         metrics.set_meter_provider(self._meter_provider)
         meter = metrics.get_meter("kio.instrumentation")
 
-        # --- Mandatory metric set (Integration Contract §2.1) ---
+        # --- Mandatory metric set (Integration Guide §5) ---
         self._request_count = meter.create_counter("kio.request.count", unit="1")
         self._request_duration = meter.create_histogram("kio.request.duration_ms", unit="ms")
         self._error_count = meter.create_counter("kio.request.error_count", unit="1")
@@ -160,7 +150,7 @@ class KIOTelemetry:
         self._active_sessions = meter.create_up_down_counter("kio.session.active_count", unit="1")
         self._heartbeat = meter.create_counter("kio.heartbeat", unit="1")
 
-        # --- Optional traces pipeline (powers the trace waterfall view) ---
+        # --- Optional traces pipeline ---
         self._tracer = None
         self._tracer_provider = None
         if enable_traces:
@@ -171,14 +161,27 @@ class KIOTelemetry:
             trace.set_tracer_provider(self._tracer_provider)
             self._tracer = trace.get_tracer("kio.instrumentation")
 
+        # --- Optional logs pipeline (string telemetry -> VictoriaLogs) ---
+        self._log_provider = None
+        self._logger = None
+        if enable_logs:
+            self._log_provider = LoggerProvider(resource=resource)
+            self._log_provider.add_log_record_processor(
+                BatchLogRecordProcessor(OTLPLogExporter(endpoint=endpoint, insecure=insecure))
+            )
+            _logs.set_logger_provider(self._log_provider)
+            self._logger = logging.getLogger(self.kio_id)
+            self._logger.setLevel(logging.INFO)
+            self._logger.propagate = False
+            self._logger.addHandler(LoggingHandler(level=logging.INFO, logger_provider=self._log_provider))
+
         self._stop = threading.Event()
         self._hb_thread: Optional[threading.Thread] = None
         _log.info("kio_otel ready: kio.id=%s -> %s (insecure=%s)", self.kio_id, endpoint, insecure)
 
     # ----------------------------------------------------------------- #
-    # Heartbeat (Contract §2.3): tick every 60s; >120s silence == stale.
-    # ----------------------------------------------------------------- #
     def start_heartbeat(self) -> None:
+        """Heartbeat: tick every 60s; >120s silence == stale in the registry."""
         if self._hb_thread is not None:
             return
 
@@ -191,23 +194,28 @@ class KIOTelemetry:
         self._hb_thread.start()
 
     # ----------------------------------------------------------------- #
-    # Per-request instrumentation.
+    def log(self, message: str, **attributes) -> None:
+        """Emit one unstructured log line -> VictoriaLogs (and nowhere else if
+        logs are disabled). kio.id / session.id are attached automatically;
+        keep any extra attributes bounded (no unique ids, no secrets)."""
+        if self._logger is None:
+            return
+        extra = {"kio.id": self.kio_id, **attributes}
+        self._logger.info(message, extra=extra)
+
     # ----------------------------------------------------------------- #
     @contextmanager
     def request(self, session_id: Optional[str] = None):
-        """Wrap one unit of work (one KIO 'request'). On normal exit the
-        request is counted status=ok; on exception it is counted status=error
-        with a bounded error_type, the exception is re-raised, and the active
-        session count is always released. Yields a _Request for recording LLM
-        token/cost usage."""
+        """Wrap one unit of work. Normal exit -> status=ok; an exception ->
+        status=error with a bounded error_type, then re-raised; the active
+        session count is always released."""
         session_id = session_id or str(uuid.uuid4())
         self._active_sessions.add(1, self._base)
         start = time.monotonic()
         span = None
         if self._tracer is not None:
             span = self._tracer.start_span(
-                "kio.request",
-                attributes={**self._base, "session.id": session_id},
+                "kio.request", attributes={**self._base, "session.id": session_id}
             )
         req = _Request(self, session_id)
         try:
@@ -233,11 +241,9 @@ class KIOTelemetry:
             self._active_sessions.add(-1, self._base)
 
     # ----------------------------------------------------------------- #
-    # Direct access to the raw instruments, for anything the context
-    # manager above doesn't cover (custom G7 self-service metrics, etc.).
-    # ----------------------------------------------------------------- #
     @property
     def meter(self):
+        """Raw meter, for custom (self-service) metrics beyond the mandatory 7."""
         return metrics.get_meter("kio.instrumentation")
 
     @property
@@ -245,17 +251,16 @@ class KIOTelemetry:
         return dict(self._base)
 
     # ----------------------------------------------------------------- #
-    # Flush and stop. MUST be called before a short-lived process exits,
-    # or the last export interval's data (and the final heartbeat) is lost.
-    # ----------------------------------------------------------------- #
     def shutdown(self) -> None:
+        """Flush and stop. MUST be called before a short-lived process exits."""
         self._stop.set()
-        try:
-            self._meter_provider.shutdown()  # force-flushes buffered metrics
-        except Exception:
-            _log.warning("metric provider shutdown failed", exc_info=True)
-        if self._tracer_provider is not None:
-            try:
-                self._tracer_provider.shutdown()
-            except Exception:
-                _log.warning("tracer provider shutdown failed", exc_info=True)
+        for name, provider in (
+            ("meter", self._meter_provider),
+            ("tracer", self._tracer_provider),
+            ("logger", self._log_provider),
+        ):
+            if provider is not None:
+                try:
+                    provider.shutdown()
+                except Exception:
+                    _log.warning("%s provider shutdown failed", name, exc_info=True)

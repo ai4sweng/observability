@@ -1,0 +1,20 @@
+# Runs the demo KIO in a container. It reads all configuration from .env
+# (env_file below), so you never edit the compose file itself.
+#
+#   cp .env.example .env      # then edit KIO_ID and the endpoint/token
+#   docker compose up --build # add -d to run in the background
+#   docker compose logs -f    # watch it push
+#   docker compose down       # stop
+#
+# This container is a telemetry CLIENT — it opens outbound connections to the
+# central collector and needs no published ports of its own.
+services:
+  kio-demo:
+    build: .
+    container_name: kio-demo
+    env_file: .env
+    # host.docker.internal lets the container reach a collector running on THIS
+    # same host (see .env.example). Harmless when the collector is remote.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

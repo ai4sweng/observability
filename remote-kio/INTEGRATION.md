@@ -15,6 +15,25 @@ Grafana. Estimated time: **15–30 minutes** if the network is ready.
 > [Integration Contract PDF](../observability_integration_contract.pdf). You do
 > not need to leave this page to follow the flow.
 
+## Quick start — run a ready-made example first
+
+The fastest way to see this working is to run one of the two ready examples in
+this folder, watch it appear in Grafana, then swap in your own code. Pick the one
+that matches how you run things:
+
+- **[`with_script/`](with_script/)** — a plain Python program (no Docker):
+  `cp .env.example .env` → edit `KIO_ID` + the endpoint/token →
+  `pip install -r requirements.txt` → `python main.py`.
+- **[`with_docker/`](with_docker/)** — the same program in a container:
+  `cp .env.example .env` → edit it → `docker compose up --build`.
+
+Both push the seven mandatory metrics + heartbeat + a log line, driven entirely
+by `.env`. Once your `KIO_ID` shows up in Grafana's **KIO Detail** dashboard, copy
+`kio_otel.py` into your real module and wrap your handler with
+`with kio.request(...)` — the rest of this guide explains that path in full.
+
+---
+
 **Contents**
 1. [What this system is (5-minute concept tour)](#1-what-this-system-is-5-minute-concept-tour)
 2. [What you change vs. never touch](#2-what-you-change-vs-never-touch)
