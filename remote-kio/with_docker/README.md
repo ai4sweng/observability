@@ -29,6 +29,19 @@ Set `OTEL_EXPORTER_OTLP_ENDPOINT` in `.env` accordingly:
 
 Finding the address and opening the firewall: [`../NETWORK.md`](../NETWORK.md).
 
+## Optional: Langfuse (LLM prompt/completion/cost)
+
+Off by default — the demo above is complete without it. To also send LLM-level
+traces to the platform's Langfuse:
+
+1. In `.env`, uncomment `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` (the shared
+   project keys the platform team gives you).
+2. Uncomment `langfuse` in `requirements.txt`, then rebuild: `docker compose up --build`.
+
+The Langfuse address is derived from your OTLP endpoint automatically (same host,
+port 3001 — e.g. `http://host.docker.internal:3001`). The secret key is a
+credential — keep it in `.env` and don't post it publicly.
+
 ## What's inside
 
 `kio_otel.py` + `main.py` are the same files as `with_script` (kept as copies so

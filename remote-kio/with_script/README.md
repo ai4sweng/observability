@@ -33,6 +33,19 @@ Only `OTEL_EXPORTER_OTLP_ENDPOINT` changes — point it at the platform host's
 address (LAN IP, or a Tailscale IP). The platform host must allow inbound
 traffic on the OTLP port. See [`../NETWORK.md`](../NETWORK.md).
 
+## Optional: Langfuse (LLM prompt/completion/cost)
+
+Off by default — the demo above is complete without it. To also send LLM-level
+traces to the platform's Langfuse:
+
+1. In `.env`, uncomment `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` (the shared
+   project keys the platform team gives you).
+2. Uncomment `langfuse` in `requirements.txt`, then `pip install -r requirements.txt`.
+
+The Langfuse address is derived from your OTLP IP automatically (same host,
+port 3001) — nothing else to set. On start you'll see `Langfuse stream ON`. The
+secret key is a credential — keep it in `.env` and don't post it publicly.
+
 ## Using your own module instead of this demo
 
 This is a demo loop. For your real KIO: copy `kio_otel.py` into your project,

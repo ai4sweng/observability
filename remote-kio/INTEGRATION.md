@@ -429,9 +429,13 @@ simple trace + heartbeat). These are all optional:
 
 - **Free-text logs → VictoriaLogs.** LLM output summaries, analysis notes, etc.,
   sent as OTLP logs. Setup pattern: the logger block in `../kio-simulator/kio_simulator.py`.
-- **Langfuse (LLM prompt/completion/cost).** A separate, parallel HTTPS stream; only
-  if you want prompt-level replay/cost analysis. Keys from the central team. Pattern:
-  `kio_simulator.py` `emit_langfuse_trace()`.
+- **Langfuse (LLM prompt/completion/cost).** A separate, parallel stream; only if
+  you want prompt-level replay/cost analysis. Shared project keys come from the
+  platform team (treat the secret as a credential — keep it in `.env`, don't post
+  it publicly). The runnable examples (`with_script`/`with_docker`) already include
+  an off-by-default Langfuse path: enable it by uncommenting the `LANGFUSE_*` keys
+  in `.env` and `langfuse` in `requirements.txt`. The host is derived from your OTLP
+  IP automatically (same host, port 3001).
 - **Rich traces (child spans / step waterfall).** `kio_otel.py` emits one root span
   per request; for a `prepare_prompt → llm_call → postprocess` waterfall, see
   `kio_simulator.py` `emit_trace()`.
