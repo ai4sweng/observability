@@ -236,7 +236,8 @@ Instead of re-running the `curl` example above by hand every time, there's a
 script that verifies the whole chain in one pass (`POST /workflow/run` → NATS
 JetStream → kio3's NATS consumer → `kio.results.kio3` → the Planner's
 `run_result_listener` → Postgres lineage), with no extra packages to install
-(stdlib-only):
+(stdlib-only). Uncomment the `nats` / `orchestrator-postgres` / `workflow-api` /
+`planner` services in `docker-compose.yml` first — they're disabled by default:
 
 ```bash
 docker compose up -d nats orchestrator-postgres workflow-api planner kio3
@@ -330,7 +331,7 @@ The `kio2` identity is now reserved for the real module; the former simulator
 was renamed to `kio2-sim` and keeps running in parallel for comparison
 (`docker-compose.yml`).
 
-## Metrics (Integration Contract §2.1 + optional extras)
+## Metrics (Integration Guide §2.1 + optional extras)
 
 Mandatory set, all carrying `kio_id`:
 
@@ -375,15 +376,17 @@ panel ever comes up empty, the same Trace ID can always be opened via
 
 ## Real project KPIs (D1.1)
 
-`docs/AI4SWENG_KPI_Metrik_Referansi_v1.3.docx` — the full catalog of every KPI
+`docs/KPI_Metrik_Referansi_v1.3.docx` — the full catalog of every KPI
 (1.1–9.2) and work-package/task-level metric from the project's official
 Project Management Handbook (D1.1), plus the mapping of which KPI belongs to
 which KIO.
 
-Six KIOs' real D1.1 KPIs are enabled via the `KIO_REAL_KPI_ROLE` env var
+Six KIOs carry D1.1 KPI roles via the `KIO_REAL_KPI_ROLE` env var
 (`docker-compose.yml`), each publishing its own metric set in
 `kio_simulator.py` (names/units taken directly from D1.1, values still
-simulated):
+simulated). **By default only kio2-sim and kio3 run**, so only their KPI panels
+populate out of the box — uncomment kio4/kio7/kio8/kio13 in `docker-compose.yml`
+to light up the rest:
 
 - **kio2-sim** (`KIO_REAL_KPI_ROLE=bugfix`, D1.1's "Bug Locate & Fix / LLM
   Debugger" — exactly the job FocusTracer does):
@@ -427,9 +430,10 @@ D1.1's clearer/more specific owner.
 The "D1.1 Real Project KPIs" sections on the KIO Detail dashboard show these
 metrics (populated only when the selected KIO has the matching
 `KIO_REAL_KPI_ROLE`, "N/A" otherwise — see "Real vs. Simulated Data Map"). Every
-KIO D1.1 assigns a KPI to (KIO2, KIO3, KIO4, KIO7, KIO8, KIO13) is now
-integrated; all 16 of D1.1's KPIs (1.1–9.2) are visible via simulated data
-through at least one KIO. See the "Other KIOs — Status" section of the
+KIO D1.1 assigns a KPI to (KIO2, KIO3, KIO4, KIO7, KIO8, KIO13) has its role
+defined, covering all 16 of D1.1's KPIs (1.1–9.2) via simulated data — but only
+the KIOs actually running (kio2-sim and kio3 by default) emit; uncomment the
+others to populate their panels. See the "Other KIOs — Status" section of the
 reference document.
 
 ## Real LLM integration (KIO2, optional — requires an NVIDIA GPU)
@@ -542,7 +546,9 @@ contract — the decisions below are ours, made after comparing the two document
   its 4 backing services) can be removed without touching the OTel pipeline at
   all — it was deliberately kept as an isolated, independently-failing addition.
 - **NATS JetStream / Session Manager / PostgreSQL lineage / Workflow API:
-  implemented (2026-08), scoped.** Originally deferred as "a different team's
+  implemented (2026-08), then disabled by default (it belongs to KIO1 — see
+  "Orchestration layer"; kept in `orchestrator/` as reference, its services
+  commented out in `docker-compose.yml`).** Originally deferred as "a different team's
   concern" — reversed after an explicit decision to accelerate this. See
   "Orchestration layer" above for the architecture and `orchestrator/` for the
   code. Scope is stated there too: the Planner is a static routing table, not a
@@ -639,7 +645,7 @@ observability/
 │   ├── provisioning/alerting/rules.yml       # Stale KIO alert (Contract §2.3)
 │   └── dashboards/{ai4sweng-overview,ai4sweng-kio}.json
 ├── kio-simulator/{kio_simulator.py,requirements.txt,Dockerfile}
-├── orchestrator/{planner.py,session_manager.py,workflow_api.py,envelope.py}
+├── orchestrator/{planner.py,session_manager.py,workflow_api.py,envelope.py}  # reference — disabled in compose (KIO1's)
 ├── remote-kio/                              # connect a KIO from another machine
 │   ├── {README.md,INTEGRATION.md,NETWORK.md}   # hub / own-module guide / networking
 │   ├── with_script/{main.py,kio_otel.py,check_connectivity.py,requirements.txt,.env.example}
