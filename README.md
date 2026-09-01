@@ -2,9 +2,9 @@
 
 
 <div align="center">
-  <a href="[VIDEO_URL_HERE](https://www.youtube.com/watch?v=2chrEqgPCFQ)">
-    <img src="assets/screenshot_1.png" width="640" alt="AI4SWENG Observability — demo video" />
-  </a>
+
+[![AI4SWENG Observability — demo video](assets/screenshot_1.png)](https://www.youtube.com/watch?v=2chrEqgPCFQ)
+
 </div>
 
 <!-- **Notion Documentation: [AI4SWENG Observability - Grafana Metrik Sistemi](https://app.notion.com/p/dawn-squash-710/Observability-Grafana-Metrik-Sistemi-3a619cd5a4d88093a1fdebd6ada75f5a)** -->
@@ -95,16 +95,22 @@ retries against it until it's up, then start landing traces automatically.
 
 Tear down (and wipe data): `docker compose down -v`
 
-## The six KIO simulators
+## The KIO simulators
 
-| KIO | LLM | Task type | Trigger | Notes |
-|-----|-----|-----------|---------|-------|
-| kio2-sim | `qwen2.5:3b` | code-analysis | internal timer | also reports **real** repo line/dir/file counts; **real Ollama tok/s + real GPU energy/temperature** (`KIO2_REAL_LLM_ENABLED=true`, see below). `kio2` itself is reserved for the real FocusTracer module — see `kio2-integration/README.md` |
-| kio3 | `llama3.1:8b` | nlp-requirements (D1.1's KIO3) | internal timer **+** NATS (`kio.tasks.kio3`) | random dummy telemetry; D1.1 KPI 1.1 + 3.1 (simulated, `KIO_REAL_KPI_ROLE=nlp-requirements`) |
-| kio4 | `gpt-4o-mini` | architecture-to-code (D1.1's KIO4) | internal timer **+** NATS (`kio.tasks.kio4`) | random dummy telemetry (non-zero cost); D1.1 KPI 1.1 + 3.1 + 3.2 (simulated, `KIO_REAL_KPI_ROLE=architecture-to-code`) |
-| kio7 | `claude-sonnet` | ai-sysdev (D1.1's KIO7) | internal timer **+** NATS (`kio.tasks.kio7`) | random dummy telemetry; D1.1 KPI 4.1 + 5.1 + 7.1 + 9.1 + 9.2 (simulated, `KIO_REAL_KPI_ROLE=ai-sysdev`) — only the KPIs where KIO7 is a clear primary owner, not the full "most KPIs" D1.1 assigns it |
-| kio8 | `gemini-1.5-pro` | green-deploy (D1.1's KIO8) | internal timer only (no NATS) | random dummy telemetry; D1.1 KPI 2.1 + 2.2 + 8.3 (simulated, `KIO_REAL_KPI_ROLE=green-deploy`) |
-| kio13 | `gpt-4o-mini` | adoption (D1.1's KIO13) | internal timer only (no NATS) | random dummy telemetry; D1.1 KPI 8.1 + 8.2 (simulated, `KIO_REAL_KPI_ROLE=adoption`) — the only two D1.1 KPIs mapped to a single KIO with no co-owner |
+Only **kio2-sim** and **kio3** run by default. The other four (**kio4**, **kio7**,
+**kio8**, **kio13**) are fully defined in `docker-compose.yml` but **commented out** —
+uncomment any of them to enable it (e.g. to populate its D1.1 KPI panels). Every
+simulator runs on its own **internal timer**; the NATS-driven trigger path is
+disabled (it belongs to KIO1 — see "Orchestration layer" below).
+
+| KIO | Default | LLM | Task type | Notes |
+|-----|---------|-----|-----------|-------|
+| kio2-sim | **on** | `qwen2.5:3b` | code-analysis | also reports **real** repo line/dir/file counts; **real Ollama tok/s + real GPU energy/temperature** (`KIO2_REAL_LLM_ENABLED=true`, see below). `kio2` itself is reserved for the real FocusTracer module — see `kio2-integration/README.md` |
+| kio3 | **on** | `llama3.1:8b` | nlp-requirements (D1.1's KIO3) | random dummy telemetry; D1.1 KPI 1.1 + 3.1 (simulated, `KIO_REAL_KPI_ROLE=nlp-requirements`) |
+| kio4 | off (commented) | `gpt-4o-mini` | architecture-to-code (D1.1's KIO4) | random dummy telemetry (non-zero cost); D1.1 KPI 1.1 + 3.1 + 3.2 (simulated, `KIO_REAL_KPI_ROLE=architecture-to-code`) |
+| kio7 | off (commented) | `claude-sonnet` | ai-sysdev (D1.1's KIO7) | random dummy telemetry; D1.1 KPI 4.1 + 5.1 + 7.1 + 9.1 + 9.2 (simulated, `KIO_REAL_KPI_ROLE=ai-sysdev`) — only the KPIs where KIO7 is a clear primary owner, not the full "most KPIs" D1.1 assigns it |
+| kio8 | off (commented) | `gemini-1.5-pro` | green-deploy (D1.1's KIO8) | random dummy telemetry; D1.1 KPI 2.1 + 2.2 + 8.3 (simulated, `KIO_REAL_KPI_ROLE=green-deploy`) |
+| kio13 | off (commented) | `gpt-4o-mini` | adoption (D1.1's KIO13) | random dummy telemetry; D1.1 KPI 8.1 + 8.2 (simulated, `KIO_REAL_KPI_ROLE=adoption`) — the only two D1.1 KPIs mapped to a single KIO with no co-owner |
 
 `task_type` for kio3/kio4 was renamed 2026-08 from the arbitrary
 `test-generation`/`debug` to match D1.1's actual KIO3/KIO4 identities, once
@@ -117,13 +123,11 @@ trigger path since they have no real dispatch target behind them yet (see
 the orchestrator's task_type routing table) — pure KPI simulators, timer-only.
 
 kio3/kio4/kio7/kio8/kio13 are otherwise still random dummy data — no real LLM
-is invoked for them. NATS-driven dispatch (via the Workflow API/Planner) is an
-*additional* trigger path for kio3/kio4/kio7, not a replacement for the
-internal timer — an earlier cut made it either/or, which meant these KIOs
-went completely silent ("No data" everywhere) whenever nothing happened to
-call the Workflow API. Both paths now run side by side for those three, so
-they always keep producing baseline demo data. Adjust LLMs, task types, and
-rates in `docker-compose.yml`, or edit `kio-simulator/kio_simulator.py`.
+is invoked for them. (A NATS-driven dispatch path via the Workflow API/Planner
+also exists in the code, but it is **disabled by default** — that orchestration
+layer belongs to KIO1, see "Orchestration layer" below.) Every simulator keeps
+producing baseline demo data on its own internal timer regardless. Adjust LLMs,
+task types, and rates in `docker-compose.yml`, or edit `kio-simulator/kio_simulator.py`.
 
 ### Real vs. Simulated Data Map
 
@@ -202,7 +206,7 @@ POST /workflow/run  ──►  workflow-api  ──► Session Manager (Postgres
   `ai-sysdev→kio7`, or an explicit `target_kio` override), builds the envelope, publishes
   to `kio.tasks.<kio_id>`. Also runs as its own long-running container, subscribed to
   `kio.results.*`, registering lineage as workers reply.
-- **kio-simulator's NATS consumer** (`NATS_ENABLED=true`, on by default for kio3/kio4) —
+- **kio-simulator's NATS consumer** (`NATS_ENABLED`, **disabled by default now**) —
   subscribes to its own `kio.tasks.<KIO_ID>`, runs the exact same `simulate_request()`
   used in internal-timer mode (just fed the envelope's `session_id` instead of
   generating its own), publishes a `KIOResult` back to `kio.results.<KIO_ID>`.
@@ -215,7 +219,8 @@ pub/sub double standing in for NATS, SQLite standing in for Postgres — no Dock
 dev sandbox this was built in); the real NATS wire protocol and the real Postgres schema
 still want one live `docker compose up` verification pass on an actual machine.
 
-Try it:
+Try it (uncomment the `nats` / `orchestrator-postgres` / `workflow-api` / `planner`
+services in `docker-compose.yml` first — they're disabled by default):
 ```bash
 curl -X POST http://localhost:8080/workflow/run \
   -H "Content-Type: application/json" \
