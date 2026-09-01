@@ -277,7 +277,7 @@ services:
       LANGFUSE_INIT_PROJECT_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
       LANGFUSE_INIT_USER_EMAIL: admin@bitnet.com.tr
       LANGFUSE_INIT_USER_NAME: admin
-      LANGFUSE_INIT_USER_PASSWORD: "${LANGFUSE_INIT_USER_PASSWORD:-admin1453}"
+      LANGFUSE_INIT_USER_PASSWORD: "${LANGFUSE_INIT_USER_PASSWORD:-admin1234}"
 
   # ===========================================================================
   # Orchestration layer — DISABLED (commented out below).
@@ -430,36 +430,36 @@ services:
   # 2026-08 to match D1.1's actual KIO3 identity, since the D1.1 traceability
   # matrix's KPI assignments (1.1, 3.1) are keyed to the real KIO3 role, not
   # to whatever arbitrary task_type this simulator happened to use first.
-#   kio3:
-#     build: ./kio-simulator
-#     container_name: ai4sweng-kio3
-#     environment:
-#       KIO_ID: kio3
-#       KIO_LLM: "llama3.1:8b"
-#       KIO_TASK_TYPE: nlp-requirements
-#       SERVICE_VERSION: "0.9.1"
-#       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-#       # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
-#       # otel-collector/config.yaml) or every OTLP export gets rejected.
-#       OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
-#       EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
-#       HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
-#       REQUEST_INTERVAL_S: "${KIO3_REQUEST_INTERVAL_S:-2}"
-#       # NATS-driven: tasks ALSO arrive via kio.tasks.kio3 (published by the
-#       # Planner) on top of this KIO's own internal timer (see kio_simulator.py
-#       # main() — NATS is an additional trigger path, not a replacement).
-#       NATS_ENABLED: "false"
-# #       NATS_URL: "nats://nats:4222"
-#       # D1.1 KPI 1.1 (Code generation speed) + 3.1 (Code quality improvement),
-#       # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx Section 5.
-#       KIO_REAL_KPI_ROLE: "nlp-requirements"
-#       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
-#       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
-#       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
-#     depends_on:
-#       - otel-collector
-# #       - nats
-#     restart: unless-stopped
+  kio3:
+    build: ./kio-simulator
+    container_name: ai4sweng-kio3
+    environment:
+      KIO_ID: kio3
+      KIO_LLM: "llama3.1:8b"
+      KIO_TASK_TYPE: nlp-requirements
+      SERVICE_VERSION: "0.9.1"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      # Must match the collector's OTLP_BEARER_TOKEN (bearertokenauth extension,
+      # otel-collector/config.yaml) or every OTLP export gets rejected.
+      OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer ${OTLP_BEARER_TOKEN:-local-dev-otlp-token}"
+      EXPORT_INTERVAL_MS: "${KIO_EXPORT_INTERVAL_MS:-15000}"
+      HEARTBEAT_INTERVAL_S: "${KIO_HEARTBEAT_INTERVAL_S:-60}"
+      REQUEST_INTERVAL_S: "${KIO3_REQUEST_INTERVAL_S:-2}"
+      # NATS-driven: tasks ALSO arrive via kio.tasks.kio3 (published by the
+      # Planner) on top of this KIO's own internal timer (see kio_simulator.py
+      # main() — NATS is an additional trigger path, not a replacement).
+      NATS_ENABLED: "false"
+#       NATS_URL: "nats://nats:4222"
+      # D1.1 KPI 1.1 (Code generation speed) + 3.1 (Code quality improvement),
+      # simulated — see docs/AI4SWENG_KPI_Metrik_Referansi_v1.1.docx Section 5.
+      KIO_REAL_KPI_ROLE: "nlp-requirements"
+      LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
+      LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
+      LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+    depends_on:
+      - otel-collector
+#       - nats
+    restart: unless-stopped
 
   # kio4 = D1.1's KIO4 (Architecture-to-Code Planner). Was labeled task_type
   # "debug" before the same D1.1 cross-check — renamed 2026-08, see kio3's

@@ -12,7 +12,7 @@ Grafana. Estimated time: **15–30 minutes** if the network is ready.
 
 > This document is self-contained. For deep networking (firewall, static IP,
 > Tailscale) see [`NETWORK.md`](NETWORK.md); for the normative rules see the
-> [Integration Contract PDF](../observability_integration_contract.pdf). You do
+> [Observability Guide v2.2](../docs/Observability_v2.2.docx). You do
 > not need to leave this page to follow the flow.
 
 ## Quick start — run a ready-made example first
@@ -416,7 +416,7 @@ and OpenTelemetry exists for Go, Java, JS/TS, .NET, Rust, and more. In any langu
    with a bounded `error_type` on failure.
 
 A working Python reference (the manual-setup pattern) is in the
-[Integration Contract PDF](../observability_integration_contract.pdf) (Appendix —
+[Observability Guide v2.2](../docs/Observability_v2.2.docx) (Appendix —
 Reference Implementation); `kio_otel.py` follows the same pattern and is a good model
 to port.
 
@@ -500,4 +500,4 @@ One-stop for all network/firewall/port issues → [`NETWORK.md`](NETWORK.md) §6
 | [`NETWORK.md`](NETWORK.md) | Networking / firewall / static IP / Tailscale (deep dive) |
 | [`README.md`](README.md) | Running **our simulator** on a remote machine (different scenario) |
 | [`../kio2-integration/README.md`](../kio2-integration/README.md) | Worked, line-referenced example for the real FocusTracer (KIO2) module |
-| [Integration Contract PDF](../observability_integration_contract.pdf) | Normative contract (7 metrics, rules, reference code) |
+| [Observability Guide v2.2](../docs/Observability_v2.2.docx) | Normative contract (7 metrics, rules, reference code) |

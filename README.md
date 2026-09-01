@@ -1,9 +1,15 @@
 # AI4SWENG Observability Stack
 
 
-**Notion Documentation: [AI4SWENG Observability - Grafana Metrik Sistemi](https://app.notion.com/p/dawn-squash-710/Observability-Grafana-Metrik-Sistemi-3a619cd5a4d88093a1fdebd6ada75f5a)**
+<div align="center">
+  <a href="[VIDEO_URL_HERE](https://www.youtube.com/watch?v=2chrEqgPCFQ)">
+    <img src="assets/screenshot_1.png" width="640" alt="AI4SWENG Observability — demo video" />
+  </a>
+</div>
 
-Local implementation of the **[AI4SWENG Observability Integration Contract v1.0](observability_integration_contract.pdf)**
+<!-- **Notion Documentation: [AI4SWENG Observability - Grafana Metrik Sistemi](https://app.notion.com/p/dawn-squash-710/Observability-Grafana-Metrik-Sistemi-3a619cd5a4d88093a1fdebd6ada75f5a)** -->
+
+Local implementation of the **[AI4SWENG Observability Integration Guide v2.2](docs/Observability_v2.2.docx)**
 (normative, issued by the Central Platform Team to all KIO Consortium teams KIO2–KIO13
 — read this first if you're integrating a new KIO). KIO modules push telemetry over
 OTLP; the central platform stores it and Grafana visualizes it. Everything runs
@@ -14,20 +20,11 @@ locally via Docker Compose.
 
 <div align="center">
 
-  <img src="assets/architecture.png" width="600" alt="Architecture diagram" />
+  <img src="assets/architecture_v2.2.png" width="600" alt="Architecture diagram" />
 
 </div>
 
-
-```
-                 OTLP/gRPC (:4317)
-  KIO2 ┐                              ┌─ metrics ─► VictoriaMetrics (:8428) ─┐
-  KIO3 ├──►  OpenTelemetry Collector ─┤─ logs ────► VictoriaLogs    (:9428) ─┼─► Grafana (:3000)
-  KIO4 ┘                              └─ traces ───► Tempo           (:3200) ─┘
-       │
-       └──────────────────────────────► Langfuse (:3001, HTTPS, parallel stream)
-       (dummy telemetry)
-```
+ 
 
 ## What's inside
 
@@ -40,11 +37,8 @@ locally via Docker Compose.
 | `grafana` | Dashboards (auto-provisioned) | 3000 |
 | `langfuse-web` / `langfuse-worker` | Self-hosted Langfuse — LLM-specific prompt/completion/cost tracing, a stream parallel to and independent of OTel | 3001 (UI+API), internal 3030 (worker) |
 | `postgres` / `clickhouse` / `redis` / `minio` | Langfuse's own required backing stores (relational DB, trace analytics, queue, blob storage) — not something we chose, this is Langfuse's mandated self-host footprint | internal only (127.0.0.1-bound except minio :9090) |
-| `nats` | JetStream message broker — how KIOs get *triggered* (orchestration layer, see below). Separate concern from the OTel/Langfuse pipeline above | 4222 (client), 8222 (monitoring) |
-| `orchestrator-postgres` | Session Manager's own dedicated DB (session + lineage records) — separate from Langfuse's Postgres | internal only |
-| `workflow-api` | HTTP entry point to trigger a task (`POST /workflow/run`) | 8080 |
-| `planner` | Long-running service: registers lineage as worker KIOs report results over NATS | — |
-| `kio2-sim` / `kio3` / `kio4` | KIO simulators pushing contract-compliant dummy telemetry, dual-written to OTel + Langfuse. `kio2-sim` runs on its own internal timer (real-Ollama demo); `kio3`/`kio4` are NATS-driven | — |
+| ~~`nats` / `orchestrator-postgres` / `workflow-api` / `planner`~~ | **Disabled — commented out in `docker-compose.yml`.** These are the orchestration layer (task dispatch), which architecturally belongs to **KIO1**, not this observability platform — kept as reference only (see "Orchestration layer" below) | off |
+| `kio2-sim` / `kio3` | KIO simulators pushing contract-compliant dummy telemetry, dual-written to OTel + Langfuse, each on its own internal timer (`kio2-sim` also drives the optional real-Ollama demo). More sims (`kio4`/`kio7`/`kio8`/`kio13`) are present but commented out — uncomment in `docker-compose.yml` to light up their D1.1 KPI panels | — |
 
 The KIOs never run their own collector, never expose a scrape endpoint, and never
 touch a database directly — exactly as the contract requires.
@@ -167,6 +161,17 @@ timing split, not a fixed mock.
 
 ## Orchestration layer (NATS JetStream) — how KIOs get triggered
 
+> **⚠️ Disabled by default — this belongs to KIO1, not the observability platform.**
+> Architecturally the Workflow API + Planner (the "KIO1 orchestrator" in the v2
+> guideline) are **KIO1's** responsibility; here they were only a *reference / demo*
+> implementation to drive the simulators end-to-end. To keep this repository
+> observability-only, the `nats`, `orchestrator-postgres`, `workflow-api` and
+> `planner` services are **commented out in `docker-compose.yml`**, and the KIOs'
+> `NATS_ENABLED` / `NATS_URL` / `depends_on` lines are neutralized so the stack
+> stays valid without them. The `orchestrator/` code stays as a reference. Re-enable
+> only if you deliberately want the dispatch demo (uncomment those services and
+> restore the KIO NATS lines). The section below describes it as originally built.
+
 Per the v2 guideline's architecture (Workflow API → Session Manager → Planner →
 NATS JetStream → worker KIO → NATS → Planner → Session Manager lineage), this is now
 implemented — see `orchestrator/`. This is a **separate concern from observability**:
@@ -264,8 +269,8 @@ documented once in **[`remote-kio/NETWORK.md`](remote-kio/NETWORK.md)**.
 
 For a new KIO team with their own codebase — one that will never use this
 repo's `kio-simulator.py` — the starting point is always
-**[`observability_integration_contract.pdf`](observability_integration_contract.pdf)**.
-There's no "send whatever metrics you like" here; it's a normative contract:
+**[`docs/Observability_v2.2.docx`](docs/Observability_v2.2.docx)**.
+There's no "send whatever metrics you like" here; it's a normative guide:
 
 1. **§1 Onboarding**: an OTLP Bearer token + Langfuse project keys are requested
    from the central platform team; the `OTEL_EXPORTER_OTLP_ENDPOINT` /
@@ -618,7 +623,7 @@ unreachable, NATS via a fake `nc`, Postgres via `sqlite:///:memory:`).
 
 ```
 observability/
-├── observability_integration_contract.pdf   # normative — start here for a new KIO
+├── docs/Observability_v2.2.docx              # normative guide (v2.2) — start here for a new KIO
 ├── docker-compose.yml
 ├── pytest.ini
 ├── otel-collector/config.yaml
@@ -635,5 +640,5 @@ observability/
 │   ├── with_script/{main.py,kio_otel.py,check_connectivity.py,requirements.txt,.env.example}
 │   └── with_docker/{Dockerfile,docker-compose.yml,main.py,kio_otel.py,check_connectivity.py,…}
 ├── tests/{conftest.py,requirements-test.txt,kio_simulator/,orchestrator/}
-└── docs/AI4SWENG_Observability_Teknik_Rapor.docx
+└── docs/                                     # v2.2 guide, technical reports, KPI reference
 ```
