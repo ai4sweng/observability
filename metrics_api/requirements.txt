@@ -1,0 +1,11 @@
+# Metrics query API — read-only front end over VictoriaMetrics.
+# Deliberately minimal: no OTel SDK (this service does not emit telemetry),
+# no database driver (it is stateless), no auth library (the endpoint is
+# deliberately open — see the README).
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+requests>=2.31.0
+# zoneinfo has no tz database on Windows or in python:*-slim images, so
+# named timezones for the `tz` query parameter need this. UTC (the
+# default) works without it.
+tzdata>=2024.1

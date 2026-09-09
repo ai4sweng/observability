@@ -119,6 +119,38 @@ services:
     restart: unless-stopped
 
   # ===========================================================================
+  # Metrics query API — parameterized read access to the operational telemetry
+  # already in VictoriaMetrics, so an external caller can ask for
+  # kio.request.duration_ms over the last hour without writing PromQL, knowing
+  # the dotted-to-underscored name mangling, or knowing that a histogram's
+  # average is rate(_sum)/rate(_count).
+  #
+  # Read-only and stateless: no ingest path, no database of its own, and it
+  # never touches the KIOs. Safe to stop or remove without affecting anything
+  # else in the stack.
+  #
+  # UNAUTHENTICATED BY DELIBERATE DECISION. The telemetry here is simulated
+  # test data with nothing sensitive in it, and the VictoriaMetrics/
+  # VictoriaLogs/Tempo read paths beside it are open as well, so this adds no
+  # exposure that did not already exist. Revisit if real data ever flows
+  # through this stack.
+  # ===========================================================================
+  metrics-api:
+    build:
+      context: .
+      dockerfile: metrics_api/Dockerfile
+    container_name: ai4sweng-metrics-api
+    environment:
+      VICTORIAMETRICS_URL: "http://victoriametrics:8428"
+      VICTORIAMETRICS_TIMEOUT_S: "${METRICS_API_TIMEOUT_S:-10}"
+      MAX_METRICS_PER_REQUEST: "${METRICS_API_MAX_METRICS:-10}"
+    ports:
+      - "${METRICS_API_PORT:-8081}:8081"
+    depends_on:
+      - victoriametrics
+    restart: unless-stopped
+
+  # ===========================================================================
   # Langfuse — second, parallel telemetry stream dedicated to LLM prompts/
   # completions/cost (per senior's request, evaluated against v2 guideline).
   # Self-hosted v3/v4-compatible stack: web + worker + postgres + clickhouse +
