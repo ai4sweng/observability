@@ -29,10 +29,10 @@ class TestNameResolution:
 
     def test_unknown_metric_raises_with_suggestions(self):
         with pytest.raises(registry.UnknownMetric) as excinfo:
-            registry.resolve("duration_hours")
+            registry.resolve("bugfix_time")
         # The point of the suggestion list is that a 400 tells the caller what
         # they probably meant, not just that they were wrong.
-        assert "kio.bugfix.duration_hours" in excinfo.value.suggestions
+        assert "kio.kpi.bugfix_time.pct_of_baseline" in excinfo.value.suggestions
 
     def test_unknown_metric_with_no_near_match_still_raises_cleanly(self):
         with pytest.raises(registry.UnknownMetric):
@@ -160,13 +160,13 @@ class TestFamilies:
     def test_dual_owned_kpi_reports_both_roles(self):
         # 1.1 and 3.1 are recorded by both kio3 and kio4's roles, which is why
         # a KPI response has to be an array.
-        assert set(registry.resolve("kio.codegen.duration_minutes").roles) == {
+        assert set(registry.resolve("kio.kpi.codegen_speed.pct_of_baseline").roles) == {
             "nlp-requirements",
             "architecture-to-code",
         }
 
     def test_role_specific_kpi_reports_only_its_owner(self):
-        assert registry.resolve("kio.review.score").roles == ("architecture-to-code",)
+        assert registry.resolve("kio.kpi.review_score.pct_of_baseline").roles == ("architecture-to-code",)
 
 
 class TestOptionalPresence:
@@ -201,7 +201,7 @@ class TestUnits:
             ("kio.llm.cost_usd", "USD"),
             ("kio.llm.tokens_per_second", "tokens/s"),
             ("kio.llm.energy_joules", "J"),
-            ("kio.bugfix.duration_hours", "h"),
+            ("kio.kpi.bugfix_time.pct_of_baseline", "%"),
             ("kio.llm.gpu_temperature_celsius", "Cel"),
         ],
     )

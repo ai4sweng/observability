@@ -63,7 +63,7 @@
     {
       "id": 100,
       "type": "row",
-      "title": "D1.1 Project KPIs — KIO11 (Table 3)",
+      "title": "D1.1 Project KPIs — KIO11  (SIMULATED DATA)",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -74,10 +74,10 @@
       }
     },
     {
-      "id": 55,
-      "title": "KPI 5.1 — Time-to-market",
+      "id": 110,
       "type": "stat",
-      "description": "**Target: 3-5 days**  |  Baseline: 5-7 days\n\nD1.1 Table 3 — KPI 5.1 (Time-to-market). Owning KIO(s): KIO7, KIO11.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 5.1 — Time-to-market",
+      "description": "**Target: ≤70% of baseline (≈3–5 days)** (lower is better)\n\nAverage elapsed time from feature design (prompt/template definition) to successful deployment in the AI4SWEng test environment.\n\nBaseline 100% = ≈5–7 days per pilot feature.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO11.\n\nMetric `kio_kpi_time_to_market_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -88,26 +88,13 @@
         "x": 0,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_time_to_market_days_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_time_to_market_days_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "d",
+          "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -115,11 +102,11 @@
               },
               {
                 "color": "orange",
-                "value": 35
+                "value": 70
               },
               {
                 "color": "red",
-                "value": 45
+                "value": 84.0
               }
             ]
           }
@@ -129,20 +116,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_time_to_market_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_time_to_market_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 5.1",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 25,
-      "title": "KPI 6.1 — Bug-fix time",
+      "id": 111,
       "type": "stat",
+      "title": "KPI 6.1 — Bug-fix time",
+      "description": "**Target: ≤80% of baseline (≈7–10 hours)** (lower is better)\n\nAverage elapsed time between bug report creation and a successful fix merged into the main branch.\n\nBaseline 100% = ≈8–12 hours per issue.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO7, KIO11.\n\nMetric `kio_kpi_bugfix_time_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -153,25 +156,13 @@
         "x": 6,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_bugfix_duration_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_bugfix_duration_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "h",
-          "color": {
-            "mode": "thresholds"
-          },
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -179,36 +170,50 @@
               },
               {
                 "color": "orange",
-                "value": 9.6
+                "value": 80
               },
               {
                 "color": "red",
-                "value": 12
+                "value": 96.0
               }
             ]
-          },
-          "noValue": "—"
+          }
         },
         "overrides": []
       },
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
+        }
       },
-      "description": "**Target: 7-10 hours**  |  Baseline: 8-12 hours\n\nD1.1 Table 3 — KPI 6.1 (Bug-fix time). Owning KIO(s): KIO2, KIO7, KIO11.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated."
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_bugfix_time_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_bugfix_time_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 6.1",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 28,
-      "title": "KPI 6.2 — Customer-reported issues",
+      "id": 112,
       "type": "stat",
+      "title": "KPI 6.2 — Customer-reported issues",
+      "description": "**Target: ≤80% of baseline (≈4 issues / feature)** (lower is better)\n\nAverage number of functional or usability issues reported by test users acting as customers, per released pilot feature.\n\nBaseline 100% = ≈5 issues per released feature.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO7, KIO11.\n\nMetric `kio_kpi_customer_reported_issues_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -219,52 +224,61 @@
         "x": 12,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(increase(kio_issue_customer_reported_count{kio_id=\"$kio_id\"}[$__range]))",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "thresholds"
-          },
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 96.0
               }
             ]
-          },
-          "noValue": "—"
+          }
         },
         "overrides": []
       },
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
+        }
       },
-      "description": "**Target: ~4 / feature**  |  Baseline: ~5 / feature\n\nD1.1 Table 3 — KPI 6.2 (Customer-reported issues). Owning KIO(s): KIO2, KIO7, KIO11.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated."
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 6.2",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 101,
+      "id": 109,
       "type": "text",
       "title": "",
       "transparent": true,

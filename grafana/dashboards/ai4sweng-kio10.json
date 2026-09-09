@@ -63,7 +63,7 @@
     {
       "id": 100,
       "type": "row",
-      "title": "D1.1 Project KPIs — KIO10 (Table 3)",
+      "title": "D1.1 Project KPIs — KIO10  (SIMULATED DATA)",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -74,10 +74,10 @@
       }
     },
     {
-      "id": 60,
-      "title": "KPI 2.1 — Lifecycle energy reduction",
+      "id": 110,
       "type": "stat",
-      "description": "**Target: <=85%**  |  Baseline: 100%\n\nD1.1 Table 3 — KPI 2.1 (Lifecycle energy reduction). Owning KIO(s): KIO7, KIO8, KIO10.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 2.1 — Lifecycle energy reduction",
+      "description": "**Target: ≤85% of baseline (≥15% reduction)** (lower is better)\n\nTotal energy consumed across a feature's lifecycle — training, inference and build/test/deploy — normalised per delivered function point.\n\nBaseline 100% = conventional pipeline lifecycle energy.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO8, KIO10.\n\nMetric `kio_kpi_lifecycle_energy_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -88,26 +88,13 @@
         "x": 0,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_lifecycle_energy_pct_of_baseline_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_lifecycle_energy_pct_of_baseline_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -119,7 +106,7 @@
               },
               {
                 "color": "red",
-                "value": 95
+                "value": 102.0
               }
             ]
           }
@@ -129,21 +116,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 2.1",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 61,
-      "title": "KPI 2.2 — Deployment energy efficiency",
+      "id": 111,
       "type": "stat",
-      "description": "**Target: >=15% improvement**  |  Baseline: 100%\n\nD1.1 Table 3 — KPI 2.2 (Deployment energy efficiency). Owning KIO(s): KIO7, KIO8, KIO10.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 2.2 — Deployment energy efficiency",
+      "description": "**Target: ≥115% of baseline (≥15% improvement)** (higher is better)\n\nThroughput per unit power during inference or code generation (tokens·s⁻¹·W⁻¹).\n\nBaseline 100% = un-optimised deployment stack, tokens·s⁻¹·W⁻¹.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO8, KIO10.\n\nMetric `kio_kpi_deploy_energy_efficiency_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -154,26 +156,13 @@
         "x": 6,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_deploy_energy_tokens_per_s_per_w_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_deploy_energy_tokens_per_s_per_w_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "red",
@@ -181,11 +170,11 @@
               },
               {
                 "color": "orange",
-                "value": 7.5
+                "value": 92.0
               },
               {
                 "color": "green",
-                "value": 8.6
+                "value": 115
               }
             ]
           }
@@ -195,21 +184,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 2.2",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 56,
-      "title": "KPI 7.1 — Annual cost saving",
+      "id": 112,
       "type": "stat",
-      "description": "**Target: <=EUR 85 000 / year**  |  Baseline: <=EUR 100 000 / year\n\nD1.1 Table 3 — KPI 7.1 (Annual cost saving). Owning KIO(s): KIO7, KIO8, KIO10.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 7.1 — Annual cost",
+      "description": "**Target: ≤85% of baseline (≈EUR 85 000 / year)** (lower is better)\n\nTotal software development and maintenance expenditure — developer time, testing effort, rework hours — normalised per FTE. D1.1 measures the remaining cost, so lower is better.\n\nBaseline 100% = ≈EUR 100 000 / developer / year.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO8, KIO10.\n\nMetric `kio_kpi_annual_cost_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -220,38 +224,25 @@
         "x": 12,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_cost_saving_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_cost_saving_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
                 "color": "orange",
-                "value": 15
+                "value": 85
               },
               {
-                "color": "green",
-                "value": 20
+                "color": "red",
+                "value": 102.0
               }
             ]
           }
@@ -261,18 +252,33 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_annual_cost_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_annual_cost_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 7.1",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 101,
+      "id": 109,
       "type": "text",
       "title": "",
       "transparent": true,

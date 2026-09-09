@@ -394,18 +394,61 @@ if TASK_TYPE == "code-analysis":
     meter.create_observable_gauge("kio.repo.directory_count", callbacks=[_obs_dirs], unit="1")
     meter.create_observable_gauge("kio.repo.file_count", callbacks=[_obs_files], unit="1")
 
-# --- Real project KPIs (D1.1) — only for KIOs mapped to a "bugfix" role ---
+# --- Real project KPIs (D1.1 Table 8) ---
+# D1.1's "Unit of Measure" column states nearly every global KPI as a
+# PERCENTAGE OF BASELINE, with the state-of-the-art IDE/SDK baseline
+# normalised to 100 % — e.g. KPI 1.1 is "% of baseline time", baseline
+# "100 % (≈100–120 min)", target "≤70 %".
+#
+# Emitting each KPI in that unit is what makes it directly comparable to its
+# D1.1 target: no unit conversion, no picking a midpoint out of a baseline
+# range, no "assume an 8-hour working day". Earlier revisions of this file
+# emitted absolute units (minutes, hours, days, features/day) and left those
+# conversions to whoever read the dashboard — and several of the absolute
+# baselines assumed here disagreed with D1.1 outright (time-to-market was
+# simulated around 24–38 days against a D1.1 baseline of ≈5–7).
+#
+# Three KPIs are NOT percentages of a baseline in D1.1, and keep their own
+# scale:
+#   KPI 8.1  % of total eligible users  (baseline 0 %, target ≥50 %)
+#   KPI 8.2  % of users, and MOS 1–5    (baseline 0 % / MOS ≈3.0,
+#                                        target ≥60 % / ≥4.0)
+#   KPI 8.3  Number                     (baseline 0, target ≥1)
+#
+# D1_1_BASELINES records what each 100 % stands for in absolute terms, so the
+# real-world figure stays documented next to the metric. Values are still
+# simulated — no real KIO module reports any of these yet — and each band is
+# chosen to straddle its target so a dashboard reads as plausible progress
+# rather than a permanent pass.
+D1_1_BASELINES = {
+    "1.1": "≈100–120 min per 300–500 LOC feature",
+    "1.2": "≈1.0–1.5 working days per issue",
+    "2.1": "conventional pipeline lifecycle energy",
+    "2.2": "un-optimised deployment stack, tokens·s⁻¹·W⁻¹",
+    "3.1": "adverse-quality composite (complexity, smells, standards)",
+    "3.2": "≈3.5 / 5 average peer-review score",
+    "4.1": "≈1 feature / developer / day",
+    "5.1": "≈5–7 days per pilot feature",
+    "6.1": "≈8–12 hours per issue",
+    "6.2": "≈5 issues per released feature",
+    "7.1": "≈EUR 100 000 / developer / year",
+    "9.1": "≈2–3 hours refactoring per 300–500 LOC feature",
+    "9.2": "≈1.0–1.2 hours of debt per 100 LOC",
+}
+
 # KIO2 in D1.1 = "Bug Locate & Fix / LLM Debugger" (T3.2 Reverse Execution /
 # Dynamic Slicing, T3.3 Fault Localization) — the same job FocusTracer does.
-# Names/units/targets are taken directly from D1.1 Table 8/9, not invented;
-# see docs/AI4SWENG_KPI_Metrik_Referansi.docx for the full mapping. Values
-# below are still simulated (calibrated to D1.1's baseline/target ranges),
-# not yet wired to real FocusTracer runs — that's a separate future step.
 if KIO_REAL_KPI_ROLE == "bugfix":
-    bugfix_duration_hist = meter.create_histogram("kio.bugfix.duration_hours", unit="h")       # KPI 6.1
-    issue_resolution_hist = meter.create_histogram("kio.issue.resolution_hours", unit="h")     # KPI 1.2
-    slicing_success_hist = meter.create_histogram("kio.slicing.success_rate", unit="1")        # WP3 task metric
-    customer_reported_counter = meter.create_counter("kio.issue.customer_reported_count", unit="1")  # KPI 6.2
+    # KPI 6.1 — Bug-fix time, % of baseline resolution time. Target ≤80 %.
+    bugfix_time_hist = meter.create_histogram("kio.kpi.bugfix_time.pct_of_baseline", unit="%")
+    # KPI 1.2 — Issue resolution speed, % of baseline time. Target ≤70 %.
+    issue_resolution_hist = meter.create_histogram("kio.kpi.issue_resolution.pct_of_baseline", unit="%")
+    # KPI 6.2 — Customer-reported issues, % of baseline issue rate. Target ≤80 %.
+    # D1.1 defines this per released feature, so a rate — not the raw count it
+    # used to be, which could not be compared to the target at all.
+    customer_reported_hist = meter.create_histogram("kio.kpi.customer_reported_issues.pct_of_baseline", unit="%")
+    # WP3 task metric (D1.1 Table 9), not a global KPI: dynamic slicing success.
+    slicing_success_hist = meter.create_histogram("kio.slicing.success_rate", unit="1")
     # "Accuracy" metric requested in the meeting, method left to us: fix@1 —
     # the bug-fix equivalent of pass@1 — did the LLM's *first* suggested patch
     # actually pass? Real outcome determination needs a real bug + real test
@@ -414,63 +457,85 @@ if KIO_REAL_KPI_ROLE == "bugfix":
     # without changing this metric's name/shape.
     fix_attempt_counter = meter.create_counter("kio.fix.attempt_count", unit="1")  # outcome=success|failure
 else:
-    bugfix_duration_hist = issue_resolution_hist = slicing_success_hist = customer_reported_counter = None
-    fix_attempt_counter = None
+    bugfix_time_hist = issue_resolution_hist = customer_reported_hist = None
+    slicing_success_hist = fix_attempt_counter = None
 
 # KPI 1.1 (Code generation speed) and KPI 3.1 (Code quality improvement) are
 # both mapped by D1.1's traceability matrix to KIO3 (nlp-requirements) AND
 # KIO4 (architecture-to-code) — even though neither role literally "generates
 # code" itself, D1.1 measures these end-to-end from the pipeline's first step.
-# Concrete units (minutes, %), not raw "% of baseline", mirroring the KIO2
-# bugfix metrics above for the same reason (a dashboard-legible absolute
-# number beats an abstract ratio with no baseline shown alongside it).
 if KIO_REAL_KPI_ROLE in ("nlp-requirements", "architecture-to-code"):
-    codegen_duration_hist = meter.create_histogram("kio.codegen.duration_minutes", unit="min")  # KPI 1.1
-    code_quality_hist = meter.create_histogram("kio.code_quality.score_pct", unit="%")           # KPI 3.1
+    # KPI 1.1 — Code generation speed, % of baseline time. Target ≤70 %.
+    codegen_speed_hist = meter.create_histogram("kio.kpi.codegen_speed.pct_of_baseline", unit="%")
+    # KPI 3.1 — Code quality improvement, % of the baseline ADVERSE-quality
+    # composite. D1.1 is explicit that this measures bad quality, so LOWER IS
+    # BETTER and the target is ≤70 %. The old "kio.code_quality.score_pct"
+    # name read as a score (higher better) and inverted the KPI on every
+    # dashboard that plotted it.
+    code_quality_hist = meter.create_histogram("kio.kpi.code_quality.pct_of_baseline", unit="%")
 else:
-    codegen_duration_hist = code_quality_hist = None
+    codegen_speed_hist = code_quality_hist = None
 
-# KPI 3.2 (Review score increase) is D1.1-mapped to KIO4 only (architecture-to-code).
+# KPI 3.2 (Review score increase) is D1.1-mapped to KIO4 only.
 if KIO_REAL_KPI_ROLE == "architecture-to-code":
-    review_score_hist = meter.create_histogram("kio.review.score", unit="1")  # KPI 3.2
+    # % of baseline review score, target ≥120 % (≈4.2 / 5 against a ≈3.5 / 5
+    # baseline). D1.1's target cell reads "≤ 120 %", which is a typo — the
+    # same row says "+20 % improvement" and Table 3 says "≥4.2 / 5".
+    review_score_hist = meter.create_histogram("kio.kpi.review_score.pct_of_baseline", unit="%")
 else:
     review_score_hist = None
 
-# KIO7 (AI-SysDev) in D1.1 is tied to "most KPIs" (1.1, 1.2, 2.x, 3.x, 4.1,
-# 5.1, 6.x, 7.1, 9.x) — far too broad to simulate wholesale without it reading
-# as noise. Only the KPIs where KIO7 is a clear primary/major owner (not
-# already covered by kio2-sim/kio3/kio4 above) are implemented here: developer
-# productivity, time-to-market, annual cost saving, refactoring reduction,
-# technical debt reduction. Concrete units again, same rationale as above.
+# KIO7 (AI-SysDev) is tied by D1.1 to most KPIs — too broad to simulate
+# wholesale without it reading as noise. Only the KPIs where KIO7 is a clear
+# primary owner and not already covered above are implemented here.
 if KIO_REAL_KPI_ROLE == "ai-sysdev":
-    dev_productivity_hist = meter.create_histogram("kio.dev_productivity.features_per_day", unit="1")  # KPI 4.1
-    time_to_market_hist = meter.create_histogram("kio.time_to_market.days", unit="d")                  # KPI 5.1
-    cost_saving_hist = meter.create_histogram("kio.cost_saving.pct", unit="%")                          # KPI 7.1
-    refactoring_hist = meter.create_histogram("kio.refactoring.hours_per_feature", unit="h")            # KPI 9.1
-    tech_debt_hist = meter.create_histogram("kio.tech_debt.hours_per_100loc", unit="h")                 # KPI 9.2
+    # KPI 4.1 — Developer productivity, % of baseline productivity. Target
+    # ≥120 %. (D1.1's "≤ 120 %" is the same typo as KPI 3.2; the row itself
+    # says "+20 % productivity gain".)
+    dev_productivity_hist = meter.create_histogram("kio.kpi.dev_productivity.pct_of_baseline", unit="%")
+    # KPI 5.1 — Time-to-market, % of baseline delivery time. Target ≤70 %.
+    time_to_market_hist = meter.create_histogram("kio.kpi.time_to_market.pct_of_baseline", unit="%")
+    # KPI 7.1 — Annual cost, % of baseline annual cost. Target ≤85 %.
+    # D1.1 measures the remaining cost, not the saving, so lower is better.
+    annual_cost_hist = meter.create_histogram("kio.kpi.annual_cost.pct_of_baseline", unit="%")
+    # KPI 9.1 — Refactoring effort, % of baseline. Target ≤80 %.
+    refactoring_hist = meter.create_histogram("kio.kpi.refactoring_effort.pct_of_baseline", unit="%")
+    # KPI 9.2 — Technical debt, % of baseline. Target ≤80 %.
+    tech_debt_hist = meter.create_histogram("kio.kpi.technical_debt.pct_of_baseline", unit="%")
 else:
-    dev_productivity_hist = time_to_market_hist = cost_saving_hist = None
+    dev_productivity_hist = time_to_market_hist = annual_cost_hist = None
     refactoring_hist = tech_debt_hist = None
 
-# KIO8 in D1.1 = the KIO uniquely tied to KPI 8.3 (Cross-Architecture Build
-# Success Rate), and one of three KIOs (with KIO7/KIO10) tied to KPI 2.1/2.2
-# (energy). KIO7's "ai-sysdev" role above deliberately left 2.1/2.2 out
-# (see comment above) since neither was covered anywhere yet; they're
-# implemented here under KIO8 instead, its clearer/more specific owner.
+# KIO8 is uniquely tied to KPI 8.3, and is one of three KIOs (with KIO7/KIO10)
+# tied to KPI 2.1/2.2. KIO7's role above deliberately leaves 2.1/2.2 to KIO8,
+# D1.1's more specific owner.
 if KIO_REAL_KPI_ROLE == "green-deploy":
-    lifecycle_energy_hist = meter.create_histogram("kio.lifecycle_energy.pct_of_baseline", unit="%")       # KPI 2.1
-    deploy_energy_eff_hist = meter.create_histogram("kio.deploy_energy.tokens_per_s_per_w", unit="1")      # KPI 2.2
-    cross_arch_build_counter = meter.create_counter("kio.cross_arch_build.success_count", unit="1")        # KPI 8.3
+    # KPI 2.1 — Lifecycle energy, % of baseline energy. Target ≤85 %.
+    lifecycle_energy_hist = meter.create_histogram("kio.kpi.lifecycle_energy.pct_of_baseline", unit="%")
+    # KPI 2.2 — Deployment energy efficiency, % of baseline throughput per
+    # watt. Target ≥115 % ("at least 1.15x tokens per watt", D1.1 §KPI 2.2).
+    # Higher is better. Reported as % of baseline rather than raw tokens·s⁻¹·W⁻¹
+    # because D1.1 defines the baseline as "100 % = current standard stack"
+    # and never gives an absolute figure — so a raw number had no target to be
+    # measured against.
+    deploy_energy_eff_hist = meter.create_histogram("kio.kpi.deploy_energy_efficiency.pct_of_baseline", unit="%")
+    # KPI 8.3 — Cross-Architecture Build Success: a Number, target ≥1
+    # validated heterogeneous target (FPGA/ARM/RISC-V). Binary success in
+    # D1.1's words: "build runs without manual correction".
+    cross_arch_build_counter = meter.create_counter("kio.kpi.cross_arch_build.success_count", unit="1")
 else:
     lifecycle_energy_hist = deploy_energy_eff_hist = cross_arch_build_counter = None
 
-# KIO13 in D1.1 = the KIO uniquely tied to KPI 8.1 (Adoption rate) and
-# KPI 8.2 (Active usage & satisfaction) — the only two KPIs D1.1 maps to a
-# single KIO with no co-owners, so both are implemented together here.
+# KIO13 is uniquely tied to KPI 8.1 and KPI 8.2 — the only two KPIs D1.1 maps
+# to a single KIO with no co-owners. Neither is a percentage of a baseline.
 if KIO_REAL_KPI_ROLE == "adoption":
-    adoption_rate_hist = meter.create_histogram("kio.adoption.active_user_pct", unit="%")  # KPI 8.1
-    adoption_usage_hist = meter.create_histogram("kio.adoption.usage_pct", unit="%")       # KPI 8.2 (usage half)
-    adoption_mos_hist = meter.create_histogram("kio.adoption.mos_score", unit="1")         # KPI 8.2 (MOS half)
+    # KPI 8.1 — Adoption rate, % of total eligible users. Target ≥50 %.
+    adoption_rate_hist = meter.create_histogram("kio.kpi.adoption_rate.pct", unit="%")
+    # KPI 8.2 — Active usage, % of developers using a feature per sprint.
+    # Target ≥60 %.
+    adoption_usage_hist = meter.create_histogram("kio.kpi.active_usage.pct", unit="%")
+    # KPI 8.2 — Satisfaction, Mean Opinion Score on a 1–5 scale. Target ≥4.0.
+    adoption_mos_hist = meter.create_histogram("kio.kpi.satisfaction.mos", unit="1")
 else:
     adoption_rate_hist = adoption_usage_hist = adoption_mos_hist = None
 
@@ -626,91 +691,79 @@ def emit_langfuse_trace(session_id, in_tokens, out_tokens, cost, is_error, error
 
 
 def emit_real_kpi_metrics(labels, is_error):
-    """D1.1-aligned KPIs, gated by KIO_REAL_KPI_ROLE (empty = none emitted).
-    Simulated values, deliberately kept inside D1.1's baseline/target bands so
-    the dashboard reads like plausible pilot-sprint progress, not noise.
+    """D1.1 Table 8 global KPIs, gated by KIO_REAL_KPI_ROLE (empty = none).
+
+    Every value is a PERCENTAGE OF BASELINE in D1.1's own unit (see the
+    D1_1_BASELINES table above), except KPI 8.1/8.2/8.3 which D1.1 states on
+    their own scales. Each simulated band deliberately straddles its D1.1
+    target, so panels show a KPI sometimes short of target instead of a flat
+    pass.
 
     Unlike the LLM-performance metrics above (tok/s, energy, error rate),
     which have a real measurement path once KIO2_REAL_LLM_ENABLED=true, every
-    metric emitted here is project-management-level (D1.1 Table 8/9) and has
-    no real variant at all yet — it would require the actual KIO module
-    (FocusTracer for "bugfix", or whichever team eventually owns KIO3/KIO4's
-    real roles) to report it for real. So source is unconditionally
-    "simulated" here, never derived from data_source."""
+    metric emitted here is project-management-level and has no real variant at
+    all yet — it would require the actual KIO module (FocusTracer for
+    "bugfix", or whichever team owns KIO3/KIO4's real roles) to report it. So
+    source is unconditionally "simulated" here, never derived from
+    data_source.
+    """
     if not KIO_REAL_KPI_ROLE:
         return
     labels_kpi = {**labels, "source": "simulated"}
 
     if KIO_REAL_KPI_ROLE == "bugfix":
-        # KIO2 (Bug Locate & Fix / LLM Debugger).
-        # KPI 6.1 — Bug-fix time: baseline ~8-12h, target <=20% reduction.
-        bugfix_duration_hist.record(round(random.uniform(6.0, 10.0), 2), labels_kpi)
-        # KPI 1.2 — Issue resolution speed: baseline ~8-12h, target <=30% reduction.
-        issue_resolution_hist.record(round(random.uniform(5.0, 9.0), 2), labels_kpi)
-        # WP3 task metric — Dynamic slicing success rate: target >=85%, realistic
-        # variance means it dips below target sometimes rather than always "passing".
+        # KPI 6.1 — target ≤80 % of baseline resolution time.
+        bugfix_time_hist.record(round(random.uniform(66.0, 84.0), 1), labels_kpi)
+        # KPI 1.2 — target ≤70 % of baseline time.
+        issue_resolution_hist.record(round(random.uniform(56.0, 74.0), 1), labels_kpi)
+        # KPI 6.2 — target ≤80 % of the baseline issue rate.
+        customer_reported_hist.record(round(random.uniform(66.0, 84.0), 1), labels_kpi)
+        # WP3 task metric — dynamic slicing success rate, target ≥85 %.
         slicing_success_hist.record(round(random.uniform(0.75, 0.97), 3), labels_kpi)
-        # KPI 6.2 — Customer-reported issues: rare event, not one per request.
-        if is_error and random.random() < 0.05:
-            customer_reported_counter.add(random.randint(1, 2), labels_kpi)
         # "Accuracy" KPI (fix@1) — see _evaluate_fix_success()'s docstring for
         # why this is a placeholder, not yet a real test-suite result.
         outcome = "success" if _evaluate_fix_success() else "failure"
         fix_attempt_counter.add(1, {**labels_kpi, "outcome": outcome})
 
     elif KIO_REAL_KPI_ROLE in ("nlp-requirements", "architecture-to-code"):
-        # KIO3 (NLP -> Formal Requirements) / KIO4 (Architecture-to-Code Planner).
-        # KPI 1.1 — Code generation speed: baseline ~100-120 min (100%),
-        # target <=70% (~70-84 min). Simulated mostly under baseline, with
-        # realistic variance rather than always beating target.
-        codegen_duration_hist.record(round(random.uniform(65.0, 95.0), 1), labels_kpi)
-        # KPI 3.1 — Code quality improvement: baseline 100%, target <=70%.
-        code_quality_hist.record(round(random.uniform(65.0, 90.0), 1), labels_kpi)
+        # KPI 1.1 — target ≤70 % of baseline time.
+        codegen_speed_hist.record(round(random.uniform(56.0, 74.0), 1), labels_kpi)
+        # KPI 3.1 — adverse quality, target ≤70 % of baseline. Lower is better.
+        code_quality_hist.record(round(random.uniform(62.0, 80.0), 1), labels_kpi)
         if KIO_REAL_KPI_ROLE == "architecture-to-code":
-            # KPI 3.2 — Review score increase: baseline ~3.5/5, target ~4.2/5.
-            review_score_hist.record(round(random.uniform(3.6, 4.4), 2), labels_kpi)
+            # KPI 3.2 — target ≥120 % of the baseline review score.
+            review_score_hist.record(round(random.uniform(110.0, 124.0), 1), labels_kpi)
 
     elif KIO_REAL_KPI_ROLE == "ai-sysdev":
-        # KIO7 (AI-SysDev). D1.1 ties KIO7 to most KPIs; only the ones where
-        # KIO7 is a clear primary owner (and not already covered by kio2-sim/
-        # kio3/kio4 above) are simulated here.
-        # KPI 4.1 — Developer productivity: baseline ~0.5-0.8 features/day,
-        # target increase.
-        dev_productivity_hist.record(round(random.uniform(0.6, 1.1), 2), labels_kpi)
-        # KPI 5.1 — Time-to-market: baseline ~30-45 days, target <=20% reduction.
-        time_to_market_hist.record(round(random.uniform(24.0, 38.0), 1), labels_kpi)
-        # KPI 7.1 — Annual cost saving: target range, realistic variance.
-        cost_saving_hist.record(round(random.uniform(12.0, 28.0), 1), labels_kpi)
-        # KPI 9.1 — Refactoring effort reduction: baseline ~4-6h/feature.
-        refactoring_hist.record(round(random.uniform(2.5, 4.5), 2), labels_kpi)
-        # KPI 9.2 — Technical debt reduction: baseline ~3-5h/100loc.
-        tech_debt_hist.record(round(random.uniform(1.8, 3.5), 2), labels_kpi)
+        # KPI 4.1 — target ≥120 % of baseline productivity.
+        dev_productivity_hist.record(round(random.uniform(116.0, 134.0), 1), labels_kpi)
+        # KPI 5.1 — target ≤70 % of baseline delivery time.
+        time_to_market_hist.record(round(random.uniform(61.0, 79.0), 1), labels_kpi)
+        # KPI 7.1 — target ≤85 % of baseline annual cost.
+        annual_cost_hist.record(round(random.uniform(71.0, 89.0), 1), labels_kpi)
+        # KPI 9.1 — target ≤80 % of baseline refactoring effort.
+        refactoring_hist.record(round(random.uniform(66.0, 84.0), 1), labels_kpi)
+        # KPI 9.2 — target ≤80 % of baseline technical debt.
+        tech_debt_hist.record(round(random.uniform(66.0, 84.0), 1), labels_kpi)
 
     elif KIO_REAL_KPI_ROLE == "green-deploy":
-        # KIO8 (Cross-Architecture / Energy-Efficient Deploy).
-        # KPI 2.1 — Lifecycle energy reduction: baseline 100%, target <=85%
-        # (>=15% reduction). Realistic variance, occasionally short of target.
-        lifecycle_energy_hist.record(round(random.uniform(78.0, 96.0), 1), labels_kpi)
-        # KPI 2.2 — Deployment energy efficiency (tokens/s/W): reported as a
-        # concrete absolute number rather than "% of baseline" for the same
-        # dashboard-legibility reason as the KIO2/KIO3/KIO4 metrics above; an
-        # assumed unoptimized baseline of ~7.5 tok/s/W, target >=15% improvement.
-        deploy_energy_eff_hist.record(round(random.uniform(6.5, 10.5), 2), labels_kpi)
-        # KPI 8.3 — Cross-Architecture Build Success Rate: target >=1 verified
-        # heterogeneous target (FPGA/ARM/RISC-V); rare, discrete event, not
-        # something that happens on every simulated request.
+        # KPI 2.1 — target ≤85 % of baseline lifecycle energy.
+        lifecycle_energy_hist.record(round(random.uniform(71.0, 89.0), 1), labels_kpi)
+        # KPI 2.2 — target ≥115 % of baseline tokens per watt. Higher is better.
+        deploy_energy_eff_hist.record(round(random.uniform(100.0, 118.0), 1), labels_kpi)
+        # KPI 8.3 — target ≥1 validated heterogeneous target; a rare, discrete
+        # event, not something that happens on every simulated request.
         if random.random() < 0.05:
             cross_arch_build_counter.add(1, labels_kpi)
 
     elif KIO_REAL_KPI_ROLE == "adoption":
-        # KIO13 (Adoption & Usage Tracking).
-        # KPI 8.1 — Adoption rate: baseline 0%, target >=50% within 2 pilot
-        # sprints. Simulated mid-ramp, since a fixed pilot has no "day zero".
-        adoption_rate_hist.record(round(random.uniform(32.0, 58.0), 1), labels_kpi)
-        # KPI 8.2 — Active usage & satisfaction: baseline usage ~0%/MOS ~3.0,
-        # target usage >=60% / MOS >=4.0.
-        adoption_usage_hist.record(round(random.uniform(45.0, 68.0), 1), labels_kpi)
-        adoption_mos_hist.record(round(random.uniform(3.4, 4.3), 2), labels_kpi)
+        # KPI 8.1 — % of eligible users, baseline 0 %, target ≥50 % within two
+        # pilot sprints. Simulated mid-ramp, since a fixed pilot has no "day zero".
+        adoption_rate_hist.record(round(random.uniform(32.0, 52.0), 1), labels_kpi)
+        # KPI 8.2 — active usage %, target ≥60 %.
+        adoption_usage_hist.record(round(random.uniform(56.0, 74.0), 1), labels_kpi)
+        # KPI 8.2 — satisfaction MOS on a 1–5 scale, target ≥4.0.
+        adoption_mos_hist.record(round(random.uniform(3.7, 4.3), 2), labels_kpi)
 
 
 # --------------------------------------------------------------------------- #

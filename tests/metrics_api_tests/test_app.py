@@ -97,7 +97,7 @@ class TestNoData:
 
     def test_conditional_kpi_metric_explains_its_role_gate(self, api, fake_vm):
         fake_vm.instant = []
-        body = api.get("/api/metrics?metric=kio.bugfix.duration_hours").json()
+        body = api.get("/api/metrics?metric=kio.kpi.bugfix_time.pct_of_baseline").json()
         reason = body["results"][0]["no_data_reason"]
         assert "KIO_REAL_KPI_ROLE=bugfix" in reason
         assert body["results"][0]["value"] is None
@@ -191,9 +191,9 @@ class TestValidation:
         assert api.get("/api/metrics").status_code == 422
 
     def test_unknown_metric_returns_400_with_suggestions(self, api):
-        response = api.get("/api/metrics?metric=duration_hours")
+        response = api.get("/api/metrics?metric=bugfix_time")
         assert response.status_code == 400
-        assert "kio.bugfix.duration_hours" in response.json()["error"]
+        assert "kio.kpi.bugfix_time.pct_of_baseline" in response.json()["error"]
 
     def test_filtering_by_a_label_the_metric_lacks_returns_400(self, api):
         # Not an empty 200 — that would look like a broken pipeline.

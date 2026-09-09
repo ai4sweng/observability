@@ -63,7 +63,7 @@
     {
       "id": 100,
       "type": "row",
-      "title": "D1.1 Project KPIs — KIO3 (Table 3)",
+      "title": "D1.1 Project KPIs — KIO3  (SIMULATED DATA)",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -74,10 +74,10 @@
       }
     },
     {
-      "id": 50,
-      "title": "KPI 1.1 — Code generation speed",
+      "id": 110,
       "type": "stat",
-      "description": "**Target: <=70% (~70-90 min)**  |  Baseline: ~100-120 min\n\nD1.1 Table 3 — KPI 1.1 (Code generation speed). Owning KIO(s): KIO2, KIO3, KIO4, KIO7.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 1.1 — Code generation speed",
+      "description": "**Target: ≤70% of baseline (≈70–90 min)** (lower is better)\n\nAverage end-to-end time from template/prompt initiation to first successful compile of a 300–500 LOC feature.\n\nBaseline 100% = ≈100–120 min per 300–500 LOC feature.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO3, KIO4, KIO7.\n\nMetric `kio_kpi_codegen_speed_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -88,26 +88,13 @@
         "x": 0,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_codegen_duration_minutes_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_codegen_duration_minutes_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "suffix: min",
+          "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -115,11 +102,11 @@
               },
               {
                 "color": "orange",
-                "value": 85
+                "value": 70
               },
               {
                 "color": "red",
-                "value": 100
+                "value": 84.0
               }
             ]
           }
@@ -129,20 +116,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_codegen_speed_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_codegen_speed_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 1.1",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 26,
-      "title": "KPI 1.2 — Issue resolution speed",
+      "id": 111,
       "type": "stat",
+      "title": "KPI 1.2 — Issue resolution speed",
+      "description": "**Target: ≤70% of baseline (≈0.7 days)** (lower is better)\n\nAverage elapsed time from defect detection in CI/CD or QA to confirmed resolution and successful re-build merge.\n\nBaseline 100% = ≈1.0–1.5 working days per issue.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO3, KIO4, KIO7.\n\nMetric `kio_kpi_issue_resolution_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -153,25 +156,13 @@
         "x": 6,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_issue_resolution_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_issue_resolution_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "h",
-          "color": {
-            "mode": "thresholds"
-          },
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -179,34 +170,47 @@
               },
               {
                 "color": "orange",
-                "value": 8.4
+                "value": 70
               },
               {
                 "color": "red",
-                "value": 12
+                "value": 84.0
               }
             ]
-          },
-          "noValue": "—"
+          }
         },
         "overrides": []
       },
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
+        }
       },
-      "description": "**Target: <=70%**  |  Baseline: 1.0-1.5 working days\n\nD1.1 Table 3 — KPI 1.2 (Issue resolution speed). Owning KIO(s): KIO2, KIO3, KIO4, KIO7.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated."
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_issue_resolution_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_issue_resolution_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 1.2",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 101,
+      "id": 109,
       "type": "text",
       "title": "",
       "transparent": true,

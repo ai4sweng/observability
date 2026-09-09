@@ -63,7 +63,7 @@
     {
       "id": 100,
       "type": "row",
-      "title": "D1.1 Project KPIs — KIO7 (Table 3)",
+      "title": "D1.1 Project KPIs — KIO7  (SIMULATED DATA)",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -74,10 +74,10 @@
       }
     },
     {
-      "id": 50,
+      "id": 110,
+      "type": "stat",
       "title": "KPI 1.1 — Code generation speed",
-      "type": "stat",
-      "description": "**Target: <=70% (~70-90 min)**  |  Baseline: ~100-120 min\n\nD1.1 Table 3 — KPI 1.1 (Code generation speed). Owning KIO(s): KIO2, KIO3, KIO4, KIO7.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "description": "**Target: ≤70% of baseline (≈70–90 min)** (lower is better)\n\nAverage end-to-end time from template/prompt initiation to first successful compile of a 300–500 LOC feature.\n\nBaseline 100% = ≈100–120 min per 300–500 LOC feature.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO3, KIO4, KIO7.\n\nMetric `kio_kpi_codegen_speed_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -88,26 +88,13 @@
         "x": 0,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_codegen_duration_minutes_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_codegen_duration_minutes_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "suffix: min",
+          "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -115,11 +102,11 @@
               },
               {
                 "color": "orange",
-                "value": 85
+                "value": 70
               },
               {
                 "color": "red",
-                "value": 100
+                "value": 84.0
               }
             ]
           }
@@ -129,20 +116,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_codegen_speed_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_codegen_speed_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 1.1",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 26,
+      "id": 111,
+      "type": "stat",
       "title": "KPI 1.2 — Issue resolution speed",
-      "type": "stat",
+      "description": "**Target: ≤70% of baseline (≈0.7 days)** (lower is better)\n\nAverage elapsed time from defect detection in CI/CD or QA to confirmed resolution and successful re-build merge.\n\nBaseline 100% = ≈1.0–1.5 working days per issue.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO3, KIO4, KIO7.\n\nMetric `kio_kpi_issue_resolution_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -153,25 +156,13 @@
         "x": 6,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_issue_resolution_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_issue_resolution_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "h",
-          "color": {
-            "mode": "thresholds"
-          },
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -179,37 +170,50 @@
               },
               {
                 "color": "orange",
-                "value": 8.4
+                "value": 70
               },
               {
                 "color": "red",
-                "value": 12
+                "value": 84.0
               }
             ]
-          },
-          "noValue": "—"
+          }
         },
         "overrides": []
       },
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
+        }
       },
-      "description": "**Target: <=70%**  |  Baseline: 1.0-1.5 working days\n\nD1.1 Table 3 — KPI 1.2 (Issue resolution speed). Owning KIO(s): KIO2, KIO3, KIO4, KIO7.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated."
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_issue_resolution_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_issue_resolution_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 1.2",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 60,
+      "id": 112,
+      "type": "stat",
       "title": "KPI 2.1 — Lifecycle energy reduction",
-      "type": "stat",
-      "description": "**Target: <=85%**  |  Baseline: 100%\n\nD1.1 Table 3 — KPI 2.1 (Lifecycle energy reduction). Owning KIO(s): KIO7, KIO8, KIO10.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "description": "**Target: ≤85% of baseline (≥15% reduction)** (lower is better)\n\nTotal energy consumed across a feature's lifecycle — training, inference and build/test/deploy — normalised per delivered function point.\n\nBaseline 100% = conventional pipeline lifecycle energy.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO8, KIO10.\n\nMetric `kio_kpi_lifecycle_energy_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -220,26 +224,13 @@
         "x": 12,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_lifecycle_energy_pct_of_baseline_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_lifecycle_energy_pct_of_baseline_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -251,7 +242,7 @@
               },
               {
                 "color": "red",
-                "value": 95
+                "value": 102.0
               }
             ]
           }
@@ -261,21 +252,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 2.1",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 61,
+      "id": 113,
+      "type": "stat",
       "title": "KPI 2.2 — Deployment energy efficiency",
-      "type": "stat",
-      "description": "**Target: >=15% improvement**  |  Baseline: 100%\n\nD1.1 Table 3 — KPI 2.2 (Deployment energy efficiency). Owning KIO(s): KIO7, KIO8, KIO10.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "description": "**Target: ≥115% of baseline (≥15% improvement)** (higher is better)\n\nThroughput per unit power during inference or code generation (tokens·s⁻¹·W⁻¹).\n\nBaseline 100% = un-optimised deployment stack, tokens·s⁻¹·W⁻¹.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO8, KIO10.\n\nMetric `kio_kpi_deploy_energy_efficiency_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -286,26 +292,13 @@
         "x": 18,
         "y": 1
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_deploy_energy_tokens_per_s_per_w_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_deploy_energy_tokens_per_s_per_w_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "red",
@@ -313,11 +306,11 @@
               },
               {
                 "color": "orange",
-                "value": 7.5
+                "value": 92.0
               },
               {
                 "color": "green",
-                "value": 8.6
+                "value": 115
               }
             ]
           }
@@ -327,21 +320,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 2.2",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 51,
-      "title": "KPI 3.1 — Code quality improvement",
+      "id": 114,
       "type": "stat",
-      "description": "**Target: <=70% of the adverse-quality measure**  |  Baseline: 100%\n\nD1.1 Table 3 — KPI 3.1 (Code quality improvement). Owning KIO(s): KIO4, KIO7, KIO9.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 3.1 — Code quality improvement",
+      "description": "**Target: ≤70% of the adverse-quality measure (≥30% improvement)** (lower is better)\n\nComposite of readability, maintainability and standards conformance, from third-party tooling such as a Sonar ruleset. D1.1 measures ADVERSE quality, so lower is better.\n\nBaseline 100% = adverse-quality composite (complexity, smells, standards).\n\nOwning KIO(s) per D1.1 Table 3: KIO4, KIO7, KIO9.\n\nMetric `kio_kpi_code_quality_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -352,26 +360,421 @@
         "x": 0,
         "y": 5
       },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 84.0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
       "targets": [
         {
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum(rate(kio_code_quality_score_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_code_quality_score_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_code_quality_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_code_quality_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 3.1",
+          "range": true,
+          "instant": false
         }
-      ],
+      ]
+    },
+    {
+      "id": 115,
+      "type": "stat",
+      "title": "KPI 3.2 — Review score increase",
+      "description": "**Target: ≥120% of baseline (≈4.2 / 5)** (higher is better)\n\nAverage improvement in peer-review evaluation score — clarity, maintainability, readability, test coverage.\n\nBaseline 100% = ≈3.5 / 5 average peer-review score.\n\nOwning KIO(s) per D1.1 Table 3: KIO4, KIO7, KIO9.\n\nMetric `kio_kpi_review_score_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 5
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 96.0
+              },
+              {
+                "color": "green",
+                "value": 120
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_review_score_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_review_score_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 3.2",
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 116,
+      "type": "stat",
+      "title": "KPI 4.1 — Developer productivity",
+      "description": "**Target: ≥120% of baseline (≈1.20 features / developer / day)** (higher is better)\n\nAverage number of completed coding tasks or features per developer per sprint, normalised by actual working hours.\n\nBaseline 100% = ≈1 feature / developer / day.\n\nOwning KIO(s) per D1.1 Table 3: KIO1, KIO7, KIO13.\n\nMetric `kio_kpi_dev_productivity_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 96.0
+              },
+              {
+                "color": "green",
+                "value": 120
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_dev_productivity_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_dev_productivity_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 4.1",
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 117,
+      "type": "stat",
+      "title": "KPI 5.1 — Time-to-market",
+      "description": "**Target: ≤70% of baseline (≈3–5 days)** (lower is better)\n\nAverage elapsed time from feature design (prompt/template definition) to successful deployment in the AI4SWEng test environment.\n\nBaseline 100% = ≈5–7 days per pilot feature.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO11.\n\nMetric `kio_kpi_time_to_market_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 84.0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_time_to_market_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_time_to_market_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 5.1",
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 118,
+      "type": "stat",
+      "title": "KPI 6.1 — Bug-fix time",
+      "description": "**Target: ≤80% of baseline (≈7–10 hours)** (lower is better)\n\nAverage elapsed time between bug report creation and a successful fix merged into the main branch.\n\nBaseline 100% = ≈8–12 hours per issue.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO7, KIO11.\n\nMetric `kio_kpi_bugfix_time_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 96.0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_bugfix_time_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_bugfix_time_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 6.1",
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 119,
+      "type": "stat",
+      "title": "KPI 6.2 — Customer-reported issues",
+      "description": "**Target: ≤80% of baseline (≈4 issues / feature)** (lower is better)\n\nAverage number of functional or usability issues reported by test users acting as customers, per released pilot feature.\n\nBaseline 100% = ≈5 issues per released feature.\n\nOwning KIO(s) per D1.1 Table 3: KIO2, KIO7, KIO11.\n\nMetric `kio_kpi_customer_reported_issues_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 96.0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 6.2",
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 120,
+      "type": "stat",
+      "title": "KPI 7.1 — Annual cost",
+      "description": "**Target: ≤85% of baseline (≈EUR 85 000 / year)** (lower is better)\n\nTotal software development and maintenance expenditure — developer time, testing effort, rework hours — normalised per FTE. D1.1 measures the remaining cost, so lower is better.\n\nBaseline 100% = ≈EUR 100 000 / developer / year.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO8, KIO10.\n\nMetric `kio_kpi_annual_cost_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "—",
+          "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -383,7 +786,7 @@
               },
               {
                 "color": "red",
-                "value": 100
+                "value": 102.0
               }
             ]
           }
@@ -393,154 +796,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 52,
-      "title": "KPI 3.2 — Review score increase",
-      "type": "gauge",
-      "description": "**Target: >=4.2 / 5**  |  Baseline: ~3.5 / 5\n\nD1.1 Table 3 — KPI 3.2 (Review score increase). Owning KIO(s): KIO4, KIO7, KIO9.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 5
+        }
       },
       "targets": [
         {
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum(rate(kio_review_score_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_review_score_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_annual_cost_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_annual_cost_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 7.1",
+          "range": true,
+          "instant": false
         }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "max": 5,
-          "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 3.5
-              },
-              {
-                "color": "green",
-                "value": 4.0
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      }
+      ]
     },
     {
-      "id": 54,
-      "title": "KPI 4.1 — Developer productivity",
+      "id": 121,
       "type": "stat",
-      "description": "**Target: ~1.20**  |  Baseline: 1 feature / developer / day\n\nD1.1 Table 3 — KPI 4.1 (Developer productivity). Owning KIO(s): KIO1, KIO7, KIO13.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 5
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_dev_productivity_features_per_day_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_dev_productivity_features_per_day_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.7
-              },
-              {
-                "color": "green",
-                "value": 0.9
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 55,
-      "title": "KPI 5.1 — Time-to-market",
-      "type": "stat",
-      "description": "**Target: 3-5 days**  |  Baseline: 5-7 days\n\nD1.1 Table 3 — KPI 5.1 (Time-to-market). Owning KIO(s): KIO7, KIO11.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 9.1 — Refactoring reduction",
+      "description": "**Target: ≤80% of baseline (≈1.5–2 h / feature)** (lower is better)\n\nPost-review or post-deployment code refactoring effort per feature, in developer hours or commits.\n\nBaseline 100% = ≈2–3 hours per 300–500 LOC feature.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO9.\n\nMetric `kio_kpi_refactoring_effort_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -549,230 +834,27 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 5
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_time_to_market_days_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_time_to_market_days_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "d",
-          "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 35
-              },
-              {
-                "color": "red",
-                "value": 45
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 25,
-      "title": "KPI 6.1 — Bug-fix time",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
         "y": 9
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_bugfix_duration_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_bugfix_duration_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "h",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 9.6
-              },
-              {
-                "color": "red",
-                "value": 12
-              }
-            ]
-          },
-          "noValue": "—"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "description": "**Target: 7-10 hours**  |  Baseline: 8-12 hours\n\nD1.1 Table 3 — KPI 6.1 (Bug-fix time). Owning KIO(s): KIO2, KIO7, KIO11.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated."
-    },
-    {
-      "id": 28,
-      "title": "KPI 6.2 — Customer-reported issues",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 9
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(increase(kio_issue_customer_reported_count{kio_id=\"$kio_id\"}[$__range]))",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "—"
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "description": "**Target: ~4 / feature**  |  Baseline: ~5 / feature\n\nD1.1 Table 3 — KPI 6.2 (Customer-reported issues). Owning KIO(s): KIO2, KIO7, KIO11.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated."
-    },
-    {
-      "id": 56,
-      "title": "KPI 7.1 — Annual cost saving",
-      "type": "stat",
-      "description": "**Target: <=EUR 85 000 / year**  |  Baseline: <=EUR 100 000 / year\n\nD1.1 Table 3 — KPI 7.1 (Annual cost saving). Owning KIO(s): KIO7, KIO8, KIO10.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 9
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_cost_saving_pct_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_cost_saving_pct_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "green",
                 "value": null
               },
               {
                 "color": "orange",
-                "value": 15
+                "value": 80
               },
               {
-                "color": "green",
-                "value": 20
+                "color": "red",
+                "value": 96.0
               }
             ]
           }
@@ -782,87 +864,36 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 57,
-      "title": "KPI 9.1 — Refactoring reduction",
-      "type": "stat",
-      "description": "**Target: 1.5-2 h / feature**  |  Baseline: 2-3 h / feature\n\nD1.1 Table 3 — KPI 9.1 (Refactoring reduction). Owning KIO(s): KIO7, KIO9.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 9
+        }
       },
       "targets": [
         {
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum(rate(kio_refactoring_hours_per_feature_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_refactoring_hours_per_feature_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_refactoring_effort_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_refactoring_effort_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 9.1",
+          "range": true,
+          "instant": false
         }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "h",
-          "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 4
-              },
-              {
-                "color": "red",
-                "value": 5.5
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      }
+      ]
     },
     {
-      "id": 58,
-      "title": "KPI 9.2 — Technical debt reduction",
+      "id": 122,
       "type": "stat",
-      "description": "**Target: <=0.8 h**  |  Baseline: 1.0-1.2 h / 100 LOC\n\nD1.1 Table 3 — KPI 9.2 (Technical debt reduction). Owning KIO(s): KIO7, KIO9.\n\nEmpty means this KIO is not reporting the KPI yet. Values are simulated.",
+      "title": "KPI 9.2 — Technical debt reduction",
+      "description": "**Target: ≤80% of baseline (≈0.8 h / 100 LOC)** (lower is better)\n\nEstimated technical-debt effort required to fix code smells, complexity issues and maintainability violations, as reported by automated code-quality tools.\n\nBaseline 100% = ≈1.0–1.2 hours of debt per 100 LOC.\n\nOwning KIO(s) per D1.1 Table 3: KIO7, KIO9.\n\nMetric `kio_kpi_technical_debt_pct_of_baseline`. Values are SIMULATED — no real KIO module reports this yet.\n\nEmpty means the selected KIO does not report this KPI.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -873,26 +904,13 @@
         "x": 0,
         "y": 13
       },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_tech_debt_hours_per_100loc_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_tech_debt_hours_per_100loc_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "",
-          "refId": "A",
-          "range": true
-        }
-      ],
       "fieldConfig": {
         "defaults": {
-          "unit": "h",
+          "unit": "percent",
+          "decimals": 1,
           "noValue": "—",
-          "color": {
-            "mode": "thresholds"
-          },
           "thresholds": {
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -900,11 +918,11 @@
               },
               {
                 "color": "orange",
-                "value": 3
+                "value": 80
               },
               {
                 "color": "red",
-                "value": 4.5
+                "value": 96.0
               }
             ]
           }
@@ -914,18 +932,33 @@
       "options": {
         "colorMode": "value",
         "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        },
-        "textMode": "auto"
-      }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(kio_kpi_technical_debt_pct_of_baseline_sum{kio_id=\"$kio_id\"}[$__range])) / clamp_min(sum(rate(kio_kpi_technical_debt_pct_of_baseline_count{kio_id=\"$kio_id\"}[$__range])), 0.001)",
+          "legendFormat": "KPI 9.2",
+          "range": true,
+          "instant": false
+        }
+      ]
     },
     {
-      "id": 101,
+      "id": 109,
       "type": "text",
       "title": "",
       "transparent": true,
@@ -941,71 +974,6 @@
       }
     },
     {
-      "id": 29,
-      "title": "Bug-fix time / issue resolution trend (hours)",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 17
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_bugfix_duration_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_bugfix_duration_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "bug-fix time (KPI 6.1)",
-          "refId": "A",
-          "range": true
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "victoriametrics"
-          },
-          "expr": "sum(rate(kio_issue_resolution_hours_sum{kio_id=\"$kio_id\"}[15m]))/clamp_min(sum(rate(kio_issue_resolution_hours_count{kio_id=\"$kio_id\"}[15m])),0.001)",
-          "legendFormat": "issue resolution (KPI 1.2)",
-          "refId": "B",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "h",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "stacking": {
-              "mode": "none"
-            },
-            "lineWidth": 2
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "last",
-            "max"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
       "id": 1,
       "title": "LLM",
       "type": "stat",
@@ -1017,7 +985,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 24
+        "y": 17
       },
       "targets": [
         {
@@ -1073,7 +1041,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 24
+        "y": 17
       },
       "targets": [
         {
@@ -1129,7 +1097,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 24
+        "y": 17
       },
       "targets": [
         {
@@ -1193,7 +1161,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 24
+        "y": 17
       },
       "targets": [
         {
@@ -1257,7 +1225,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 24
+        "y": 17
       },
       "targets": [
         {
@@ -1321,7 +1289,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 24
+        "y": 17
       },
       "targets": [
         {
@@ -1383,7 +1351,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 21
       },
       "panels": []
     },
@@ -1399,7 +1367,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 22
       },
       "targets": [
         {
@@ -1454,7 +1422,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 22
       },
       "targets": [
         {
@@ -1526,7 +1494,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 30
       },
       "panels": []
     },
@@ -1542,7 +1510,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 38
+        "y": 31
       },
       "targets": [
         {
@@ -1597,7 +1565,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 38
+        "y": 31
       },
       "targets": [
         {
@@ -1652,7 +1620,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 38
+        "y": 31
       },
       "targets": [
         {
@@ -1704,7 +1672,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 39
       },
       "panels": []
     },
@@ -1720,7 +1688,7 @@
         "h": 4,
         "w": 8,
         "x": 0,
-        "y": 47
+        "y": 40
       },
       "targets": [
         {
@@ -1778,7 +1746,7 @@
         "h": 4,
         "w": 8,
         "x": 8,
-        "y": 47
+        "y": 40
       },
       "targets": [
         {
@@ -1836,7 +1804,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 47
+        "y": 40
       },
       "targets": [
         {
@@ -1891,7 +1859,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 44
       },
       "panels": []
     },
@@ -1907,7 +1875,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 45
       },
       "targets": [
         {
@@ -1938,7 +1906,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 55
       },
       "panels": []
     },
@@ -1950,7 +1918,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 63
+        "y": 56
       },
       "options": {
         "mode": "markdown",
@@ -1969,7 +1937,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 66
+        "y": 59
       },
       "targets": [
         {
@@ -2009,7 +1977,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 67
       },
       "targets": [
         {
@@ -2033,7 +2001,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 77
       },
       "panels": []
     },
@@ -2050,7 +2018,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 85
+        "y": 78
       },
       "targets": [
         {
@@ -2140,7 +2108,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 85
+        "y": 78
       },
       "targets": [
         {
@@ -2194,7 +2162,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 85
+        "y": 78
       },
       "targets": [
         {
@@ -2282,7 +2250,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 84
       },
       "panels": []
     },
@@ -2298,7 +2266,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 92
+        "y": 85
       },
       "targets": [
         {
@@ -2363,7 +2331,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 92
+        "y": 85
       },
       "targets": [
         {
@@ -2428,7 +2396,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 92
+        "y": 85
       },
       "targets": [
         {
@@ -2491,7 +2459,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 98
+        "y": 91
       },
       "panels": []
     },
@@ -2507,7 +2475,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 99
+        "y": 92
       },
       "targets": [
         {
@@ -2573,7 +2541,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 99
+        "y": 92
       },
       "targets": [
         {
@@ -2639,7 +2607,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 99
+        "y": 92
       },
       "targets": [
         {
@@ -2694,7 +2662,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 105
+        "y": 98
       },
       "panels": []
     },
@@ -2710,7 +2678,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 106
+        "y": 99
       },
       "targets": [
         {
@@ -2773,7 +2741,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 105
       },
       "panels": []
     },
@@ -2789,7 +2757,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 113
+        "y": 106
       },
       "targets": [
         {
@@ -2843,7 +2811,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 113
+        "y": 106
       },
       "targets": [
         {
@@ -2896,7 +2864,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 113
+        "y": 106
       },
       "targets": [
         {
