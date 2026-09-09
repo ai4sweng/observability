@@ -1,8 +1,11 @@
-# Test-only dependencies. Install alongside kio-simulator/requirements.txt
-# and orchestrator/requirements.txt (both are exercised by this suite):
-#   pip install -r kio-simulator/requirements.txt \
-#               -r orchestrator/requirements.txt \
-#               -r tests/requirements-test.txt
-# then: pytest
+# Test-only dependencies. Install alongside the requirements of everything
+# this suite exercises (kio-simulator, orchestrator, metrics_api):
+#   uv pip install -r kio-simulator/requirements.txt \
+#                  -r orchestrator/requirements.txt \
+#                  -r metrics_api/requirements.txt \
+#                  -r tests/requirements-test.txt
+# then: uv run pytest
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+# fastapi.testclient needs httpx (metrics_api endpoint tests).
+httpx>=0.27.0
