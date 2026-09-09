@@ -1,995 +1,2120 @@
 {
- "uid": "ai4sweng-overview",
- "title": "AI4SWENG — Overview (All KIOs)",
- "tags": [
-  "ai4sweng",
-  "overview"
- ],
- "timezone": "browser",
- "schemaVersion": 39,
- "version": 1,
- "refresh": "10s",
- "time": {
-  "from": "now-30m",
-  "to": "now"
- },
- "templating": {
-  "list": []
- },
- "panels": [
-  {
-   "id": 1,
-   "title": "Active KIOs",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 0,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "count(count by (kio_id) (increase(kio_heartbeat[5m]) > bool 0 == 1)) or count(count by (kio_id)(kio_heartbeat))",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "green",
-        "value": 1
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
+  "uid": "ai4sweng-overview",
+  "title": "AI4SWENG — Overview (All KIOs)",
+  "tags": [
+    "ai4sweng",
+    "overview"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 7,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
   },
-  {
-   "id": 2,
-   "title": "Requests / sec (all)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 4,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_request_count[5m]))",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "reqps",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 0.1
-       },
-       {
-        "color": "green",
-        "value": 0.4
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
+  "templating": {
+    "list": []
   },
-  {
-   "id": 3,
-   "title": "Error rate %",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 8,
-    "y": 0
-   },
-   "targets": [
+  "panels": [
     {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "100 * sum(rate(kio_request_error_count[5m])) / clamp_min(sum(rate(kio_request_count[5m])), 0.001)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percent",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 5
-       },
-       {
-        "color": "red",
-        "value": 15
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 4,
-   "title": "Tokens / sec (all)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 12,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(rate(kio_llm_token_count[5m]))",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "thresholds"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "red",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 100
-       },
-       {
-        "color": "green",
-        "value": 400
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   }
-  },
-  {
-   "id": 5,
-   "title": "Total LLM cost (USD)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 16,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(kio_llm_cost_usd)",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "currencyUSD",
-     "color": {
-      "mode": "fixed",
-      "fixedColor": "blue"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "blue",
-        "value": null
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Cumulative total since process start (not a rate) — it keeps growing, so a green/yellow/red health threshold isn't meaningful; deliberately left neutral (blue)."
-  },
-  {
-   "id": 6,
-   "title": "Energy (kJ, all)",
-   "type": "stat",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 4,
-    "w": 4,
-    "x": 20,
-    "y": 0
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum(kio_llm_energy_joules) / 1000",
-     "legendFormat": "",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "color": {
-      "mode": "fixed",
-      "fixedColor": "blue"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "blue",
-        "value": null
-       }
-      ]
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "colorMode": "value",
-    "graphMode": "area",
-    "reduceOptions": {
-     "calcs": [
-      "lastNotNull"
-     ],
-     "fields": "",
-     "values": false
-    },
-    "textMode": "auto"
-   },
-   "description": "Cumulative total since process start (not a rate) — it keeps growing, so a green/yellow/red health threshold isn't meaningful; deliberately left neutral (blue)."
-  },
-  {
-   "id": 7,
-   "title": "Throughput & Reliability",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 4
-   },
-   "panels": []
-  },
-  {
-   "id": 8,
-   "title": "Request rate by KIO",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 0,
-    "y": 5
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id) (rate(kio_request_count[5m]))",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "reqps",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "normal"
+      "id": 200,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
       },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 9,
-   "title": "Error rate by KIO",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 5
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id) (rate(kio_request_error_count[5m]))",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 10,
-   "title": "Latency p95 (ms) by KIO",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 0,
-    "y": 13
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "histogram_quantile(0.95, sum by (kio_id, le) (rate(kio_request_duration_ms_bucket[5m])))",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "ms",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 11,
-   "title": "Active sessions by KIO",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 13
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id) (kio_session_active_count)",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 12,
-   "title": "LLM Metrics",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 21
-   },
-   "panels": []
-  },
-  {
-   "id": 13,
-   "title": "Token throughput by KIO (in+out)",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 0,
-    "y": 22
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id) (rate(kio_llm_token_count[5m]))",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "normal"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 14,
-   "title": "Avg tokens/sec by KIO",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 22
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id)(rate(kio_llm_tokens_per_second_sum[5m])) / clamp_min(sum by (kio_id)(rate(kio_llm_tokens_per_second_count[5m])), 0.001)",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 15,
-   "title": "GPU energy rate (J/s) by KIO",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 0,
-    "y": 30
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id) (rate(kio_llm_energy_joules[5m]))",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "watt",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 16,
-   "title": "Avg accuracy by KIO",
-   "type": "timeseries",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 30
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id)(rate(kio_request_accuracy_sum[5m])) / clamp_min(sum by (kio_id)(rate(kio_request_accuracy_count[5m])), 0.001)",
-     "legendFormat": "{{kio_id}}",
-     "refId": "A",
-     "range": true
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percentunit",
-     "custom": {
-      "drawStyle": "line",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "none"
-      },
-      "lineWidth": 2
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "bottom",
-     "calcs": [
-      "last",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 17,
-   "title": "Per-KIO Summary",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 38
-   },
-   "panels": []
-  },
-  {
-   "id": 18,
-   "title": "KIO inventory (llm / task / cost / tokens)",
-   "type": "table",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 24,
-    "x": 0,
-    "y": 39
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "sum by (kio_id, llm, task_type) (kio_llm_cost_usd)",
-     "format": "table",
-     "instant": true,
-     "refId": "A"
-    }
-   ],
-   "options": {
-    "showHeader": true
-   },
-   "fieldConfig": {
-    "defaults": {
-     "custom": {
-      "align": "auto"
-     }
-    },
-    "overrides": []
-   }
-  },
-  {
-   "id": 19,
-   "title": "Stale KIO Check (Contract §2.3)",
-   "type": "row",
-   "collapsed": false,
-   "gridPos": {
-    "h": 1,
-    "w": 24,
-    "x": 0,
-    "y": 47
-   },
-   "panels": []
-  },
-  {
-   "id": 20,
-   "title": "Time since last heartbeat (seconds)",
-   "type": "table",
-   "description": "Every KIO must publish a heartbeat every 60s (Contract §2.3). Values exceeding 120s (2x the interval) turn red — see the 'Stale KIO' alert rule in grafana/provisioning/alerting/rules.yml, which fires on the same threshold in the Alerting tab.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "victoriametrics"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 24,
-    "x": 0,
-    "y": 48
-   },
-   "targets": [
-    {
-     "datasource": {
-      "type": "prometheus",
-      "uid": "victoriametrics"
-     },
-     "expr": "time() - max by (kio_id) (timestamp(kio_heartbeat))",
-     "format": "table",
-     "instant": true,
-     "refId": "A"
-    }
-   ],
-   "transformations": [
-    {
-     "id": "organize",
-     "options": {
-      "renameByName": {
-       "kio_id": "KIO",
-       "Value": "Last heartbeat (s ago)"
-      },
-      "excludeByName": {
-       "Time": true
+      "options": {
+        "mode": "markdown",
+        "content": "### D1.1 Project KPIs — attainment against target\n**⚠ SIMULATED DATA.** No real KIO module reports these yet; every value below is generated by `kio-simulator/kio_simulator.py` within D1.1's baseline/target bands. These are *not* project results. Real values will arrive tagged `source=real` as KIO owners connect."
       }
-     }
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "s",
-     "color": {
-      "mode": "thresholds"
-     },
-     "custom": {
-      "cellOptions": {
-       "type": "color-background"
-      },
-      "align": "auto"
-     },
-     "thresholds": {
-      "steps": [
-       {
-        "color": "green",
-        "value": null
-       },
-       {
-        "color": "orange",
-        "value": 60
-       },
-       {
-        "color": "red",
-        "value": 120
-       }
-      ]
-     }
     },
-    "overrides": []
-   },
-   "options": {
-    "showHeader": true
-   }
-  }
- ]
+    {
+      "id": 201,
+      "type": "bargauge",
+      "title": "Attainment — 100% means the D1.1 target is met (all KIOs, SIMULATED)",
+      "description": "Each KPI is normalised against its own D1.1 target so one axis covers all of them:\n\n- lower-is-better KPIs: `100 x target / measured`\n- higher-is-better KPIs: `100 x measured / target`\n\nGreen = target met or beaten (>=100%), amber = within 20% of it, red = below, grey = no KIO currently reporting it.\n\nD1.1 states almost every KPI as a percentage of baseline (baseline = 100%), and the simulator emits them in that unit — so no unit conversion or baseline midpoint is assumed anywhere. Averaged over the dashboard time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 0,
+          "min": 0,
+          "max": 150,
+          "noValue": "no producer",
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": -1000000,
+                "to": 0,
+                "result": {
+                  "text": "no producer",
+                  "color": "#585A5E",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "left",
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 70 / clamp_min(sum(rate(kio_kpi_codegen_speed_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_codegen_speed_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 1.1 Code generation speed  (target ≤70% of baseline (≈70–90 min))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 70 / clamp_min(sum(rate(kio_kpi_issue_resolution_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_issue_resolution_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 1.2 Issue resolution speed  (target ≤70% of baseline (≈0.7 days))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 85 / clamp_min(sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 2.1 Lifecycle energy reduction  (target ≤85% of baseline (≥15% reduction))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_count{}[$__range])), 0.001)) / 115) or vector(-1)",
+          "legendFormat": "KPI 2.2 Deployment energy efficiency  (target ≥115% of baseline (≥15% improvement))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 70 / clamp_min(sum(rate(kio_kpi_code_quality_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_code_quality_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 3.1 Code quality improvement  (target ≤70% of the adverse-quality measure (≥30% improvement))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (sum(rate(kio_kpi_review_score_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_review_score_pct_of_baseline_count{}[$__range])), 0.001)) / 120) or vector(-1)",
+          "legendFormat": "KPI 3.2 Review score increase  (target ≥120% of baseline (≈4.2 / 5))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (sum(rate(kio_kpi_dev_productivity_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_dev_productivity_pct_of_baseline_count{}[$__range])), 0.001)) / 120) or vector(-1)",
+          "legendFormat": "KPI 4.1 Developer productivity  (target ≥120% of baseline (≈1.20 features / developer / day))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 70 / clamp_min(sum(rate(kio_kpi_time_to_market_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_time_to_market_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 5.1 Time-to-market  (target ≤70% of baseline (≈3–5 days))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 80 / clamp_min(sum(rate(kio_kpi_bugfix_time_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_bugfix_time_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 6.1 Bug-fix time  (target ≤80% of baseline (≈7–10 hours))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 80 / clamp_min(sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 6.2 Customer-reported issues  (target ≤80% of baseline (≈4 issues / feature))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 85 / clamp_min(sum(rate(kio_kpi_annual_cost_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_annual_cost_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 7.1 Annual cost  (target ≤85% of baseline (≈EUR 85 000 / year))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "L",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (sum(rate(kio_kpi_adoption_rate_pct_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_adoption_rate_pct_count{}[$__range])), 0.001)) / 50) or vector(-1)",
+          "legendFormat": "KPI 8.1 Adoption rate  (target ≥50% of active developers within two pilot sprints)",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "M",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (sum(rate(kio_kpi_active_usage_pct_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_active_usage_pct_count{}[$__range])), 0.001)) / 60) or vector(-1)",
+          "legendFormat": "KPI 8.2 Active usage  (target ≥60% of developers using a feature at least once per sprint)",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * (sum(rate(kio_kpi_satisfaction_mos_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_satisfaction_mos_count{}[$__range])), 0.001)) / 4.0) or vector(-1)",
+          "legendFormat": "KPI 8.2 Satisfaction (MOS)  (target ≥4.0 / 5)",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "O",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * clamp_max(sum(increase(kio_kpi_cross_arch_build_success_count{}[$__range])), 1) / 1) or vector(-1)",
+          "legendFormat": "KPI 8.3 Cross-architecture build success  (target ≥1 validated working target)",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "P",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 80 / clamp_min(sum(rate(kio_kpi_refactoring_effort_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_refactoring_effort_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 9.1 Refactoring reduction  (target ≤80% of baseline (≈1.5–2 h / feature))",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "Q",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(100 * 80 / clamp_min(sum(rate(kio_kpi_technical_debt_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_technical_debt_pct_of_baseline_count{}[$__range])), 0.001), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 9.2 Technical debt reduction  (target ≤80% of baseline (≈0.8 h / 100 LOC))",
+          "range": false,
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "bargauge",
+      "title": "Measured value in D1.1's own unit (all KIOs, SIMULATED)",
+      "description": "The raw measurement behind each attainment bar, in the unit D1.1 specifies — percent of baseline for all but KPI 8.1 (% of eligible users), 8.2 (% of users, and MOS 1-5) and 8.3 (a count). Each bar is coloured against that KPI's own target, so green here means the same thing as green above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "noValue": "no producer",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 1.1 Code generation speed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 70
+                    },
+                    {
+                      "color": "red",
+                      "value": 84.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 1.2 Issue resolution speed"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 70
+                    },
+                    {
+                      "color": "red",
+                      "value": 84.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 2.1 Lifecycle energy reduction"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 85
+                    },
+                    {
+                      "color": "red",
+                      "value": 102.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 2.2 Deployment energy efficiency"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 92.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 115
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 3.1 Code quality improvement"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 70
+                    },
+                    {
+                      "color": "red",
+                      "value": 84.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 3.2 Review score increase"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 96.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 120
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 4.1 Developer productivity"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 96.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 120
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 5.1 Time-to-market"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 70
+                    },
+                    {
+                      "color": "red",
+                      "value": 84.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 6.1 Bug-fix time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 80
+                    },
+                    {
+                      "color": "red",
+                      "value": 96.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 6.2 Customer-reported issues"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 80
+                    },
+                    {
+                      "color": "red",
+                      "value": 96.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 7.1 Annual cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 85
+                    },
+                    {
+                      "color": "red",
+                      "value": 102.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 8.1 Adoption rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 40.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 50
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 8.2 Active usage"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 48.0
+                    },
+                    {
+                      "color": "green",
+                      "value": 60
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 8.2 Satisfaction (MOS)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 3.2
+                    },
+                    {
+                      "color": "green",
+                      "value": 4.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 8.3 Cross-architecture build success"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 0.8
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 9.1 Refactoring reduction"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 80
+                    },
+                    {
+                      "color": "red",
+                      "value": 96.0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "KPI 9.2 Technical debt reduction"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 80
+                    },
+                    {
+                      "color": "red",
+                      "value": 96.0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "left",
+        "sizing": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_codegen_speed_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_codegen_speed_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 1.1 Code generation speed",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_issue_resolution_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_issue_resolution_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 1.2 Issue resolution speed",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_lifecycle_energy_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 2.1 Lifecycle energy reduction",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_deploy_energy_efficiency_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 2.2 Deployment energy efficiency",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_code_quality_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_code_quality_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 3.1 Code quality improvement",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_review_score_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_review_score_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 3.2 Review score increase",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_dev_productivity_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_dev_productivity_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 4.1 Developer productivity",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_time_to_market_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_time_to_market_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 5.1 Time-to-market",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_bugfix_time_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_bugfix_time_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 6.1 Bug-fix time",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_customer_reported_issues_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 6.2 Customer-reported issues",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "K",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_annual_cost_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_annual_cost_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 7.1 Annual cost",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "L",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_adoption_rate_pct_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_adoption_rate_pct_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 8.1 Adoption rate",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "M",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_active_usage_pct_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_active_usage_pct_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 8.2 Active usage",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_satisfaction_mos_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_satisfaction_mos_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 8.2 Satisfaction (MOS)",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "O",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(kio_kpi_cross_arch_build_success_count{}[$__range]))) or vector(-1)",
+          "legendFormat": "KPI 8.3 Cross-architecture build success",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "P",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_refactoring_effort_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_refactoring_effort_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 9.1 Refactoring reduction",
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "Q",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(kio_kpi_technical_debt_pct_of_baseline_sum{}[$__range])) / clamp_min(sum(rate(kio_kpi_technical_debt_pct_of_baseline_count{}[$__range])), 0.001)) or vector(-1)",
+          "legendFormat": "KPI 9.2 Technical debt reduction",
+          "range": false,
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "title": "Active KIOs",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 33
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "count(count by (kio_id) (increase(kio_heartbeat[5m]) > bool 0 == 1)) or count(count by (kio_id)(kio_heartbeat))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Requests / sec (all)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 33
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_request_count[5m]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.1
+              },
+              {
+                "color": "green",
+                "value": 0.4
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Error rate %",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 33
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "100 * sum(rate(kio_request_error_count[5m])) / clamp_min(sum(rate(kio_request_count[5m])), 0.001)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 15
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Tokens / sec (all)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 33
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(rate(kio_llm_token_count[5m]))",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 100
+              },
+              {
+                "color": "green",
+                "value": 400
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Total LLM cost (USD)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 33
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(kio_llm_cost_usd)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Cumulative total since process start (not a rate) — it keeps growing, so a green/yellow/red health threshold isn't meaningful; deliberately left neutral (blue)."
+    },
+    {
+      "id": 6,
+      "title": "Energy (kJ, all)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 33
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(kio_llm_energy_joules) / 1000",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "description": "Cumulative total since process start (not a rate) — it keeps growing, so a green/yellow/red health threshold isn't meaningful; deliberately left neutral (blue)."
+    },
+    {
+      "id": 7,
+      "title": "Throughput & Reliability",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "title": "Request rate by KIO",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 38
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id) (rate(kio_request_count[5m]))",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Error rate by KIO",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id) (rate(kio_request_error_count[5m]))",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Latency p95 (ms) by KIO",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "histogram_quantile(0.95, sum by (kio_id, le) (rate(kio_request_duration_ms_bucket[5m])))",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Active sessions by KIO",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id) (kio_session_active_count)",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "LLM Metrics",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "title": "Token throughput by KIO (in+out)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 55
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id) (rate(kio_llm_token_count[5m]))",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Avg tokens/sec by KIO",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 55
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id)(rate(kio_llm_tokens_per_second_sum[5m])) / clamp_min(sum by (kio_id)(rate(kio_llm_tokens_per_second_count[5m])), 0.001)",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "GPU energy rate (J/s) by KIO",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 63
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id) (rate(kio_llm_energy_joules[5m]))",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "Avg accuracy by KIO",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 63
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id)(rate(kio_request_accuracy_sum[5m])) / clamp_min(sum by (kio_id)(rate(kio_request_accuracy_count[5m])), 0.001)",
+          "legendFormat": "{{kio_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            },
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "title": "Per-KIO Summary",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "panels": []
+    },
+    {
+      "id": 18,
+      "title": "KIO inventory (llm / task / cost / tokens)",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum by (kio_id, llm, task_type) (kio_llm_cost_usd)",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 19,
+      "title": "Stale KIO Check (Contract §2.3)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 80
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "title": "Time since last heartbeat (seconds)",
+      "type": "table",
+      "description": "Every KIO must publish a heartbeat every 60s (Contract §2.3). Values exceeding 120s (2x the interval) turn red — see the 'Stale KIO' alert rule in grafana/provisioning/alerting/rules.yml, which fires on the same threshold in the Alerting tab.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "time() - max by (kio_id) (timestamp(kio_heartbeat))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "kio_id": "KIO",
+              "Value": "Last heartbeat (s ago)"
+            },
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "cellOptions": {
+              "type": "color-background"
+            },
+            "align": "auto"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 120
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 900,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "h": 2,
+        "w": 8,
+        "x": 16,
+        "y": 89
+      },
+      "options": {
+        "mode": "markdown",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"text-align:right;font-size:11px;opacity:0.65\">AI4SWENG Observability Stack &nbsp;<b>v1.0.2</b><br/>KPI targets per D1.1 Table 3</div>"
+      }
+    }
+  ]
 }

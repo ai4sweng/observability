@@ -518,40 +518,50 @@ which KIO.
 
 Six KIOs carry D1.1 KPI roles via the `KIO_REAL_KPI_ROLE` env var
 (`docker-compose.yml`), each publishing its own metric set in
-`kio_simulator.py` (names/units taken directly from D1.1, values still
-simulated). **By default only kio2-sim and kio3 run**, so only their KPI panels
-populate out of the box — uncomment kio4/kio7/kio8/kio13 in `docker-compose.yml`
-to light up the rest:
+`kio_simulator.py`. **All six run by default**, so every D1.1 KPI populates
+out of `docker compose up`.
+
+Each KPI is emitted in the unit D1.1's own "Unit of Measure" column
+specifies — which for all but three KPIs is a **percentage of baseline**, with
+the SotA IDE/SDK baseline normalised to 100 % (KPI 1.1 is literally "% of
+baseline time", target "≤70 %"). Emitting them that way is what makes each
+value directly comparable to its D1.1 target with no unit conversion and no
+assumed baseline midpoint. The exceptions keep D1.1's own scale: KPI 8.1
+(% of eligible users), 8.2 (% of users, and MOS 1–5) and 8.3 (a count).
+
+`scripts/d11_kpis.py` is the single source of truth for every KPI's target,
+direction and owning KIOs (D1.1 Table 3 + Table 8); both dashboard generators
+read it. Values are still simulated:
 
 - **kio2-sim** (`KIO_REAL_KPI_ROLE=bugfix`, D1.1's "Bug Locate & Fix / LLM
   Debugger" — exactly the job FocusTracer does):
-  - `kio_bugfix_duration_hours` — KPI 6.1 (Bug-fix time)
-  - `kio_issue_resolution_hours` — KPI 1.2 (Issue resolution speed)
+  - `kio_kpi_bugfix_time_pct_of_baseline` — KPI 6.1 (Bug-fix time)
+  - `kio_kpi_issue_resolution_pct_of_baseline` — KPI 1.2 (Issue resolution speed)
   - `kio_slicing_success_rate` — WP3 task metric (Dynamic slicing success rate, target ≥85%)
-  - `kio_issue_customer_reported_count` — KPI 6.2 (Customer-reported issues)
+  - `kio_kpi_customer_reported_issues_pct_of_baseline` — KPI 6.2 (Customer-reported issues)
 - **kio3** (`KIO_REAL_KPI_ROLE=nlp-requirements`, D1.1's "NLP → Formal Requirements"):
-  - `kio_codegen_duration_minutes` — KPI 1.1 (Code generation speed)
-  - `kio_code_quality_score_pct` — KPI 3.1 (Code quality improvement)
+  - `kio_kpi_codegen_speed_pct_of_baseline` — KPI 1.1 (Code generation speed)
+  - `kio_kpi_code_quality_pct_of_baseline` — KPI 3.1 (Code quality improvement)
 - **kio4** (`KIO_REAL_KPI_ROLE=architecture-to-code`, D1.1's "Architecture-to-Code Planner"):
-  - `kio_codegen_duration_minutes`, `kio_code_quality_score_pct` (same as kio3, KPI 1.1 + 3.1)
-  - `kio_review_score` — KPI 3.2 (Review score increase, KIO4 only)
+  - `kio_kpi_codegen_speed_pct_of_baseline`, `kio_kpi_code_quality_pct_of_baseline` (same as kio3, KPI 1.1 + 3.1)
+  - `kio_kpi_review_score_pct_of_baseline` — KPI 3.2 (Review score increase, KIO4 only)
 - **kio7** (`KIO_REAL_KPI_ROLE=ai-sysdev`, D1.1's "AI-SysDev" — shared across most
   KPIs (1.1, 1.2, 2.x, 3.x, 4.1, 5.1, 6.x, 7.1, 9.x); only the five where KIO7 is
   a clear primary owner and not already covered by the other three KIOs are simulated):
-  - `kio_dev_productivity_features_per_day` — KPI 4.1 (Developer productivity)
-  - `kio_time_to_market_days` — KPI 5.1 (Time-to-Market)
-  - `kio_cost_saving_pct` — KPI 7.1 (Annual cost saving)
-  - `kio_refactoring_hours_per_feature` — KPI 9.1 (Refactoring effort reduction)
-  - `kio_tech_debt_hours_per_100loc` — KPI 9.2 (Technical debt reduction)
+  - `kio_kpi_dev_productivity_pct_of_baseline` — KPI 4.1 (Developer productivity)
+  - `kio_kpi_time_to_market_pct_of_baseline` — KPI 5.1 (Time-to-Market)
+  - `kio_kpi_annual_cost_pct_of_baseline` — KPI 7.1 (Annual cost saving)
+  - `kio_kpi_refactoring_effort_pct_of_baseline` — KPI 9.1 (Refactoring effort reduction)
+  - `kio_kpi_technical_debt_pct_of_baseline` — KPI 9.2 (Technical debt reduction)
 - **kio8** (`KIO_REAL_KPI_ROLE=green-deploy`, D1.1's "Cross-Architecture /
   Energy-Efficient Deploy" — shares KPI 2.1/2.2 with KIO7/KIO10, sole owner of KPI 8.3):
-  - `kio_lifecycle_energy_pct_of_baseline` — KPI 2.1 (Lifecycle energy reduction)
-  - `kio_deploy_energy_tokens_per_s_per_w` — KPI 2.2 (Deployment energy efficiency)
-  - `kio_cross_arch_build_success_count` — KPI 8.3 (Cross-Architecture Build Success Rate)
+  - `kio_kpi_lifecycle_energy_pct_of_baseline` — KPI 2.1 (Lifecycle energy reduction)
+  - `kio_kpi_deploy_energy_efficiency_pct_of_baseline` — KPI 2.2 (Deployment energy efficiency)
+  - `kio_kpi_cross_arch_build_success_count` — KPI 8.3 (Cross-Architecture Build Success Rate)
 - **kio13** (`KIO_REAL_KPI_ROLE=adoption`, D1.1's "Adoption & Usage Tracking" —
   owner of the only two D1.1 KPIs not shared with any other KIO):
-  - `kio_adoption_active_user_pct` — KPI 8.1 (Adoption rate)
-  - `kio_adoption_usage_pct`, `kio_adoption_mos_score` — KPI 8.2 (Active usage & satisfaction)
+  - `kio_kpi_adoption_rate_pct` — KPI 8.1 (Adoption rate)
+  - `kio_kpi_active_usage_pct`, `kio_kpi_satisfaction_mos` — KPI 8.2 (Active usage & satisfaction)
 
 Note: kio3/kio4's `task_type` was renamed in 2026-08 (`test-generation`/`debug`
 → `nlp-requirements`/`architecture-to-code`) to match D1.1's actual KIO3/KIO4

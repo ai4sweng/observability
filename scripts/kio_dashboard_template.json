@@ -1590,7 +1590,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum by (llm) (rate(kio_llm_energy_joules[10m]))",
+          "expr": "sum by (llm) (rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[10m]))",
           "legendFormat": "{{llm}}",
           "refId": "A",
           "range": true
@@ -1644,7 +1644,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum by (llm) (rate(kio_fix_attempt_count{outcome=\"success\"}[30m])) / clamp_min(sum by (llm) (rate(kio_fix_attempt_count[30m])),0.001)",
+          "expr": "sum by (llm) (rate(kio_fix_attempt_count{kio_id=\"$kio_id\", outcome=\"success\"}[30m])) / clamp_min(sum by (llm) (rate(kio_fix_attempt_count{kio_id=\"$kio_id\"}[30m])),0.001)",
           "legendFormat": "fix@1 success rate",
           "refId": "A",
           "range": true
@@ -1654,7 +1654,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "sum by (llm) (rate(kio_llm_energy_joules[30m]))",
+          "expr": "sum by (llm) (rate(kio_llm_energy_joules{kio_id=\"$kio_id\"}[30m]))",
           "legendFormat": "energy rate (J/s)",
           "refId": "B",
           "range": true
