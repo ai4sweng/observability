@@ -382,9 +382,6 @@ def main():
     finally:
         kio.shutdown()        # flush — mandatory in a short-lived process
 ```
-(A real, line-referenced CLI example — FocusTracer/KIO2 — is in
-[`../kio2-integration/README.md`](../kio2-integration/README.md).)
-
 **C) Continuous worker / queue consumer** — each job is one `request()`:
 ```python
 kio = KIOTelemetry(); kio.start_heartbeat()
@@ -499,5 +496,4 @@ One-stop for all network/firewall/port issues → [`NETWORK.md`](NETWORK.md) §6
 | [`with_script/`](with_script/) | Copyable minimal kit: `kio_otel.py`, example, preflight |
 | [`NETWORK.md`](NETWORK.md) | Networking / firewall / static IP / Tailscale (deep dive) |
 | [`README.md`](README.md) | Running **our simulator** on a remote machine (different scenario) |
-| [`../kio2-integration/README.md`](../kio2-integration/README.md) | Worked, line-referenced example for the real FocusTracer (KIO2) module |
 | [Observability Guide v2.2](../docs/Observability_v2.2.docx) | Normative contract (7 metrics, rules, reference code) |
