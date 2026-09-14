@@ -330,8 +330,8 @@
       ]
     },
     {
-      "type": "traces",
-      "title": "Recent traces (click one for the pipeline waterfall)",
+      "type": "table",
+      "title": "Recent traces (open one for the pipeline waterfall)",
       "description": "Each request's step-by-step timing: load_data -> train -> compress_grid -> pareto_front -> conflict_ladder.",
       "gridPos": {
         "h": 8,
@@ -345,9 +345,26 @@
       },
       "targets": [
         {
-          "queryType": "traceql",
-          "query": "{resource.kio.id=\"$kio_id\"}",
-          "limit": 20
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceqlSearch",
+          "limit": 20,
+          "tableType": "traces",
+          "filters": [
+            {
+              "id": "kio",
+              "tag": "resource.kio.id",
+              "operator": "=",
+              "value": [
+                "$kio_id"
+              ],
+              "valueType": "string",
+              "scope": "resource"
+            }
+          ]
         }
       ]
     },
