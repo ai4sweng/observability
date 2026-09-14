@@ -14,13 +14,184 @@
   "schemaVersion": 39,
   "panels": [
     {
+      "type": "row",
+      "title": "D1.1 Project KPIs — KIO10  (live pipeline; energy = estimate until the hardware bench)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false
+    },
+    {
+      "type": "stat",
+      "title": "KPI 2.2 — Energy efficiency (intelligence/watt, inf/J)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "description": "Inferences per second per watt = inferences per joule. TinyML analogue of grant KPI 2.2 (tokens/s/W). Estimate until the bench.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5ee6a0"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_pipeline_inferences_per_joule_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_inferences_per_joule_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "KPI 2.1 — Energy per inference (mJ, ESTIMATE)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "description": "Per-inference energy of the chosen variant. % reduction vs baseline awaits the hardware bench (KPI 2.1 target: <=85% of baseline).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 4,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#f0a35e"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_pipeline_energy_estimate_mj_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_energy_estimate_mj_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Model accuracy — chosen MAE (cycles)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "description": "Validation MAE of the variant the ladder selected (lower is better).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5ee6a0"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_pipeline_chosen_mae_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_chosen_mae_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Pipeline success rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "description": "Share of runs finishing success (vs failure/clarification).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#5ee6a0"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100*sum(rate(kio_request_count{kio_id=\"$kio_id\",status=\"ok\"}[5m]))/clamp_min(sum(rate(kio_request_count{kio_id=\"$kio_id\"}[5m])),1e-9)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ]
+    },
+    {
       "type": "stat",
       "title": "Requests/sec",
       "gridPos": {
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 0
+        "y": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -46,7 +217,7 @@
         "h": 5,
         "w": 4,
         "x": 4,
-        "y": 0
+        "y": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -85,7 +256,7 @@
         "h": 5,
         "w": 4,
         "x": 8,
-        "y": 0
+        "y": 6
       },
       "datasource": {
         "type": "prometheus",
@@ -111,7 +282,7 @@
         "h": 5,
         "w": 4,
         "x": 12,
-        "y": 0
+        "y": 6
       },
       "description": "Non-dominated variants offered by the last runs (accuracy / flash / RAM / energy).",
       "datasource": {
@@ -138,7 +309,7 @@
         "h": 5,
         "w": 4,
         "x": 16,
-        "y": 0
+        "y": 6
       },
       "description": "Validation accuracy of the variant the ladder selected.",
       "datasource": {
@@ -165,7 +336,7 @@
         "h": 5,
         "w": 4,
         "x": 20,
-        "y": 0
+        "y": 6
       },
       "description": "MAC-model estimate until the hardware bench exists; the method label will switch to hardware_meter then.",
       "datasource": {
@@ -196,7 +367,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 11
       },
       "datasource": {
         "type": "prometheus",
@@ -222,7 +393,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 11
       },
       "datasource": {
         "type": "prometheus",
@@ -257,7 +428,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 13
+        "y": 19
       },
       "datasource": {
         "type": "prometheus",
@@ -283,7 +454,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 13
+        "y": 19
       },
       "datasource": {
         "type": "prometheus",
@@ -310,7 +481,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 13
+        "y": 19
       },
       "datasource": {
         "type": "prometheus",
@@ -337,7 +508,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 27
       },
       "datasource": {
         "type": "tempo",
@@ -356,7 +527,7 @@
           "filters": [
             {
               "id": "kio",
-              "tag": "resource.kio.id",
+              "tag": "kio.id",
               "operator": "=",
               "value": [
                 "$kio_id"
@@ -375,7 +546,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 27
       },
       "datasource": {
         "type": "victoriametrics-logs-datasource",
@@ -394,7 +565,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 35
       },
       "collapsed": false
     },
@@ -415,7 +586,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 30
+        "y": 36
       },
       "targets": [
         {
@@ -445,7 +616,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 30
+        "y": 36
       },
       "targets": [
         {
@@ -475,7 +646,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 30
+        "y": 36
       },
       "targets": [
         {
@@ -505,7 +676,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 38
+        "y": 44
       },
       "targets": [
         {
@@ -535,7 +706,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 38
+        "y": 44
       },
       "targets": [
         {
@@ -565,7 +736,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 38
+        "y": 44
       },
       "targets": [
         {
