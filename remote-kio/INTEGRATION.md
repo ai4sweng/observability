@@ -12,7 +12,7 @@ Grafana. Estimated time: **15–30 minutes** if the network is ready.
 
 > This document is self-contained. For deep networking (firewall, static IP,
 > Tailscale) see [`NETWORK.md`](NETWORK.md); for the normative rules see the
-> [Observability Guide v2.2](../docs/Observability_v2.2.docx). You do
+> [Observability Guide v2.2](../docs/report/Observability_v2.2.docx). You do
 > not need to leave this page to follow the flow.
 
 ## Quick start — run a ready-made example first
@@ -413,7 +413,7 @@ and OpenTelemetry exists for Go, Java, JS/TS, .NET, Rust, and more. In any langu
    with a bounded `error_type` on failure.
 
 A working Python reference (the manual-setup pattern) is in the
-[Observability Guide v2.2](../docs/Observability_v2.2.docx) (Appendix —
+[Observability Guide v2.2](../docs/report/Observability_v2.2.docx) (Appendix —
 Reference Implementation); `kio_otel.py` follows the same pattern and is a good model
 to port.
 
@@ -496,4 +496,4 @@ One-stop for all network/firewall/port issues → [`NETWORK.md`](NETWORK.md) §6
 | [`with_script/`](with_script/) | Copyable minimal kit: `kio_otel.py`, example, preflight |
 | [`NETWORK.md`](NETWORK.md) | Networking / firewall / static IP / Tailscale (deep dive) |
 | [`README.md`](README.md) | Running **our simulator** on a remote machine (different scenario) |
-| [Observability Guide v2.2](../docs/Observability_v2.2.docx) | Normative contract (7 metrics, rules, reference code) |
+| [Observability Guide v2.2](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?email=yasin%40bitnet.com.tr&e=flE4Zz) | Normative contract (7 metrics, rules, reference code) |

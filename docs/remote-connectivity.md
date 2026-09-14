@@ -222,7 +222,7 @@ Rust and more. Configure an OTLP exporter at `OTEL_EXPORTER_OTLP_ENDPOINT`,
 load the resource attributes, create the 7 mandatory instruments with the
 exact names/types/units in §3.2, and tick the heartbeat every 60s. The
 normative reference implementation (appendix, `MeterProvider` setup) is in
-**[`docs/Observability_v2.2.docx`](Observability_v2.2.docx)**.
+**[`docs/Observability_v2.2.docx`](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?email=yasin%40bitnet.com.tr&e=flE4Zz)**.
 
 ## 5. Networking (firewall, static IP, Tailscale)
 

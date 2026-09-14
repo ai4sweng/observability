@@ -3,7 +3,7 @@
 Part of the [AI4SWENG Observability Stack](../README.md) documentation. See the
 [documentation index](README.md) for the full set of guides.
 
-**[`docs/KPI_Metrik_Referansi_v1.3.docx`](KPI_Metrik_Referansi_v1.3.docx)** — the full catalog of every KPI
+**[`docs/report/KPI_Metrik_Referansi_v1.3.docx`](report/KPI_Metrik_Referansi_v1.3.docx)** — the full catalog of every KPI
 (1.1–9.2) and work-package/task-level metric from the project's official
 Project Management Handbook (D1.1), plus the mapping of which KPI belongs to
 which KIO.

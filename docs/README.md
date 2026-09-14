@@ -10,7 +10,7 @@ project overview and quick start, then come back here for the topic you need.
 |---|---|
 | Just trying the stack locally | Root [`README.md`](../README.md) — Quick start |
 | Connecting my own KIO (local or a different machine), and what data to send | [Connecting a KIO — Data Contract & Setup Guide](remote-connectivity.md) → [`remote-kio/`](../remote-kio/) |
-| Looking for the normative integration contract | [`Observability_v2.2.docx`](Observability_v2.2.docx) |
+| Looking for the normative integration contract | [`Observability_v2.2.docx`](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?email=yasin%40bitnet.com.tr&e=flE4Zz) |
 | Building dashboards / querying data programmatically | [Metrics Reference & Query API](metrics-reference.md) |
 
 ## All guides
@@ -33,10 +33,10 @@ project overview and quick start, then come back here for the topic you need.
 
 | Document | For |
 |---|---|
-| [`Observability_v2.2.docx`](Observability_v2.2.docx) | The normative Integration Guide — start here for any brand-new KIO |
-| [`KPI_Metrik_Referansi_v1.3.docx`](KPI_Metrik_Referansi_v1.3.docx) | Full D1.1 KPI catalog and KIO ownership mapping |
-| [`Observability_Technical_Report_EN_v1.5.docx`](Observability_Technical_Report_EN_v1.5.docx) | Technical report (English) |
-| [`Observability_Teknik_Rapor_v1.5.docx`](Observability_Teknik_Rapor_v1.5.docx) | Technical report (Turkish) |
+| [`Observability_v2.2.docx`](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?email=yasin%40bitnet.com.tr&e=flE4Zz) | The normative Integration Guide — start here for any brand-new KIO |
+| [`KPI_Metrik_Referansi_v1.3.docx`](report/KPI_Metrik_Referansi_v1.3.docx) | Full D1.1 KPI catalog and KIO ownership mapping |
+| [`Observability_Technical_Report_EN_v1.5.docx`](report/Observability_Technical_Report_EN_v1.5.docx) | Technical report (English) |
+| [`Observability_Teknik_Rapor_v1.5.docx`](report/Observability_Teknik_Rapor_v1.5.docx) | Technical report (Turkish) |
 | [`old/`](old/) | Superseded document versions, kept for history |
 
 ## The `remote-kio/` example folder

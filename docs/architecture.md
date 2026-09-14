@@ -25,7 +25,7 @@ touch a database directly — exactly as the contract requires.
 
 ```
 observability/
-├── docs/Observability_v2.2.docx              # normative guide (v2.2) — start here for a new KIO
+├── docs/report/Observability_v2.2.docx              # normative guide (v2.2) — start here for a new KIO
 ├── docker-compose.yml
 ├── pytest.ini
 ├── otel-collector/config.yaml

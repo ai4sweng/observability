@@ -11,7 +11,7 @@ Scope: the four items raised in the consortium meeting.
 Normative sources: **D1.1 Project Management Handbook** (§2.6 KPIs & targets,
 Table 8 global KPIs, Table 9 WP/task KPIs, Table 10 milestone tracking, §3.3
 Min/Baseline/Max bands, §3.9 Documentation & Version Control Standards) and the
-**Observability Integration Guide v2.2** (`docs/Observability_v2.2.docx`).
+**Observability Integration Guide v2.2**.
 
 ---
 
