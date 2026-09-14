@@ -496,4 +496,4 @@ One-stop for all network/firewall/port issues → [`NETWORK.md`](NETWORK.md) §6
 | [`with_script/`](with_script/) | Copyable minimal kit: `kio_otel.py`, example, preflight |
 | [`NETWORK.md`](NETWORK.md) | Networking / firewall / static IP / Tailscale (deep dive) |
 | [`README.md`](README.md) | Running **our simulator** on a remote machine (different scenario) |
-| [Observability Guide v2.2](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?email=yasin%40bitnet.com.tr&e=flE4Zz) | Normative contract (7 metrics, rules, reference code) |
+| [Observability Guide v2.2](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB) | Normative contract (7 metrics, rules, reference code) |

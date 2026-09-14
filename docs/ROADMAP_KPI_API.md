@@ -380,8 +380,7 @@ Original sketch, for reference. This is the headline deliverable:
 *"KIO owners or anybody shall be able to collect previous data by providing KIO
 number and time interval."*
 
-**Stack**: FastAPI + uvicorn (same pattern already proven in
-`orchestrator/workflow_api.py`), read-only, depending on `ai4sweng>=0.2.0` for
+**Stack**: FastAPI + uvicorn read-only, depending on `ai4sweng>=0.2.0` for
 the catalog. Port `8090`, overridable as `KPI_API_PORT` in `.env.example` —
 consistent with how every other port in this repo is centralized.
 

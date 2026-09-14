@@ -33,8 +33,8 @@ KIO_SIM_DIR = REPO_ROOT / "kio-simulator"
 if str(KIO_SIM_DIR) not in sys.path:
     sys.path.insert(0, str(KIO_SIM_DIR))
 
-# orchestrator/ is a plain top-level package (orchestrator/__init__.py) —
-# needs the repo root on sys.path for `from orchestrator import planner` etc.
+# metrics_api/ is a top-level package — needs the repo root on sys.path
+# for `from metrics_api import ...` to resolve here.
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

@@ -179,7 +179,7 @@ sends it only if it applies to that KIO's role:
   stream, independent of OTel. See [Langfuse](langfuse.md).
 - **NATS-driven dispatch** — only relevant if a KIO wants to be triggerable by
   the central `POST /workflow/run` call; a completely separate concern from
-  telemetry. See [Orchestration Layer](orchestration.md).
+  telemetry (that task-dispatch layer belongs to KIO1, not this platform).
 
 ## 4. Runnable examples & step-by-step setup
 
@@ -222,7 +222,7 @@ Rust and more. Configure an OTLP exporter at `OTEL_EXPORTER_OTLP_ENDPOINT`,
 load the resource attributes, create the 7 mandatory instruments with the
 exact names/types/units in §3.2, and tick the heartbeat every 60s. The
 normative reference implementation (appendix, `MeterProvider` setup) is in
-**[`docs/Observability_v2.2.docx`](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?email=yasin%40bitnet.com.tr&e=flE4Zz)**.
+**[`docs/Observability_v2.2.docx`](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB)**.
 
 ## 5. Networking (firewall, static IP, Tailscale)
 
@@ -245,5 +245,5 @@ different networks), and adding TLS + Bearer auth for untrusted networks.
    only if the KIO should be triggerable centrally.
 
 This is a completely separate concern from the Planner/NATS orchestration
-layer — sending contract-compliant telemetry never requires registering
-there. See [Orchestration Layer](orchestration.md).
+layer (which belongs to KIO1, not this platform) — sending contract-compliant
+telemetry never requires registering there.

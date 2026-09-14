@@ -26,21 +26,6 @@ contract — the decisions below are ours, made after comparing the two document
   debugging, this whole sub-stack (and its 4 backing services) can be removed
   without touching the OTel pipeline at all — it was deliberately kept as an
   isolated, independently-failing addition.
-- **NATS JetStream / Session Manager / PostgreSQL lineage / Workflow API:
-  implemented (2026-08), then disabled by default (it belongs to KIO1 — see
-  [Orchestration Layer](orchestration.md); kept in `orchestrator/` as reference, its services
-  commented out in `docker-compose.yml`).** Originally deferred as "a different team's
-  concern" — reversed after an explicit decision to accelerate this. See
-  [Orchestration Layer](orchestration.md) for the architecture and `orchestrator/` for the
-  code. Scope is stated there too: the Planner is a static routing table, not a
-  full LangGraph workflow graph. Tested at the logic level (fake pub/sub + SQLite,
-  no Docker available in the dev sandbox this was built in) — kio3/kio4 are wired
-  to it; kio2-sim stays on its internal timer so the real-Ollama demo isn't
-  disrupted. A live `docker compose up` pass against the real NATS/Postgres is
-  the remaining verification step — run `python scripts/verify_orchestration.py`
-  after bringing the stack up (see [Orchestration verification](orchestration.md#orchestration-verification)); it drives
-  the whole round trip (`POST /workflow/run` -> NATS -> kio3 -> `kio.results.kio3`
-  -> Planner -> Postgres lineage) and prints exactly which hop failed if it doesn't.
 - **Confirmed already-compliant, no change needed:** the 7 mandatory metrics
   (names/types/units), resource attributes, the low-cardinality rule (session IDs
   never used as metric labels — only in trace/log metadata, exactly as v2 also
