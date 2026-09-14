@@ -311,79 +311,7 @@ services:
       LANGFUSE_INIT_USER_NAME: admin
       LANGFUSE_INIT_USER_PASSWORD: "${LANGFUSE_INIT_USER_PASSWORD:-admin1234}"
 
-  # ===========================================================================
-  # Orchestration layer — DISABLED (commented out below).
-  # Architecturally the Workflow API + Planner belong to the KIO1 orchestrator,
-  # not to the observability platform; they lived here only as a reference /
-  # demo implementation to drive the simulators end-to-end. This repo is kept
-  # observability-only. NATS is commented out too, and the KIOs' NATS_ENABLED /
-  # NATS_URL / depends_on lines were neutralized so the stack is valid without
-  # it. To re-enable: uncomment this block and restore those KIO lines.
-  # (Reference flow: Workflow API -> Session Manager -> Planner -> NATS ->
-  # worker KIO -> NATS result -> Planner -> Session Manager lineage.)
-  # See the KIO1 orchestration gap (YouTrack) for the real ownership.
-  # ===========================================================================
-#   nats:
-#     image: nats:2.10-alpine
-#     container_name: ai4sweng-nats
-#     command: ["-js", "-m", "8222"]   # -js enables JetStream persistence
-#     ports:
-#       - "${NATS_CLIENT_PORT:-4222}:4222"   # client connections
-#       - "${NATS_MONITOR_PORT:-8222}:8222"   # HTTP monitoring (http://localhost:8222/varz)
-#     volumes:
-#       - natsdata:/data
-#     restart: unless-stopped
-# 
-#   orchestrator-postgres:
-#     image: postgres:16-alpine
-#     container_name: ai4sweng-orchestrator-postgres
-#     environment:
-#       POSTGRES_DB: orchestrator
-#       POSTGRES_USER: orchestrator
-#       POSTGRES_PASSWORD: "${ORCHESTRATOR_POSTGRES_PASSWORD:-orchestrator}"
-#     healthcheck:
-#       test: ["CMD-SHELL", "pg_isready -U orchestrator -d orchestrator"]
-#       interval: 5s
-#       timeout: 5s
-#       retries: 20
-#     volumes:
-#       - orchestrator_postgres_data:/var/lib/postgresql/data
-#       - ./orchestrator/postgres/init:/docker-entrypoint-initdb.d:ro
-#     restart: unless-stopped
-# 
-#   workflow-api:
-#     build:
-#       context: .
-#       dockerfile: orchestrator/Dockerfile
-#     container_name: ai4sweng-workflow-api
-#     environment:
-#       NATS_URL: "nats://nats:4222"
-#       SESSION_DB_DSN: "postgresql+psycopg2://orchestrator:${ORCHESTRATOR_POSTGRES_PASSWORD:-orchestrator}@orchestrator-postgres:5432/orchestrator"
-#     ports:
-#       - "${WORKFLOW_API_PORT:-8080}:8080"   # POST /workflow/run, GET /workflow/{session_id}
-#     depends_on:
-#       nats:
-#         condition: service_started
-#       orchestrator-postgres:
-#         condition: service_healthy
-#     restart: unless-stopped
-# 
-#   planner:
-#     build:
-#       context: .
-#       dockerfile: orchestrator/Dockerfile
-#     container_name: ai4sweng-planner
-#     command: ["python", "-m", "orchestrator.planner"]
-#     environment:
-#       NATS_URL: "nats://nats:4222"
-#       SESSION_DB_DSN: "postgresql+psycopg2://orchestrator:${ORCHESTRATOR_POSTGRES_PASSWORD:-orchestrator}@orchestrator-postgres:5432/orchestrator"
-#     depends_on:
-#       nats:
-#         condition: service_started
-#       orchestrator-postgres:
-#         condition: service_healthy
-#     restart: unless-stopped
-
+  
   # ---------------------------------------------------------------------------
   # KIO simulators. Each is an independent module pushing dummy telemetry.
   # kio2-sim = code-analysis (emits real repo line/dir metrics), kio3/kio4 = random.
@@ -562,8 +490,7 @@ services:
   # # kio8 = D1.1's KIO8 (Cross-Architecture / Energy-Efficient Deploy). D1.1
   # # ties KIO8 to KPI 2.1/2.2 (energy, shared with KIO7/KIO10) and uniquely to
   # # KPI 8.3 (Cross-Architecture Build Success Rate). Pure D1.1-KPI simulator
-  # # like kio7 — NATS left off since there's no real dispatch target behind it
-  # # yet (see orchestrator's task_type routing table).
+  # # like kio7 — NATS left off since there's no real dispatch target behind it yet.
   kio8:
     build: ./kio-simulator
     container_name: ai4sweng-kio8
@@ -628,5 +555,3 @@ volumes:
   langfuse_clickhouse_logs:
   langfuse_minio_data:
   langfuse_redis_data:
-#   natsdata:
-#   orchestrator_postgres_data:

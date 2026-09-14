@@ -15,7 +15,6 @@ Part of the [AI4SWENG Observability Stack](../README.md) documentation. See the
 | `metrics-api` | Parameterized read API over the metrics store — query telemetry without writing PromQL (see [Metrics Reference & Query API](metrics-reference.md)) | 8081 |
 | `langfuse-web` / `langfuse-worker` | Self-hosted Langfuse — LLM-specific prompt/completion/cost tracing, a stream parallel to and independent of OTel | 3001 (UI+API), internal 3030 (worker) |
 | `postgres` / `clickhouse` / `redis` / `minio` | Langfuse's own required backing stores (relational DB, trace analytics, queue, blob storage) — not something we chose, this is Langfuse's mandated self-host footprint | internal only (127.0.0.1-bound except minio :9090) |
-| ~~`nats` / `orchestrator-postgres` / `workflow-api` / `planner`~~ | **Disabled — commented out in `docker-compose.yml`.** These are the orchestration layer (task dispatch), which architecturally belongs to **KIO1**, not this observability platform — kept as reference only (see [Orchestration Layer](orchestration.md)) | off |
 | `kio2-sim` / `kio3` | KIO simulators pushing contract-compliant dummy telemetry, dual-written to OTel + Langfuse, each on its own internal timer (`kio2-sim` also drives the optional real-Ollama demo). More sims (`kio4`/`kio7`/`kio8`/`kio13`) are present but commented out — uncomment in `docker-compose.yml` to light up their D1.1 KPI panels (see [KIO Simulators](kio-simulators.md)) | — |
 
 The KIOs never run their own collector, never expose a scrape endpoint, and never
@@ -39,12 +38,11 @@ observability/
 ├── metrics_api/                              # /api/metrics query API (read-only, 8081)
 │   ├── {app.py,query.py,registry.py,stats.py,timefmt.py,victoriametrics.py}
 │   └── registry_data.py                      # GENERATED — see scripts/
-├── orchestrator/{planner.py,session_manager.py,workflow_api.py,envelope.py}  # reference — disabled in compose (KIO1's)
 ├── remote-kio/                              # connect a KIO from another machine
 │   ├── {README.md,INTEGRATION.md,NETWORK.md}   # hub / own-module guide / networking
 │   ├── with_script/{main.py,kio_otel.py,check_connectivity.py,requirements.txt,.env.example}
 │   └── with_docker/{Dockerfile,docker-compose.yml,main.py,kio_otel.py,check_connectivity.py,…}
-├── tests/{conftest.py,requirements-test.txt,kio_simulator_tests/,orchestrator_tests/,metrics_api_tests/}
+├── tests/{conftest.py,requirements-test.txt,kio_simulator_tests/,metrics_api_tests/}
 └── docs/                                     # this documentation, plus the v2.2 guide, technical reports, KPI reference
 ```
 

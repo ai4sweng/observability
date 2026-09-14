@@ -6,12 +6,13 @@
 
 </div>
 
-Local implementation of the **[AI4SWENG Observability Integration Guide v2.2](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?email=yasin%40bitnet.com.tr&e=flE4Zz)**.
+Local implementation of the **[AI4SWENG Observability Integration Guide v2.2](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB)**.
 KIO modules push telemetry over
 OTLP; the central platform stores it and Grafana visualizes it. Stack: 
 
 
-- VictoriaMetrics/VictoriaLogs for logs, 
+- VictoriaMetrics for metrics,
+- VictoriaLogs for unstructured string logs, 
 - Tempo for traces,
 - langfuse for LLM prompt/completion/cost tracing,
 - Grafana for the overall visualization 
@@ -44,7 +45,6 @@ metrics reference, the remote-KIO integration path, KPIs, testing, and design de
 | [The KIO Simulators](docs/kio-simulators.md) | Which simulators run by default and the real-vs-simulated data map |
 | [Metrics Reference & Query API](docs/metrics-reference.md) | The 7 mandatory metrics, the `/api/metrics` HTTP query API, logs, and traces |
 | [Real Project KPIs (D1.1)](docs/kpis.md) | The 16 D1.1 KPIs and which KIO emits which |
-| [Orchestration Layer (NATS)](docs/orchestration.md) | The KIO1-owned task-dispatch layer, disabled by default |
 | [Real LLM Integration (KIO2)](docs/real-llm-integration.md) | Running a real Ollama LLM + real GPU energy behind `kio2-sim` |
 | [Langfuse (LLM Tracing)](docs/langfuse.md) | The self-hosted Langfuse stack for prompt/completion/cost tracing |
 | [Tests (pytest)](docs/testing.md) | Running the test suite |
@@ -112,7 +112,6 @@ observability/
 ├── otel-collector/ tempo/ grafana/            # ingestion gateway, trace store, dashboards
 ├── kio-simulator/                             # dummy KIO telemetry generators
 ├── metrics_api/                               # /api/metrics query API (read-only, 8081)
-├── orchestrator/                              # KIO1's task-dispatch reference (disabled by default)
 ├── remote-kio/                                # connect a KIO from another machine — see docs/remote-connectivity.md
 └── tests/                                     # pytest suite
 ```

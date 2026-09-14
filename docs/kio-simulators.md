@@ -17,7 +17,7 @@ Only **kio2-sim** and **kio3** run by default. The other four (**kio4**, **kio7*
 **kio8**, **kio13**) are fully defined in `docker-compose.yml` but **commented out** —
 uncomment any of them to enable it (e.g. to populate its D1.1 KPI panels). Every
 simulator runs on its own **internal timer**; the NATS-driven trigger path is
-disabled (it belongs to KIO1 — see [Orchestration Layer](orchestration.md)).
+disabled — that task-dispatch layer belongs to KIO1, not this observability platform.
 
 | KIO | Default | LLM | Task type | Notes |
 |-----|---------|-----|-----------|-------|
@@ -35,13 +35,13 @@ it became clear the D1.1 KPI traceability matrix's assignments (KPI 1.1, 3.1,
 to call them first. kio7, kio8, kio13 were added the same way directly
 against D1.1's KIO7/KIO8/KIO13 identities — kio8/kio13 close out D1.1's last
 two uncovered KPIs (2.1/2.2/8.3 and 8.1/8.2). kio8/kio13 skip the NATS
-trigger path since they have no real dispatch target behind them yet (see
-the orchestrator's task_type routing table) — pure KPI simulators, timer-only.
+trigger path since they have no real dispatch target behind them — pure KPI
+simulators, timer-only.
 
 kio3/kio4/kio7/kio8/kio13 are otherwise still random dummy data — no real LLM
 is invoked for them. (A NATS-driven dispatch path via the Workflow API/Planner
 also exists in the code, but it is **disabled by default** — that orchestration
-layer belongs to KIO1, see [Orchestration Layer](orchestration.md).) Every simulator keeps
+layer belongs to KIO1.) Every simulator keeps
 producing baseline demo data on its own internal timer regardless. Adjust LLMs,
 task types, and rates in `docker-compose.yml`, or edit `kio-simulator/kio_simulator.py`.
 
