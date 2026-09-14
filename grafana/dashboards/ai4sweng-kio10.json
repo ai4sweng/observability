@@ -369,6 +369,197 @@
           "expr": "kio.id:$kio_id"
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Efficiency & Agent-shell LLM",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Throughput (inferences/s, estimate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 30
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_pipeline_inferences_per_second_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_inferences_per_second_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ],
+      "description": "On-device inference throughput of the chosen variant (estimate until the bench)."
+    },
+    {
+      "type": "timeseries",
+      "title": "Intelligence per watt — inferences/joule (estimate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 30
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_pipeline_inferences_per_joule_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_inferences_per_joule_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ],
+      "description": "Inferences per second per watt: the TinyML analogue of grant KPI 2.2 (tokens/s/W). Estimate until the hardware bench."
+    },
+    {
+      "type": "timeseries",
+      "title": "Inference latency (ms/inference, estimate)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 30
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_pipeline_latency_ms_per_inference_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_latency_ms_per_inference_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ],
+      "description": "Per-inference on-device latency of the chosen variant (estimate)."
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM tokens (agent-shell narration)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 38
+      },
+      "targets": [
+        {
+          "expr": "sum by (direction)(increase(kio_llm_token_count{kio_id=\"$kio_id\"}[30m]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ],
+      "description": "Real tokens from the one narration call per run (0 when narration is off)."
+    },
+    {
+      "type": "timeseries",
+      "title": "Narration throughput (tokens/sec)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 38
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_llm_tokens_per_second_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_llm_tokens_per_second_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ],
+      "description": "tokens/s of the agent-shell explanation call."
+    },
+    {
+      "type": "timeseries",
+      "title": "Time to first token (ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 38
+      },
+      "targets": [
+        {
+          "expr": "sum(kio_llm_time_to_first_token_ms_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_llm_time_to_first_token_ms_count{kio_id=\"$kio_id\"}),1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          }
+        }
+      ],
+      "description": "TFT of the streamed narration."
     }
   ],
   "version": 2,
