@@ -76,23 +76,36 @@ docker compose up -d --build
 Then open **http://localhost:3000**, anonymous browsing is on (Viewer role, no
 login needed to look at dashboards); editing/deleting/datasources/alerting/user
 management need the admin login (`admin` / `GF_SECURITY_ADMIN_PASSWORD` from
-`.env.example`, rotate before any real/shared deployment). Two dashboards appear
-under the **AI4SWENG** folder:
+`.env.example`, rotate before any real/shared deployment). Eleven dashboards
+appear under the **AI4SWENG** folder:
 
-- **AI4SWENG — Overview (All KIOs)**: aggregate stats across every KIO request &
-  error rates, latency p95, token throughput, tokens/sec, GPU energy, cost, accuracy.
-- **AI4SWENG — KIO Detail**: pick a KIO from the `KIO` dropdown; per-KIO metrics, a
-  live panel of that KIO's unstructured string logs, and a **traces** section, a
-  table of recent traces plus a waterfall view of the selected one (copy a Trace ID
-  from the table into the `trace_id` box above it). Further down: a **gauge view**
-  (colored green/orange/red bands, mirroring an external dashboard reference the
-  team liked) for error rate, tokens/sec, and accuracy; a **power/efficiency/carbon**
-  row (Watts, tokens-per-Watt, and an estimated kg-CO2e derived from energy, all
-  pure PromQL, no new instrumentation); a **real GPU temperature** gauge (only
-  populated when `KIO2_REAL_LLM_ENABLED=true` and NVML/power-exporter is reachable.
-  "No data" otherwise is expected, not a bug); and a **simulated vs. real**
-  before/after bar-chart row (energy, tokens/sec, latency) split by the `source`
-  label.
+- **AI4SWENG — Overview (All KIOs)**: aggregate stats across every KIO,
+  request & error rates, latency p95, token throughput, tokens/sec, GPU
+  energy, cost, accuracy — plus a **D1.1 KPI section**: a bar gauge of current
+  attainment per KPI (100% = target met, green/orange/red), the raw measured
+  value in D1.1's own unit, and a **trend panel with a red threshold line at
+  100%** so you can see at a glance whether a KPI is consistently meeting its
+  GA-acceptable commitment over time, not just right now. These aggregate
+  panels have **no per-KIO filter** — any `kio.id` that sends the matching
+  metrics is automatically folded in, including one nobody registered.
+- **AI4SWENG — KIO*N* Detail** (one dashboard per KIO — KIO1, KIO2, KIO3,
+  KIO4, KIO7, KIO8, KIO9, KIO10, KIO11, KIO13): per-KIO metrics, a live panel
+  of that KIO's unstructured string logs, and a **traces** section, a table of
+  recent traces plus a waterfall view of the selected one (copy a Trace ID
+  from the table into the `trace_id` box above it). Further down: a **gauge
+  view** (colored green/orange/red bands, mirroring an external dashboard
+  reference the team liked) for error rate, tokens/sec, and accuracy; a
+  **power/efficiency/carbon** row (Watts, tokens-per-Watt, and an estimated
+  kg-CO2e derived from energy, all pure PromQL, no new instrumentation); a
+  **real GPU temperature** gauge (only populated when
+  `KIO2_REAL_LLM_ENABLED=true` and NVML/power-exporter is reachable. "No data"
+  otherwise is expected, not a bug); and a **simulated vs. real** before/after
+  bar-chart row (energy, tokens/sec, latency) split by the `source` label.
+  **Each of these dashboards is wired to one specific, pre-registered
+  `kio.id`** (set as a fixed dropdown option in that dashboard's JSON, not
+  discovered dynamically) — a KIO sending an ID nobody created a dashboard for
+  shows up only in the Overview aggregate, never gets its own detail page. See
+  [Connecting a KIO](docs/remote-connectivity.md) for what `kio.id` to use.
 
 Give it ~30–60 seconds after startup for the first metrics and traces to land.
 

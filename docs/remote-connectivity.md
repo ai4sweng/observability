@@ -238,10 +238,21 @@ different networks), and adding TLS + Bearer auth for untrusted networks.
    platform team (plus Langfuse project keys if you'll use that stream).
 2. **Set the environment variables** in §2/§3.1 for your scenario.
 3. **Send the 7 mandatory metrics** (§3.2) plus the heartbeat.
-4. **Verify the acceptance gate**: `kio.heartbeat` visible in Grafana → **KIO
-   Detail**, and (if using Langfuse) at least one trace visible there. A KIO
-   isn't considered onboarded until both are visible.
-5. *(Optional)* register with the Workflow API/Planner (§3.4, last bullet) —
+4. **Verify the acceptance gate**: `kio.heartbeat` visible in Grafana →
+   **Overview (All KIOs)** (its panels are unfiltered — any `kio.id` sending
+   data shows up there automatically), and (if using Langfuse) at least one
+   trace visible there. A KIO isn't considered onboarded until both are
+   visible.
+5. **Ask the platform team for a per-KIO detail dashboard.** Each
+   `AI4SWENG — KIO*N* Detail` dashboard is wired to one specific `kio.id`,
+   hardcoded as that dashboard's `kio_id` template variable (not discovered
+   dynamically) — see `grafana/dashboards/ai4sweng-kio*.json`. Sending data
+   under a `kio.id` nobody created a dashboard for still lands in Overview,
+   but has **no drill-down page** (no per-KIO logs/traces/gauge view) until
+   the platform team copies an existing `ai4sweng-kioN.json`, points its
+   `kio_id` variable at your value, and adds it to
+   `grafana/provisioning/dashboards/`.
+6. *(Optional)* register with the Workflow API/Planner (§3.4, last bullet) —
    only if the KIO should be triggerable centrally.
 
 This is a completely separate concern from the Planner/NATS orchestration
