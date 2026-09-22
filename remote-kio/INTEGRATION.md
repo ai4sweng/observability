@@ -58,7 +58,7 @@ tokens it spent…) into one central place and viewing them as charts. The piece
 ```
    YOUR MACHINE                          CENTRAL MACHINE (B)
  ┌────────────────┐   OTLP/gRPC     ┌──────────────────────────────────────┐
- │  Your KIO      │  ── :4317 ───▶  │  OTel Collector  (ingestion gateway) │
+ │  Your KIO      │  ── :5317 ───▶  │  OTel Collector  (ingestion gateway) │
  │  + kio_otel.py │  (you push)     │      │                              │
  └────────────────┘                  │      ├─▶ VictoriaMetrics  (metrics) │
                                      │      ├─▶ VictoriaLogs     (logs)    │
@@ -73,7 +73,7 @@ Three things to know:
 
 1. **It is push-based.** *You* push data to the center. The center never pulls
    from you, never scrapes you, never connects to you. The only network permission
-   needed: an **outbound** connection from you to the center's `:4317`.
+   needed: an **outbound** connection from you to the center's `:5317`.
 2. **Location is irrelevant.** Your KIO can be in the same room or another city —
    as long as it can reach the collector, it works. So moving from "local test →
    LAN → remote network" is **not a code change**, only a change of one address
@@ -83,7 +83,7 @@ Three things to know:
    SDK and emit 7 standard measurements. This repo hands you that in one file:
    [`with_script/kio_otel.py`](with_script/kio_otel.py).
 
-**Telemetry has three kinds** (all travel over the same `:4317`):
+**Telemetry has three kinds** (all travel over the same `:5317`):
 - **Metrics** — numeric time series (request count, duration, tokens…). *Required.*
 - **Traces** — the step-by-step timeline of one request. *Recommended, easy.*
 - **Logs** — free-text lines. *Optional.*
@@ -125,8 +125,8 @@ know precisely what you are emitting).
 ### 3.1 Transport
 
 - Protocol: **OTLP** (OpenTelemetry Protocol).
-- Default: **gRPC on port 4317** — this is what `kio_otel.py` and every KIO in this
-  repo use. Point your exporter's endpoint at `http://<central>:4317`.
+- Default: **gRPC on port 5317** — this is what `kio_otel.py` and every KIO in this
+  repo use. Point your exporter's endpoint at `http://<central>:5317`.
 - Alternative: **OTLP/HTTP on port 4318** — the collector also accepts it, at path
   `/v1/metrics` (metrics), `/v1/traces`, `/v1/logs`. Use this only if your language's
   SDK prefers HTTP. **Do not hand-roll OTLP by hand** — use a real OTel SDK for your
@@ -209,7 +209,7 @@ Example PromQL a dashboard uses: `sum(rate(kio_request_count{kio_id="kio1"}[5m])
    some job. (This guide assumes Python; for other languages see §8.)
 2. **Python 3.9+** and `pip` (for the Python helper). **No Docker required** (§6).
 3. **The central machine's address** — from the central team (e.g. `192.168.1.50`
-   or a Tailscale IP). You'll append `:4317`.
+   or a Tailscale IP). You'll append `:5317`.
 4. **An assigned `kio.id`** — from the central team. Must be **unique** across all
    running KIOs; don't make one up (collisions merge two KIOs' series in Grafana).
 5. *(Optional)* an **OTLP Bearer token** if the setup is secured/remote; **Langfuse
@@ -227,13 +227,13 @@ reachability first:
 ```bash
 cd with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:4317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:5317 python check_connectivity.py
 ```
 
 It checks (1) TCP reachability to the port, and (2) that a real `kio.heartbeat`
 export is accepted by the collector. **Do not continue until you see `RESULT: PASS`** —
 if it's a network/firewall issue, no code change will fix it. On `FAIL`, it's almost
-always that **port 4317 is closed by the firewall** on the central machine, or you're
+always that **port 5317 is closed by the firewall** on the central machine, or you're
 **not on the same network**. Fixes in [`NETWORK.md`](NETWORK.md).
 
 ### Step 2 — Install dependencies and take `kio_otel.py`
@@ -248,8 +248,8 @@ You do **not** edit `kio_otel.py` — use it as-is.
 ### Step 3 — Set environment variables
 
 ```bash
-# REQUIRED: central collector address (gRPC, port 4317)
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://<central-address>:4317"
+# REQUIRED: central collector address (gRPC, port 5317)
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://<central-address>:5317"
 
 # REQUIRED: your identity (the unique id assigned by the central team)
 export OTEL_RESOURCE_ATTRIBUTES="service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production"
@@ -303,7 +303,7 @@ Python; your KIO runs however you already run it. Options:
 
 **A) Bare process.** Set the env vars, then just run it:
 ```bash
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://192.168.1.50:4317"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://192.168.1.50:5317"
 export OTEL_RESOURCE_ATTRIBUTES="service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production"
 python your_kio.py
 ```
@@ -318,7 +318,7 @@ Wants=network-online.target
 
 [Service]
 WorkingDirectory=/opt/kio1
-Environment=OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.1.50:4317
+Environment=OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.1.50:5317
 Environment=OTEL_RESOURCE_ATTRIBUTES=service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production
 ExecStart=/opt/kio1/venv/bin/python /opt/kio1/your_kio.py
 Restart=always
@@ -341,7 +341,7 @@ run your Python entrypoint with the env vars set.
 integration doesn't care. There's just no requirement to.
 
 Whatever you choose, the only hard requirements are: the 3 pip packages installed,
-the env vars set, and outbound reachability to `:4317`.
+the env vars set, and outbound reachability to `:5317`.
 
 ---
 
@@ -404,7 +404,7 @@ finally:
 `kio_otel.py` is a convenience, not a requirement. The contract is language-agnostic
 and OpenTelemetry exists for Go, Java, JS/TS, .NET, Rust, and more. In any language:
 
-1. Configure an OTLP metric exporter (gRPC → `:4317`, or HTTP → `:4318`, §3.1) at
+1. Configure an OTLP metric exporter (gRPC → `:5317`, or HTTP → `:4318`, §3.1) at
    `OTEL_EXPORTER_OTLP_ENDPOINT`.
 2. Load `Resource` attributes from `OTEL_RESOURCE_ATTRIBUTES` (§3.2).
 3. Create the **7 mandatory instruments with the exact names/types/units** in §3.3.
@@ -452,7 +452,7 @@ one object at startup, a `with` around your handler, one `shutdown()` at exit. Y
 don't touch metric names, the collector, or docker-compose.
 
 **Do I have to use Docker?** No — §6. Bare process, systemd, Windows service, any
-process manager. Only the 3 pip packages + env vars + reachability to `:4317`.
+process manager. Only the 3 pip packages + env vars + reachability to `:5317`.
 
 **My module isn't Python.** Fine — §8. The contract is language-agnostic.
 
@@ -462,7 +462,7 @@ lines. Request/duration/error/heartbeat metrics still flow; LLM metrics stay at 
 **What exactly do I send, and under what names?** §3 — that's the full data & naming
 contract (metric names, label keys, allowed values, how they appear in Grafana).
 
-**Port 4317 or 4318?** The Python client uses **gRPC → 4317**. 4318 is OTLP/HTTP, for
+**Port 5317 or 4318?** The Python client uses **gRPC → 5317**. 4318 is OTLP/HTTP, for
 SDKs that prefer HTTP. Pointing a gRPC client at 4318 gives a silent "No data".
 
 **Do I set up Grafana?** No. Grafana, the collector, and the databases already run on
@@ -480,7 +480,7 @@ long-running service heartbeats normally.
 |---|---|---|
 | `check_connectivity.py` **[1/2] FAIL** | Wrong IP / firewall closed / different network | [`NETWORK.md`](NETWORK.md) §2 (firewall), §2c (address), §3 (network/VPN) |
 | **[1/2] OK but [2/2] FAIL** | Port open, collector rejects export (e.g. TLS/auth) | [`NETWORK.md`](NETWORK.md) §4; check `http` vs `https` scheme |
-| Test PASS but "No data" in Grafana | Endpoint set to `:4318` (HTTP), client is gRPC | Use port **4317** |
+| Test PASS but "No data" in Grafana | Endpoint set to `:4318` (HTTP), client is gRPC | Use port **5317** |
 | KIO shows up but series look mixed | Same `kio.id` sent from two sources | Get a unique `kio.id` (§4) |
 | Runs briefly, then stops reporting | `shutdown()` not called in a short-lived process | §7-B: `finally: kio.shutdown()` |
 | KIO flagged "stale" | Heartbeat gap >120s (process stopped / network dropped) | Verify the process is up and exporting |

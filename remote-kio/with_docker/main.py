@@ -56,7 +56,7 @@ def _maybe_langfuse(kio_id: str):
     # is configured only once. An explicit LANGFUSE_HOST still wins.
     if not os.environ.get("LANGFUSE_HOST"):
         from urllib.parse import urlparse
-        otlp = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+        otlp = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:5317")
         host = urlparse(otlp if "://" in otlp else f"//{otlp}").hostname or "localhost"
         port = os.environ.get("LANGFUSE_PORT", "3001")
         os.environ["LANGFUSE_HOST"] = f"http://{host}:{port}"

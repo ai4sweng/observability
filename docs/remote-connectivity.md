@@ -22,7 +22,7 @@ Part of the [AI4SWENG Observability Stack](../README.md) documentation. See the
 ```
    YOUR MACHINE                          CENTRAL PLATFORM
  ┌────────────────┐   OTLP/gRPC     ┌──────────────────────────────────────┐
- │  Your KIO      │  ── :4317 ───▶  │  OTel Collector  (ingestion gateway) │
+ │  Your KIO      │  ── :5317 ───▶  │  OTel Collector  (ingestion gateway) │
  │  + kio_otel.py │  (you push)     │      │                              │
  └────────────────┘                  │      ├─▶ VictoriaMetrics  (metrics) │
                                      │      ├─▶ VictoriaLogs     (logs)    │
@@ -53,7 +53,7 @@ that server over the network.
 
 ```bash
 # On the machine running YOUR KIO:
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<server-address>:4317
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<server-address>:5317
 OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token from the platform team>
 ```
 
@@ -75,12 +75,12 @@ real central server.
 
 ```bash
 # Plain Python process on the host:
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:5317
 OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer local-dev-otlp-token
 
 # Your KIO ALSO running in a container on the same machine — "localhost"
 # inside a container means the container itself, not your host, so use:
-OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4317
+OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:5317
 ```
 
 `local-dev-otlp-token` is the default `OTLP_BEARER_TOKEN` baked into
@@ -209,7 +209,7 @@ Grafana" problems are network problems, not code problems:
 ```bash
 cd remote-kio/with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:4317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:5317 python check_connectivity.py
 ```
 
 A `PASS` means the network path and auth are good; watch your `KIO_ID` appear

@@ -12,7 +12,7 @@ random data).
 Everything is configured from environment variables, so pointing a KIO at a
 different machine is a config change, never a code change:
 
-    OTEL_EXPORTER_OTLP_ENDPOINT   e.g. http://192.168.1.50:4317  (gRPC, port 4317)
+    OTEL_EXPORTER_OTLP_ENDPOINT   e.g. http://192.168.1.50:5317  (gRPC, port 5317)
     OTEL_RESOURCE_ATTRIBUTES      e.g. service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production
     OTEL_EXPORTER_OTLP_HEADERS    e.g. Authorization=Bearer <token>   (the central collector requires this)
 
@@ -116,7 +116,7 @@ class KIOTelemetry:
     """
 
     def __init__(self, *, enable_traces: bool = True, enable_logs: bool = True):
-        endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+        endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:5317")
         export_interval_ms = int(os.environ.get("EXPORT_INTERVAL_MS", "5000"))
         self.heartbeat_interval_s = int(os.environ.get("HEARTBEAT_INTERVAL_S", "60"))
         # TLS off for plain http:// (LAN / Tailscale / VPN); https:// keeps TLS on.

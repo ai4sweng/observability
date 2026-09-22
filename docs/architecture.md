@@ -7,7 +7,7 @@ Part of the [AI4SWENG Observability Stack](../README.md) documentation. See the
 
 | Component | Role | Port |
 |-----------|------|------|
-| `otel-collector` | Single OTLP ingestion gateway; fans metrics → VictoriaMetrics, logs → VictoriaLogs, traces → Tempo | 4317 (gRPC), 4318 (HTTP) |
+| `otel-collector` | Single OTLP ingestion gateway; fans metrics → VictoriaMetrics, logs → VictoriaLogs, traces → Tempo | 5317 (gRPC), 4318 (HTTP) |
 | `victoriametrics` | Metrics store (Prometheus-compatible, no Prometheus needed) | 8428 |
 | `victorialogs` | Store for unstructured / string telemetry | 9428 |
 | `tempo` | Trace store (monolithic mode, local disk) — powers the trace waterfall view | 3200 |
@@ -57,7 +57,7 @@ observability/
   parallel to metrics + logs + traces, added per direct request and evaluated
   against the v2 proposal in [Design Decisions & v2 Guideline Evaluation](design-decisions.md).
 - **Auth/TLS (2026-08, §9.3): Bearer done, TLS still deferred.** The contract uses
-  Bearer token + TLS on `:4317`/`:4318`. The collector's `bearertokenauth`
+  Bearer token + TLS on `:5317`/`:4318`. The collector's `bearertokenauth`
   extension (`otel-collector/config.yaml`) now enforces the Bearer half on both
   gRPC and HTTP — every KIO in `docker-compose.yml` sends
   `OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer $OTLP_BEARER_TOKEN"` (shared
