@@ -23,9 +23,9 @@ Set `OTEL_EXPORTER_OTLP_ENDPOINT` in `.env` accordingly:
 
 | Where the collector runs | Endpoint |
 |--------------------------|----------|
-| The **same host** as this container | `http://host.docker.internal:4317` |
-| A **different machine** (LAN) | `http://<platform-ip>:4317` |
-| A **different network** (Tailscale/VPN) | `http://<tailscale-ip>:4317` |
+| The **same host** as this container | `http://host.docker.internal:5317` |
+| A **different machine** (LAN) | `http://<platform-ip>:5317` |
+| A **different network** (Tailscale/VPN) | `http://<tailscale-ip>:5317` |
 
 Finding the address and opening the firewall: [`../NETWORK.md`](../NETWORK.md).
 

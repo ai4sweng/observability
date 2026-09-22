@@ -22,7 +22,7 @@ central collector; the central machine never opens a connection toward the
 KIO, and never "scrapes" it. So the only thing required is:
 
 > The remote machine must be able to open an **outbound** TCP connection
-> toward the central machine's `:4317` (OTLP/gRPC).
+> toward the central machine's `:5317` (OTLP/gRPC).
 
 The practical consequence: it doesn't matter where the KIO runs (same LAN, a
 different city, behind NAT) — it works as long as it can reach the collector.
@@ -33,13 +33,13 @@ environment variable (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 
 | Port | Protocol | For | Used by |
 |------|----------|---------|--------------|
-| **4317** | OTLP/**gRPC** | Metrics + logs + traces | Every KIO in this repo (default) |
+| **5317** | OTLP/**gRPC** | Metrics + logs + traces | Every KIO in this repo (default) |
 | 4318 | OTLP/**HTTP** | The same three signals, over HTTP transport | Clients that prefer HTTP over gRPC |
 | 3000 | HTTP | Grafana UI | Anyone opening the dashboards remotely |
 | 3001 | HTTP | Langfuse UI + API | (Optional) KIOs using the Langfuse stream |
 
 > **Most common mistake:** setting the endpoint to `:4318`. The clients in
-> this repo use **gRPC** → it must be port **4317**. 4318 is for HTTP, and if
+> this repo use **gRPC** → it must be port **5317**. 4318 is for HTTP, and if
 > a gRPC client connects there you'll silently get "No data."
 
 ---
@@ -50,9 +50,9 @@ Good news: **the collector code is already ready for remote connections.**
 The following two things are already in place:
 
 1. The collector listens on both OTLP ports on all interfaces —
-   `endpoint: 0.0.0.0:4317` / `0.0.0.0:4318` in `otel-collector/config.yaml`
+   `endpoint: 0.0.0.0:5317` / `0.0.0.0:4318` in `otel-collector/config.yaml`
    (not just `127.0.0.1`).
-2. `docker-compose.yml` publishes these ports to the host (`"4317:4317"`,
+2. `docker-compose.yml` publishes these ports to the host (`"5317:5317"`,
    `"4318:4318"`) — Docker exposes them on `0.0.0.0` by default, i.e. reachable
    from the LAN.
 
@@ -64,7 +64,7 @@ the most common cause of "No data."
 If the central machine is Windows, open PowerShell as **Administrator**:
 
 ```powershell
-New-NetFirewallRule -DisplayName "AI4SWENG OTLP gRPC" -Direction Inbound -LocalPort 4317 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "AI4SWENG OTLP gRPC" -Direction Inbound -LocalPort 5317 -Protocol TCP -Action Allow
 New-NetFirewallRule -DisplayName "AI4SWENG OTLP HTTP" -Direction Inbound -LocalPort 4318 -Protocol TCP -Action Allow
 ```
 
@@ -82,7 +82,7 @@ To remove a rule: `Remove-NetFirewallRule -DisplayName "AI4SWENG OTLP gRPC"`.
 If you use `ufw`:
 
 ```bash
-sudo ufw allow 4317/tcp
+sudo ufw allow 5317/tcp
 sudo ufw allow 4318/tcp
 # optional: sudo ufw allow 3000/tcp ; sudo ufw allow 3001/tcp
 ```
@@ -90,7 +90,7 @@ sudo ufw allow 4318/tcp
 If you use `firewalld`:
 
 ```bash
-sudo firewall-cmd --permanent --add-port=4317/tcp --add-port=4318/tcp
+sudo firewall-cmd --permanent --add-port=5317/tcp --add-port=4318/tcp
 sudo firewall-cmd --reload
 ```
 
@@ -120,7 +120,7 @@ If both machines are on the same local network, no VPN is needed. On the
 remote machine:
 
 ```
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-LAN-IP>:4317
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-LAN-IP>:5317
 ```
 
 > **Static IP recommendation:** LAN IPs can change over time via DHCP. If the
@@ -133,11 +133,11 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-LAN-IP>:4317
 ### 3b. Static / public IP + port forwarding — be careful
 
 If the machines are on different networks and you have a real static/public
-IP, you can **forward** port `4317` to the central machine on your router
+IP, you can **forward** port `5317` to the central machine on your router
 (port forwarding). But this **opens the port to the public internet**.
 
 > ⚠️ This package listens **without authentication (insecure)** by default.
-> Opening 4317 directly to the internet means anyone can send fake metrics.
+> Opening 5317 directly to the internet means anyone can send fake metrics.
 > If you're opening it to the public internet, apply the TLS + Bearer token
 > steps in §4 **first**. §3c (VPN) is generally safer and less work — it works
 > without opening any port to the internet.
@@ -158,7 +158,7 @@ Setup:
    `100.101.102.103`.
 3. On the remote machine:
    ```
-   OTEL_EXPORTER_OTLP_ENDPOINT=http://100.101.102.103:4317
+   OTEL_EXPORTER_OTLP_ENDPOINT=http://100.101.102.103:5317
    ```
    (Since the Tailscale IP never changes, you won't need to update this again.
    Traffic inside Tailscale is already encrypted, so `http://` + insecure is
@@ -187,10 +187,10 @@ routing traffic over an untrusted network (§3b) or moving to production:
 
 1. Add a `bearertokenauth` extension to the **central collector** and enable
    TLS on the OTLP receiver (`otel-collector/config.yaml`).
-2. On the **remote KIO**, change the endpoint to `https://...:4317` and add
+2. On the **remote KIO**, change the endpoint to `https://...:5317` and add
    the token:
    ```
-   OTEL_EXPORTER_OTLP_ENDPOINT=https://<central-address>:4317
+   OTEL_EXPORTER_OTLP_ENDPOINT=https://<central-address>:5317
    OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <TOKEN>
    ```
    The OpenTelemetry SDK reads both of these environment variables
@@ -210,12 +210,12 @@ In order:
 
 - If the remote machine is Windows:
   ```powershell
-  Test-NetConnection <central-address> -Port 4317
+  Test-NetConnection <central-address> -Port 5317
   ```
   You should see `TcpTestSucceeded : True`.
 - If the remote machine is Linux:
   ```bash
-  nc -zv <central-address> 4317
+  nc -zv <central-address> 5317
   ```
 
 **b) Does it flow end to end? (real export test)**
@@ -227,7 +227,7 @@ got stuck:
 ```bash
 cd with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:4317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:5317 python check_connectivity.py
 ```
 
 If it succeeds, `kio-preflight` (or whatever `KIO_ID` you gave it) appears in
@@ -241,7 +241,7 @@ Grafana → **KIO Detail** → the `KIO` dropdown within ~30-60 seconds.
 |---|---|---|
 | `check_connectivity.py` **[1/2] FAIL** | Wrong IP / firewall closed / different network | §2 (firewall), §2c (correct address), §3 (same network/VPN) |
 | **[1/2] OK but [2/2] FAIL** | Port is open but the collector rejects the export (e.g. TLS/auth required) | §4 (TLS + token), or check the endpoint scheme (`http` vs `https`) |
-| TCP succeeds, still "No data" in Grafana | Endpoint set to `:4318` (HTTP), client uses gRPC | Change the port to **4317** |
+| TCP succeeds, still "No data" in Grafana | Endpoint set to `:4318` (HTTP), client uses gRPC | Change the port to **5317** |
 | Worked for a while, then dropped | The central machine's LAN IP changed via DHCP | §3a static IP / DHCP reservation |
 | KIO appears but the series looks scrambled | Two sources sending the same `kio.id` | Use a unique `kio.id` (see INTEGRATION.md / README) |
 | KIO marked "stale" | Heartbeat has been silent for >120s (KIO stopped or the network dropped) | Verify the KIO is up and exporting |

@@ -40,7 +40,7 @@ The central collector **requires a bearer token** — set it in `.env`
 ```bash
 cd with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:4317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:5317 python check_connectivity.py
 ```
 
 A `PASS` means the network path and auth are good. If it fails, it's almost

@@ -5,7 +5,7 @@ check_connectivity — preflight for a remote KIO, BEFORE touching your own code
 Two checks, in order:
 
   1) TCP reachability — can this machine open a socket to the central
-     collector's OTLP gRPC port (host:4317)? Catches the common failures
+     collector's OTLP gRPC port (host:5317)? Catches the common failures
      (wrong IP, firewall closed on the central machine, not on the same
      network/Tailscale) with a clear message instead of a silent "No data".
 
@@ -17,7 +17,7 @@ Two checks, in order:
 
 Usage:
     pip install -r requirements.txt
-    OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-ip>:4317 python check_connectivity.py
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-ip>:5317 python check_connectivity.py
     #  (or put it in .env and load it first)
 
 The test id defaults to "kio-preflight" so it never collides with a real KIO.
@@ -32,14 +32,14 @@ from urllib.parse import urlparse
 
 
 def _endpoint() -> str:
-    return os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+    return os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:5317")
 
 
 def _host_port(endpoint: str):
-    # Accept "http://host:4317", "host:4317", or bare "host".
+    # Accept "http://host:5317", "host:5317", or bare "host".
     parsed = urlparse(endpoint if "://" in endpoint else f"//{endpoint}", scheme="")
     host = parsed.hostname or "localhost"
-    port = parsed.port or 4317
+    port = parsed.port or 5317
     return host, port
 
 
@@ -53,8 +53,8 @@ def check_tcp(host: str, port: int, timeout: float = 5.0) -> bool:
         print(f"      FAIL — could not connect ({exc}).")
         print("      Fix ideas:")
         print("        - Is OTEL_EXPORTER_OTLP_ENDPOINT the CENTRAL machine's address, not localhost?")
-        print("        - Is the central stack running (docker compose up) and port 4317 published?")
-        print("        - Firewall on the CENTRAL machine must allow inbound 4317 (see NETWORK.md).")
+        print("        - Is the central stack running (docker compose up) and port 5317 published?")
+        print("        - Firewall on the CENTRAL machine must allow inbound 5317 (see NETWORK.md).")
         print("        - Same LAN, or both on Tailscale/VPN? (see NETWORK.md)\n")
         return False
 
