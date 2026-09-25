@@ -748,6 +748,197 @@
         }
       ],
       "description": "TFT of the streamed narration."
+    },
+    {
+      "type": "row",
+      "title": "D1.1 KPIs — actual vs threshold (KIO10, estimate until bench)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "KPI 2.1 — Lifecycle energy (% of baseline)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "description": "Green = KIO10 lifecycle energy as % of the (provisional) baseline; red = 85% target (≤ passes). Estimate until the hardware bench.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 53
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "actual (estimate)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "threshold"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "legendFormat": "actual (estimate)",
+          "expr": "100*(sum(kio_pipeline_energy_estimate_mj_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_energy_estimate_mj_count{kio_id=\"$kio_id\"}),1))/$baseline_energy_mj"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "legendFormat": "threshold",
+          "expr": "vector(85)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "KPI 2.2 — Deployment energy efficiency (% of baseline)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "description": "Green = KIO10 efficiency (inferences/joule) as % of the (provisional) baseline; red = 115% target (≥ passes). Estimate until the hardware bench.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 53
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 8
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "actual (estimate)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "threshold"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "legendFormat": "actual (estimate)",
+          "expr": "100*(sum(kio_pipeline_inferences_per_joule_sum{kio_id=\"$kio_id\"})/clamp_min(sum(kio_pipeline_inferences_per_joule_count{kio_id=\"$kio_id\"}),1))/$baseline_eff_ipj"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "legendFormat": "threshold",
+          "expr": "vector(115)"
+        }
+      ]
     }
   ],
   "version": 2,
@@ -770,6 +961,44 @@
             "value": "kio10"
           }
         ]
+      },
+      {
+        "name": "baseline_energy_mj",
+        "type": "textbox",
+        "label": "KPI 2.1 baseline (mJ/inf)",
+        "query": "0.015",
+        "current": {
+          "text": "0.015",
+          "value": "0.015"
+        },
+        "options": [
+          {
+            "text": "0.015",
+            "value": "0.015",
+            "selected": true
+          }
+        ],
+        "hide": 0,
+        "description": "Provisional declared baseline — replace with the measured baseline once the hardware bench runs."
+      },
+      {
+        "name": "baseline_eff_ipj",
+        "type": "textbox",
+        "label": "KPI 2.2 baseline (inf/J)",
+        "query": "75000",
+        "current": {
+          "text": "75000",
+          "value": "75000"
+        },
+        "options": [
+          {
+            "text": "75000",
+            "value": "75000",
+            "selected": true
+          }
+        ],
+        "hide": 0,
+        "description": "Provisional declared baseline — replace with the measured baseline once the hardware bench runs."
       }
     ]
   }
