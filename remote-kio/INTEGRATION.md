@@ -12,7 +12,7 @@ Grafana. Estimated time: **15–30 minutes** if the network is ready.
 
 > This document is self-contained. For deep networking (firewall, static IP,
 > Tailscale) see [`NETWORK.md`](NETWORK.md); for the normative rules see the
-> [Observability Guide v2.2](../docs/report/Observability_v2.2.docx). You do
+> [Observability Guide v2.3](../docs/report/Observability_v2.3.docx). You do
 > not need to leave this page to follow the flow.
 
 ## Quick start — run a ready-made example first
@@ -28,7 +28,7 @@ that matches how you run things:
   `cp .env.example .env` → edit it → `docker compose up --build`.
 
 Both push the seven mandatory metrics + heartbeat + a log line, driven entirely
-by `.env`. Once your `KIO_ID` shows up in Grafana's **KIO Detail** dashboard, copy
+by `.env`. Once your `KIO_ID` shows up in Grafana (see §5, Step 5), copy
 `kio_otel.py` into your real module and wrap your handler with
 `with kio.request(...)` — the rest of this guide explains that path in full.
 
@@ -56,7 +56,7 @@ by `.env`. Once your `KIO_ID` shows up in Grafana's **KIO Detail** dashboard, co
 tokens it spent…) into one central place and viewing them as charts. The pieces:
 
 ```
-   YOUR MACHINE                          CENTRAL MACHINE (B)
+   YOUR MACHINE                          CENTRAL MACHINE    
  ┌────────────────┐   OTLP/gRPC     ┌──────────────────────────────────────┐
  │  Your KIO      │  ── :5317 ───▶  │  OTel Collector  (ingestion gateway) │
  │  + kio_otel.py │  (you push)     │      │                              │
@@ -173,7 +173,7 @@ listed below are the ones that vary per data point.
 there — see rule G3.
 
 > **The heartbeat is critical.** A KIO that does not emit `kio.heartbeat` for more
-> than **120 seconds** is flagged **stale** in the central registry — a Grafana
+> than **120 seconds** is flagged **stale** — a Grafana
 > alert rule and an Overview panel show this automatically. `kio_otel.py` handles
 > it via `start_heartbeat()`.
 
@@ -212,8 +212,9 @@ Example PromQL a dashboard uses: `sum(rate(kio_request_count{kio_id="kio1"}[5m])
    or a Tailscale IP). You'll append `:5317`.
 4. **An assigned `kio.id`** — from the central team. Must be **unique** across all
    running KIOs; don't make one up (collisions merge two KIOs' series in Grafana).
-5. *(Optional)* an **OTLP Bearer token** if the setup is secured/remote; **Langfuse
-   keys** if you'll also use that stream — both from the central team.
+5. **An OTLP Bearer token** (required — the collector rejects unauthenticated
+   exports) and, optionally, **Langfuse keys** if you'll also use that stream —
+   both from the central team.
 
 ---
 
@@ -227,7 +228,8 @@ reachability first:
 ```bash
 cd with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:5317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>" \
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:5317 python check_connectivity.py
 ```
 
 It checks (1) TCP reachability to the port, and (2) that a real `kio.heartbeat`
@@ -250,6 +252,9 @@ You do **not** edit `kio_otel.py` — use it as-is.
 ```bash
 # REQUIRED: central collector address (gRPC, port 5317)
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://<central-address>:5317"
+
+# REQUIRED: the collector rejects exports without the Bearer token
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token from the central team>"
 
 # REQUIRED: your identity (the unique id assigned by the central team)
 export OTEL_RESOURCE_ATTRIBUTES="service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production"
@@ -289,9 +294,10 @@ example: [`with_script/main.py`](with_script/main.py).
 
 ### Step 5 — Run and verify (the acceptance gate)
 
-Start your module. Within ~30–60s: central Grafana → **KIO Detail** dashboard → the
-`KIO` dropdown should show **your `kio.id`**, the heartbeat should tick, and your
-panels should start filling. Until it appears, the KIO is **not "onboarded"**
+Start your module. Within ~30–60s your `kio.id` appears in central Grafana on
+**AI4SWENG — KIO*N* Detail** if your `kio.id` is `kioN`, otherwise on
+**AI4SWENG — Others (Unlisted KIOs)** (pick it in the `kio_id` dropdown),
+the heartbeat should tick, and your panels should start filling. Until it appears, the KIO is **not "onboarded"**
 (Contract §1.5). If it doesn't show, see §11.
 
 ---
@@ -304,6 +310,7 @@ Python; your KIO runs however you already run it. Options:
 **A) Bare process.** Set the env vars, then just run it:
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://192.168.1.50:5317"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>"
 export OTEL_RESOURCE_ATTRIBUTES="service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production"
 python your_kio.py
 ```
@@ -319,6 +326,7 @@ Wants=network-online.target
 [Service]
 WorkingDirectory=/opt/kio1
 Environment=OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.1.50:5317
+"Environment=OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token>"
 Environment=OTEL_RESOURCE_ATTRIBUTES=service.name=kio1,service.version=1.0.0,kio.id=kio1,deployment.environment=production
 ExecStart=/opt/kio1/venv/bin/python /opt/kio1/your_kio.py
 Restart=always
@@ -405,7 +413,8 @@ finally:
 and OpenTelemetry exists for Go, Java, JS/TS, .NET, Rust, and more. In any language:
 
 1. Configure an OTLP metric exporter (gRPC → `:5317`, or HTTP → `:4318`, §3.1) at
-   `OTEL_EXPORTER_OTLP_ENDPOINT`.
+   `OTEL_EXPORTER_OTLP_ENDPOINT`, sending the Bearer token from
+   `OTEL_EXPORTER_OTLP_HEADERS`.
 2. Load `Resource` attributes from `OTEL_RESOURCE_ATTRIBUTES` (§3.2).
 3. Create the **7 mandatory instruments with the exact names/types/units** in §3.3.
 4. Run a background task that increments `kio.heartbeat` every 60s.
@@ -413,7 +422,7 @@ and OpenTelemetry exists for Go, Java, JS/TS, .NET, Rust, and more. In any langu
    with a bounded `error_type` on failure.
 
 A working Python reference (the manual-setup pattern) is in the
-[Observability Guide v2.2](../docs/report/Observability_v2.2.docx) (Appendix —
+[Observability Guide v2.3](../docs/report/Observability_v2.3.docx) (Appendix —
 Reference Implementation); `kio_otel.py` follows the same pattern and is a good model
 to port.
 
@@ -436,12 +445,9 @@ simple trace + heartbeat). These are all optional:
 - **Rich traces (child spans / step waterfall).** `kio_otel.py` emits one root span
   per request; for a `prepare_prompt → llm_call → postprocess` waterfall, see
   `kio_simulator.py` `emit_trace()`.
-- **NATS-driven dispatch (orchestration layer).** Completely separate from telemetry;
-  only if your KIO should be triggered by the central `POST /workflow/run`. See the
-  main [`../README.md`](../README.md) "Orchestration layer".
-- **TLS + Bearer auth** (for untrusted networks / production): `https://` endpoint +
-  `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token>`. The SDK reads both env
-  vars automatically — no code change. See [`NETWORK.md`](NETWORK.md) §4.
+- **TLS** (for untrusted networks / production): an `https://` endpoint. The Bearer
+  token (`OTEL_EXPORTER_OTLP_HEADERS`) is already required everywhere. The SDK reads
+  both env vars automatically — no code change. See [`NETWORK.md`](NETWORK.md) §4.
 
 ---
 
@@ -479,7 +485,7 @@ long-running service heartbeats normally.
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `check_connectivity.py` **[1/2] FAIL** | Wrong IP / firewall closed / different network | [`NETWORK.md`](NETWORK.md) §2 (firewall), §2c (address), §3 (network/VPN) |
-| **[1/2] OK but [2/2] FAIL** | Port open, collector rejects export (e.g. TLS/auth) | [`NETWORK.md`](NETWORK.md) §4; check `http` vs `https` scheme |
+| **[1/2] OK but [2/2] FAIL** | Port open, collector rejects export — usually a missing/wrong Bearer token (`OTEL_EXPORTER_OTLP_HEADERS`), or a TLS scheme mismatch | [`NETWORK.md`](NETWORK.md) §4; check `http` vs `https` scheme |
 | Test PASS but "No data" in Grafana | Endpoint set to `:4318` (HTTP), client is gRPC | Use port **5317** |
 | KIO shows up but series look mixed | Same `kio.id` sent from two sources | Get a unique `kio.id` (§4) |
 | Runs briefly, then stops reporting | `shutdown()` not called in a short-lived process | §7-B: `finally: kio.shutdown()` |
@@ -495,5 +501,5 @@ One-stop for all network/firewall/port issues → [`NETWORK.md`](NETWORK.md) §6
 |---|---|
 | [`with_script/`](with_script/) | Copyable minimal kit: `kio_otel.py`, example, preflight |
 | [`NETWORK.md`](NETWORK.md) | Networking / firewall / static IP / Tailscale (deep dive) |
-| [`README.md`](README.md) | Running **our simulator** on a remote machine (different scenario) |
-| [Observability Guide v2.2](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB) | Normative contract (7 metrics, rules, reference code) |
+| [`README.md`](README.md) | Hub page — pick a path |
+| [Observability Guide v2.3](../docs/report/Observability_v2.3.docx) ([SharePoint](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB)) | Normative contract (7 metrics, rules, reference code) |

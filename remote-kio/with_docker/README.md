@@ -13,8 +13,10 @@ docker compose logs -f        # watch it push (Ctrl-C detaches)
 docker compose down           # stop
 ```
 
-Within ~30–60s your `KIO_ID` shows up in Grafana → **KIO Detail** (the `KIO`
-dropdown), and the panels start filling. The log lines land in the logs panel.
+Within ~30–60s your `KIO_ID` shows up in Grafana on
+**AI4SWENG — KIO*N* Detail** if your `kio.id` is `kioN`, otherwise on
+**AI4SWENG — Others (Unlisted KIOs)** (pick it in the `kio_id` dropdown),
+and the panels start filling. The log lines land in the logs panel.
 
 ## The one gotcha: the endpoint address
 

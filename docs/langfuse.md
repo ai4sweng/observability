@@ -16,11 +16,19 @@ Self-hosted via `LANGFUSE_INIT_*` "headless initialization" env vars on
 `langfuse-web`, so the org/project/API-keys exist automatically on first boot —
 no manual UI setup step, no copy-pasting keys before the KIOs can connect.
 
-Login: `admin@ai4sweng.local` / `ai4sweng-admin` at **http://localhost:3001**,
-auto-created on first boot. Langfuse takes noticeably longer to become ready
+Login: `admin@bitnet.com.tr` / `admin1234` at **http://localhost:3001**,
+auto-created on first boot (set `LANGFUSE_INIT_USER_PASSWORD` in `.env` for
+any shared deployment). Langfuse takes noticeably longer to become ready
 than the rest of the stack (~2–3 minutes: it's booting Postgres + ClickHouse +
 Redis + MinIO underneath it) — the KIOs will log harmless connection-refused
 retries against it until it's up, then start landing traces automatically.
+
+## Disk usage & retention
+
+Self-hosted OSS Langfuse never deletes anything on its own (its Data Retention
+setting is Enterprise-only). See **[Langfuse Data Retention](data-retention.md)**
+for the ClickHouse/MinIO retention setup, the daily cron job and the expected
+disk growth per KIO.
 
 ## Remote / multi-machine deployments
 
@@ -40,5 +48,5 @@ or Linux doesn't matter) you don't need to do anything, the default
 `localhost` is already correct.
 
 A remote **KIO** (rather than a remote browser) connecting its own telemetry
-into Langfuse is covered in [Connecting a Remote KIO](remote-connectivity.md)
-§9 ("Optional streams") of `remote-kio/INTEGRATION.md`.
+into Langfuse is covered in [`remote-kio/INTEGRATION.md`](../remote-kio/INTEGRATION.md)
+§9 ("Optional streams").

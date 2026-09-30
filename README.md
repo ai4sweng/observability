@@ -6,20 +6,21 @@
 
 </div>
 
-Local implementation of the **[AI4SWENG Observability Integration Guide v2.2](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB)**.
-KIO modules push telemetry over
-OTLP; the central platform stores it and Grafana visualizes it. Stack: 
+Local implementation of the **[AI4SWENG Observability Integration Guide v2.3](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB)**.
 
-
-- VictoriaMetrics for metrics,
-- VictoriaLogs for unstructured string logs, 
-- Tempo for traces,
-- langfuse for LLM prompt/completion/cost tracing,
-- Grafana for the overall visualization 
-
-is the **generic central platform every KIO connects to**; it doesn't run or own any KIO's real logic. The push-based architecture means a KIO can connect from a completely different machine
-with no code change, only one address — see
+This is the **central platform every KIO connects to**: KIO modules push
+telemetry over OTLP, the platform stores it and Grafana visualizes it. It does
+not run or own any KIO's logic. Because it is push-based, a KIO can connect
+from a different machine by changing only one address — see
 **[Connecting a KIO — Data Contract & Setup Guide](docs/remote-connectivity.md)**.
+
+| Component | Role |
+|---|---|
+| VictoriaMetrics | Metrics (30-day retention) |
+| VictoriaLogs | Unstructured string logs (30-day retention) |
+| Tempo | Traces (48-hour retention) |
+| Langfuse | LLM prompt/completion/cost tracing ([retention](docs/data-retention.md)) |
+| Grafana | Dashboards |
 
 > **⚠️ The KIOs bundled in this repo (`kio-simulator/`) are simulators.** They
 > emit synthetic telemetry that follows the same contract a real KIO must
@@ -47,6 +48,7 @@ metrics reference, the remote-KIO integration path, KPIs, testing, and design de
 | [Real Project KPIs (D1.1)](docs/kpis.md) | The 16 D1.1 KPIs and which KIO emits which |
 | [Real LLM Integration (KIO2)](docs/real-llm-integration.md) | Running a real Ollama LLM + real GPU energy behind `kio2-sim` |
 | [Langfuse (LLM Tracing)](docs/langfuse.md) | The self-hosted Langfuse stack for prompt/completion/cost tracing |
+| [Langfuse Data Retention](docs/data-retention.md) | Retention/cleanup of Langfuse's ClickHouse + MinIO data and disk growth per KIO |
 | [Tests (pytest)](docs/testing.md) | Running the test suite |
 | [Design Decisions & v2 Guideline Evaluation](docs/design-decisions.md) | Why this stack made the choices it did |
 
@@ -76,7 +78,7 @@ docker compose up -d --build
 Then open **http://localhost:3000**, anonymous browsing is on (Viewer role, no
 login needed to look at dashboards); editing/deleting/datasources/alerting/user
 management need the admin login (`admin` / `GF_SECURITY_ADMIN_PASSWORD` from
-`.env.example`, rotate before any real/shared deployment). Eleven dashboards
+`.env.example`, rotate before any real/shared deployment). Fifteen dashboards
 appear under the **AI4SWENG** folder:
 
 - **AI4SWENG — Overview (All KIOs)**: aggregate stats across every KIO,
@@ -88,13 +90,12 @@ appear under the **AI4SWENG** folder:
   GA-acceptable commitment over time, not just right now. These aggregate
   panels have **no per-KIO filter** — any `kio.id` that sends the matching
   metrics is automatically folded in, including one nobody registered.
-- **AI4SWENG — KIO*N* Detail** (one dashboard per KIO — KIO1, KIO2, KIO3,
-  KIO4, KIO7, KIO8, KIO9, KIO10, KIO11, KIO13): per-KIO metrics, a live panel
+- **AI4SWENG — KIO*N* Detail** (one dashboard per KIO, KIO1–KIO13): the D1.1
+  KPIs that KIO owns at the top, then per-KIO metrics, a live panel
   of that KIO's unstructured string logs, and a **traces** section, a table of
   recent traces plus a waterfall view of the selected one (copy a Trace ID
   from the table into the `trace_id` box above it). Further down: a **gauge
-  view** (colored green/orange/red bands, mirroring an external dashboard
-  reference the team liked) for error rate, tokens/sec, and accuracy; a
+  view** (green/orange/red bands) for error rate, tokens/sec, and accuracy; a
   **power/efficiency/carbon** row (Watts, tokens-per-Watt, and an estimated
   kg-CO2e derived from energy, all pure PromQL, no new instrumentation); a
   **real GPU temperature** gauge (only populated when
@@ -104,8 +105,12 @@ appear under the **AI4SWENG** folder:
   **Each of these dashboards is wired to one specific, pre-registered
   `kio.id`** (set as a fixed dropdown option in that dashboard's JSON, not
   discovered dynamically) — a KIO sending an ID nobody created a dashboard for
-  shows up only in the Overview aggregate, never gets its own detail page. See
+  shows up in the Overview aggregate and on the Others dashboard below. See
   [Connecting a KIO](docs/remote-connectivity.md) for what `kio.id` to use.
+  Only KIO2 and KIO7 have a simulator behind them (`kio2-sim`, `kio7-sim`);
+  the other KIO pages stay empty until that KIO connects.
+- **AI4SWENG — Others (Unlisted KIOs)**: the same per-KIO view for any
+  `kio.id` that has no dashboard of its own (e.g. a new or misspelled id).
 
 Give it ~30–60 seconds after startup for the first metrics and traces to land.
 
@@ -123,9 +128,11 @@ observability/
 ├── docs/                                     # full documentation set — see docs/README.md
 ├── docker-compose.yml
 ├── otel-collector/ tempo/ grafana/            # ingestion gateway, trace store, dashboards
+├── langfuse/                                  # ClickHouse/MinIO retention config for Langfuse
 ├── kio-simulator/                             # dummy KIO telemetry generators
 ├── metrics_api/                               # /api/metrics query API (read-only, 8081)
 ├── remote-kio/                                # connect a KIO from another machine — see docs/remote-connectivity.md
+├── scripts/                                   # dashboard generators, Langfuse retention job
 └── tests/                                     # pytest suite
 ```
 

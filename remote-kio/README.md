@@ -22,8 +22,9 @@ architecture is push-based, so only one address changes.
 
 Both `with_script` and `with_docker` run the same tiny demo KIO: it reads
 everything from `.env` and pushes the **seven mandatory metrics + a 60s heartbeat
-+ log lines** to the platform. Watch your `KIO_ID` appear in Grafana → **KIO
-Detail** within ~30–60s.
++ log lines** to the platform. Within ~30–60s your `KIO_ID` appears in Grafana on
+**AI4SWENG — KIO*N* Detail** (if the id is `kioN`) or on
+**AI4SWENG — Others (Unlisted KIOs)** (any other id).
 
 The two files that matter:
 - **`main.py`** — the demo loop. Replace `do_one_request()` with your real work.
@@ -40,7 +41,8 @@ The central collector **requires a bearer token** — set it in `.env`
 ```bash
 cd with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:5317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>" \
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:5317 python check_connectivity.py
 ```
 
 A `PASS` means the network path and auth are good. If it fails, it's almost

@@ -19,8 +19,7 @@ uv pip install -r kio-simulator/requirements.txt \
 uv run pytest
 ```
 
-No real OTel collector/NATS/Postgres/VictoriaMetrics is required — every
-external dependency is faked (the OTLP exporters silently fall back when the
-endpoint is unreachable, NATS via a fake `nc`, Postgres via
-`sqlite:///:memory:`, and VictoriaMetrics via a fake client that records the
-queries it was asked to run).
+No real OTel collector/NATS/VictoriaMetrics is required — every external
+dependency is faked (the OTLP exporters silently fall back when the endpoint
+is unreachable, NATS via a fake `nc`, and VictoriaMetrics via a fake client
+that records the queries it was asked to run).
