@@ -1,0 +1,53 @@
+<!--
+  ClickHouse overrides for the Langfuse sub-stack (mounted into
+  /etc/clickhouse-server/config.d/ by docker-compose.yml).
+
+  ClickHouse writes its own diagnostics into system.* tables continuously,
+  even with zero traffic, and by default never deletes them. On a long-running
+  server these are typically a large share of the langfuse_clickhouse_data
+  volume. Langfuse reads none of them.
+
+  1. Tables Langfuse never reads: removed entirely (list from Langfuse's
+     self-hosting scaling guide, plus the other high-volume profiling logs).
+  2. query_log / part_log / error_log: kept for debugging, capped by TTL.
+  3. The server's own text log files (langfuse_clickhouse_logs volume): warning
+     level, 3 x 100 MB instead of the default 10 x 1000 MB.
+
+  Changing a system log's TTL makes ClickHouse rename the existing table to
+  e.g. system.query_log_0 on the next start and create a fresh one — the old
+  copy is NOT dropped automatically. scripts/langfuse_retention.sh drops those
+  leftovers (see docs/data-retention.md).
+-->
+<clickhouse>
+    <logger>
+        <level>warning</level>
+        <size>100M</size>
+        <count>3</count>
+    </logger>
+
+    <trace_log remove="1"/>
+    <text_log remove="1"/>
+    <opentelemetry_span_log remove="1"/>
+    <asynchronous_metric_log remove="1"/>
+    <metric_log remove="1"/>
+    <latency_log remove="1"/>
+    <query_thread_log remove="1"/>
+    <query_views_log remove="1"/>
+    <query_metric_log remove="1"/>
+    <processors_profile_log remove="1"/>
+    <asynchronous_insert_log remove="1"/>
+    <backup_log remove="1"/>
+    <s3queue_log remove="1"/>
+    <blob_storage_log remove="1"/>
+    <session_log remove="1"/>
+
+    <query_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </query_log>
+    <part_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </part_log>
+    <error_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </error_log>
+</clickhouse>

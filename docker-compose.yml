@@ -16,6 +16,15 @@
 # ${VAR:-default} — absent a .env, every default here is unchanged, so this
 # file works out of the box exactly as before.
 
+# Docker's default json-file driver never rotates, so every container's stdout
+# (the KIO simulators log one line per simulated request) grows without bound
+# under /var/lib/docker/containers. Capped at 3 x 10 MB per container.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ---------------------------------------------------------------------------
   # Ingestion gateway: single OTLP entrypoint for every KIO.
@@ -40,6 +49,7 @@ services:
       - victorialogs
       - tempo
     restart: unless-stopped
+    logging: *default-logging
 
   # ---------------------------------------------------------------------------
   # Metrics store (Prometheus-compatible, remote_write ingest).
@@ -56,6 +66,7 @@ services:
     ports:
       - "${VICTORIAMETRICS_PORT:-8428}:8428"
     restart: unless-stopped
+    logging: *default-logging
 
   # ---------------------------------------------------------------------------
   # Log store for unstructured / string telemetry (OTLP logs ingest).
@@ -72,6 +83,7 @@ services:
     ports:
       - "${VICTORIALOGS_PORT:-9428}:9428"
     restart: unless-stopped
+    logging: *default-logging
 
   # ---------------------------------------------------------------------------
   # Trace store. Receives spans forwarded by the collector's traces pipeline.
@@ -88,6 +100,7 @@ services:
     ports:
       - "${TEMPO_PORT:-3200}:3200"   # Tempo query API (used by Grafana's Tempo datasource)
     restart: unless-stopped
+    logging: *default-logging
 
   # ---------------------------------------------------------------------------
   # Visualization. Datasources + dashboards provisioned from disk.
@@ -117,6 +130,7 @@ services:
       - victorialogs
       - tempo
     restart: unless-stopped
+    logging: *default-logging
 
   # ===========================================================================
   # Metrics query API — parameterized read access to the operational telemetry
@@ -149,6 +163,7 @@ services:
     depends_on:
       - victoriametrics
     restart: unless-stopped
+    logging: *default-logging
 
   # ===========================================================================
   # Langfuse — second, parallel telemetry stream dedicated to LLM prompts/
@@ -163,6 +178,7 @@ services:
     image: docker.io/postgres:17
     container_name: ai4sweng-langfuse-postgres
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 3s
@@ -181,6 +197,7 @@ services:
     image: docker.io/clickhouse/clickhouse-server
     container_name: ai4sweng-langfuse-clickhouse
     restart: unless-stopped
+    logging: *default-logging
     user: "101:101"
     environment:
       CLICKHOUSE_DB: default
@@ -189,6 +206,10 @@ services:
     volumes:
       - langfuse_clickhouse_data:/var/lib/clickhouse
       - langfuse_clickhouse_logs:/var/log/clickhouse-server
+      # Disables the ClickHouse system log tables Langfuse never reads and caps
+      # the rest (they grow on their own even with zero traffic), and shrinks
+      # the server's own log files. See docs/data-retention.md.
+      - ./langfuse/clickhouse/zz-ai4sweng-retention.xml:/etc/clickhouse-server/config.d/zz-ai4sweng-retention.xml:ro
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
       interval: 5s
@@ -200,15 +221,22 @@ services:
     image: cgr.dev/chainguard/minio
     container_name: ai4sweng-langfuse-minio
     restart: unless-stopped
+    logging: *default-logging
+    # Wrapper around `minio server` that also (re)applies the bucket lifecycle
+    # rule expiring Langfuse's raw event files after LANGFUSE_EVENT_RETENTION_DAYS.
+    # Without it every ingested event stays in MinIO forever as its own small
+    # object — millions of files, which is what made `du` hang on the server.
     entrypoint: sh
-    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    command: /usr/local/bin/minio-entrypoint.sh
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: "${LANGFUSE_MINIO_ROOT_PASSWORD:-b5jzlZ-NNeSu7q5Ix7-PtD6m}"   # local-dev only
+      LANGFUSE_EVENT_RETENTION_DAYS: "${LANGFUSE_EVENT_RETENTION_DAYS:-3}"
     ports:
       - "${MINIO_PORT:-9090}:9000"
     volumes:
       - langfuse_minio_data:/data
+      - ./langfuse/minio-entrypoint.sh:/usr/local/bin/minio-entrypoint.sh:ro
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 1s
@@ -220,6 +248,7 @@ services:
     image: docker.io/redis:7
     container_name: ai4sweng-langfuse-redis
     restart: unless-stopped
+    logging: *default-logging
     command: >
       --requirepass ${LANGFUSE_REDIS_PASSWORD:-EQ_2-5L9BKy-rwiX96RsSwg8}
       --maxmemory-policy noeviction
@@ -235,6 +264,7 @@ services:
     image: docker.io/langfuse/langfuse-worker:3
     container_name: ai4sweng-langfuse-worker
     restart: unless-stopped
+    logging: *default-logging
     depends_on: &langfuse-depends-on
       postgres:
         condition: service_healthy
@@ -273,6 +303,11 @@ services:
       LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
       LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
       LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      # Off: this ClickHouse table records every event file written above, only
+      # so Langfuse's Enterprise-only data-retention job can later delete them.
+      # We expire those files with a MinIO lifecycle rule instead (minio
+      # service), so the table would just be one more thing growing forever.
+      LANGFUSE_ENABLE_BLOB_STORAGE_FILE_LOG: "false"
       LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
       LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
       LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
@@ -293,6 +328,7 @@ services:
     image: docker.io/langfuse/langfuse:3
     container_name: ai4sweng-langfuse-web
     restart: unless-stopped
+    logging: *default-logging
     depends_on: *langfuse-depends-on
     ports:
       - "${LANGFUSE_PORT:-3001}:3000"
@@ -369,6 +405,10 @@ services:
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+      # Client-side trace sampling (Langfuse SDK). OTel metrics/logs/traces are
+      # NOT sampled — only the Langfuse stream, which is what fills ClickHouse
+      # and MinIO. See docs/data-retention.md for the growth figures.
+      LANGFUSE_SAMPLE_RATE: "${KIO_LANGFUSE_SAMPLE_RATE:-0.2}"
     # host.docker.internal resolves automatically on Docker Desktop
     # (Windows/Mac); on native Linux Docker Engine it needs this explicit
     # mapping (host-gateway, supported since Docker Engine 20.10). Harmless
@@ -378,6 +418,7 @@ services:
     depends_on:
       - otel-collector
     restart: unless-stopped
+    logging: *default-logging
 
   # kio2: reserved for the REAL FocusTracer module. Not started from here —
   # FocusTracer runs as its own process/container per kio2-integration/README.md
@@ -416,10 +457,15 @@ services:
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+      # Client-side trace sampling (Langfuse SDK). OTel metrics/logs/traces are
+      # NOT sampled — only the Langfuse stream, which is what fills ClickHouse
+      # and MinIO. See docs/data-retention.md for the growth figures.
+      LANGFUSE_SAMPLE_RATE: "${KIO_LANGFUSE_SAMPLE_RATE:-0.2}"
     depends_on:
       - otel-collector
 #       - nats
     restart: unless-stopped
+    logging: *default-logging
 
   # kio4 = D1.1's KIO4 (Architecture-to-Code Planner). Was labeled task_type
   # "debug" before the same D1.1 cross-check — renamed 2026-08, see kio3's
@@ -447,10 +493,15 @@ services:
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+      # Client-side trace sampling (Langfuse SDK). OTel metrics/logs/traces are
+      # NOT sampled — only the Langfuse stream, which is what fills ClickHouse
+      # and MinIO. See docs/data-retention.md for the growth figures.
+      LANGFUSE_SAMPLE_RATE: "${KIO_LANGFUSE_SAMPLE_RATE:-0.2}"
     depends_on:
       - otel-collector
 #       - nats
     restart: unless-stopped
+    logging: *default-logging
 
   # kio7 = D1.1's KIO7 (AI-SysDev). D1.1 ties KIO7 to most KPIs; only the
   # ones where KIO7 is a clear primary owner (4.1, 5.1, 7.1, 9.1, 9.2 — not
@@ -482,10 +533,15 @@ services:
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+      # Client-side trace sampling (Langfuse SDK). OTel metrics/logs/traces are
+      # NOT sampled — only the Langfuse stream, which is what fills ClickHouse
+      # and MinIO. See docs/data-retention.md for the growth figures.
+      LANGFUSE_SAMPLE_RATE: "${KIO_LANGFUSE_SAMPLE_RATE:-0.2}"
     depends_on:
       - otel-collector
 #       - nats
     restart: unless-stopped
+    logging: *default-logging
 
   # # kio8 = D1.1's KIO8 (Cross-Architecture / Energy-Efficient Deploy). D1.1
   # # ties KIO8 to KPI 2.1/2.2 (energy, shared with KIO7/KIO10) and uniquely to
@@ -513,9 +569,14 @@ services:
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+      # Client-side trace sampling (Langfuse SDK). OTel metrics/logs/traces are
+      # NOT sampled — only the Langfuse stream, which is what fills ClickHouse
+      # and MinIO. See docs/data-retention.md for the growth figures.
+      LANGFUSE_SAMPLE_RATE: "${KIO_LANGFUSE_SAMPLE_RATE:-0.2}"
     depends_on:
       - otel-collector
     restart: unless-stopped
+    logging: *default-logging
 
   # # kio13 = D1.1's KIO13 (Adoption & Usage Tracking) — the sole owner of KPI
   # # 8.1 (Adoption rate) and KPI 8.2 (Active usage & satisfaction), D1.1's
@@ -541,9 +602,14 @@ services:
       LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PROJECT_PUBLIC_KEY:-pk-lf-724e64325a5bb595077226d8129117fd}"
       LANGFUSE_SECRET_KEY: "${LANGFUSE_PROJECT_SECRET_KEY:-sk-lf-484c3829fc7dd2b09018278cc02f5318}"
       LANGFUSE_BASE_URL: "http://langfuse-web:3000"
+      # Client-side trace sampling (Langfuse SDK). OTel metrics/logs/traces are
+      # NOT sampled — only the Langfuse stream, which is what fills ClickHouse
+      # and MinIO. See docs/data-retention.md for the growth figures.
+      LANGFUSE_SAMPLE_RATE: "${KIO_LANGFUSE_SAMPLE_RATE:-0.2}"
     depends_on:
       - otel-collector
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   vmdata:
