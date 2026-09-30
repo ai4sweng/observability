@@ -47,12 +47,11 @@ environment variable (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 Good news: **the collector code is already ready for remote connections.**
 The following two things are already in place:
 
-1. The collector listens on both OTLP ports on all interfaces —
-   `0.0.0.0:4317` (gRPC) / `0.0.0.0:4318` (HTTP) inside the container, in
-   `otel-collector/config.yaml` (not just `127.0.0.1`).
-2. `docker-compose.yml` publishes these ports to the host (`"5317:4317"` —
-   host 5317 → container 4317 — and `"4318:4318"`) — Docker exposes them on `0.0.0.0` by default, i.e. reachable
-   from the LAN.
+1. The collector listens on all interfaces (`0.0.0.0`) in
+   `otel-collector/config.yaml`, not just `127.0.0.1`.
+2. `docker-compose.yml` publishes it on host port **5317** (gRPC) and
+   **4318** (HTTP) — Docker exposes them on `0.0.0.0` by default, i.e.
+   reachable from the LAN. These two host ports are the only ones a KIO uses.
 
 Only one thing is left: **opening the inbound port on the firewall.** This is
 the most common cause of "No data."
