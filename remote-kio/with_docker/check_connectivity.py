@@ -18,7 +18,8 @@ Two checks, in order:
 Usage:
     pip install -r requirements.txt
     OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-ip>:5317 python check_connectivity.py
-    #  (or put it in .env and load it first)
+    #  or just `python check_connectivity.py` - a local .env is loaded first,
+    #  like main.py does (shell variables still win)
 
 The test id defaults to "kio-preflight" so it never collides with a real KIO.
 Override with KIO_ID if you want to test your assigned id specifically.
@@ -29,6 +30,23 @@ import socket
 import sys
 import time
 from urllib.parse import urlparse
+
+
+def _load_dotenv(path: str = ".env") -> None:
+    """Load a local .env into os.environ (no dependency). Existing environment
+    variables win, so `docker compose` / shell exports are not overridden."""
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            os.environ.setdefault(key.strip(), val.strip())
+
+
+_load_dotenv()
 
 
 def _endpoint() -> str:
@@ -90,7 +108,7 @@ def check_export(endpoint: str) -> bool:
     provider.shutdown()
     if ok:
         print("      OK — export accepted by the collector.")
-        print(f"      Now open Grafana -> KIO Detail and look for kio.id={kio_id!r}")
+        print(f"      Now open Grafana -> "AI4SWENG — KIO<N> Detail" (kio.id=kioN) or "Others (Unlisted KIOs)" and look for kio.id={kio_id!r}")
         print("      in the KIO dropdown within ~30-60s (heartbeat + scrape delay).\n")
         return True
     print("      FAIL — export did not complete (collector unreachable or rejecting).")
