@@ -18,24 +18,29 @@
       {
         "name": "kio_id",
         "type": "custom",
-        "query": "kio7",
+        "query": "kio7-sim,kio7",
         "sort": 1,
         "current": {
           "selected": true,
-          "text": "kio7",
-          "value": "kio7"
+          "text": "kio7-sim",
+          "value": "kio7-sim"
         },
         "includeAll": false,
         "label": "KIO",
         "options": [
           {
             "selected": true,
+            "text": "kio7-sim",
+            "value": "kio7-sim"
+          },
+          {
+            "selected": false,
             "text": "kio7",
             "value": "kio7"
           }
         ],
         "multi": false,
-        "hide": 2
+        "hide": 0
       },
       {
         "name": "session_id",

@@ -26,7 +26,7 @@
           "query": "label_values(kio_heartbeat, kio_id)",
           "refId": "kio_id_variable"
         },
-        "regex": "/^(?!kio1$|kio2$|kio2-sim$|kio3$|kio4$|kio5$|kio6$|kio7$|kio8$|kio9$|kio10$|kio11$|kio12$|kio13$).*$/",
+        "regex": "/^(?!kio1$|kio2$|kio2-sim$|kio3$|kio4$|kio5$|kio6$|kio7$|kio7-sim$|kio8$|kio9$|kio10$|kio11$|kio12$|kio13$).*$/",
         "refresh": 2,
         "sort": 1,
         "label": "KIO",
