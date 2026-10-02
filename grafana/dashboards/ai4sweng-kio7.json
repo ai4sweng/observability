@@ -18,24 +18,29 @@
       {
         "name": "kio_id",
         "type": "custom",
-        "query": "kio7",
+        "query": "kio7-sim,kio7",
         "sort": 1,
         "current": {
           "selected": true,
-          "text": "kio7",
-          "value": "kio7"
+          "text": "kio7-sim",
+          "value": "kio7-sim"
         },
         "includeAll": false,
         "label": "KIO",
         "options": [
           {
             "selected": true,
+            "text": "kio7-sim",
+            "value": "kio7-sim"
+          },
+          {
+            "selected": false,
             "text": "kio7",
             "value": "kio7"
           }
         ],
         "multi": false,
-        "hide": 2
+        "hide": 0
       },
       {
         "name": "session_id",
@@ -1927,7 +1932,7 @@
     },
     {
       "id": 22,
-      "title": "Son trace'ler ($kio_id)",
+      "title": "Recent traces ($kio_id)",
       "type": "table",
       "datasource": {
         "type": "tempo",
@@ -2531,7 +2536,7 @@
     },
     {
       "id": 41,
-      "title": "Verimlilik (tok/W)",
+      "title": "Efficiency (tok/W)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -2801,7 +2806,7 @@
     },
     {
       "id": 47,
-      "title": "Ortalama tok/s: Simulated vs Real",
+      "title": "Average tok/s: Simulated vs Real",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",
@@ -2854,7 +2859,7 @@
     },
     {
       "id": 48,
-      "title": "Ortalama gecikme (ms): Simulated vs Real",
+      "title": "Average latency (ms): Simulated vs Real",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",

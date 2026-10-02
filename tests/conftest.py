@@ -45,7 +45,7 @@ if str(REPO_ROOT) not in sys.path:
 # (see its module docstring), which is exactly what we want in unit tests:
 # no real network I/O, no test ever blocked on a live OTel collector.
 _DEFAULT_ENV = {
-    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:5317",
     "EXPORT_INTERVAL_MS": "600000",  # keep background exporter threads quiet during the test run
     "HEARTBEAT_INTERVAL_S": "600000",
     "LANGFUSE_PUBLIC_KEY": "",

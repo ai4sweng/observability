@@ -3,13 +3,11 @@
 This document explains how **a KIO running on a different machine** reaches
 the central observability stack (OTel Collector → VictoriaMetrics/
 VictoriaLogs/Tempo → Grafana) over the network. Both the "connecting your own
-code" scenario (see [`INTEGRATION.md`](INTEGRATION.md)) and the "running our
-simulator remotely" scenario (see [`README.md`](README.md)) use the exact same
-network model — the only difference is which code runs; the networking side is
-identical in both.
+code" scenario (see [`INTEGRATION.md`](INTEGRATION.md)) and the ready-made
+examples (see [`README.md`](README.md)) use the exact same network model.
 
 Throughout this document:
-- **Central machine (B)** = the computer running the main `docker compose`
+- **Central machine** = the computer running the main `docker compose`
   (collector + databases + Grafana).
 - **Remote machine** = the different computer running the KIO module.
 
@@ -44,17 +42,16 @@ environment variable (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 
 ---
 
-## 2. What needs to happen on the central machine (B) side
+## 2. What needs to happen on the central machine side
 
 Good news: **the collector code is already ready for remote connections.**
 The following two things are already in place:
 
-1. The collector listens on both OTLP ports on all interfaces —
-   `endpoint: 0.0.0.0:5317` / `0.0.0.0:4318` in `otel-collector/config.yaml`
-   (not just `127.0.0.1`).
-2. `docker-compose.yml` publishes these ports to the host (`"5317:5317"`,
-   `"4318:4318"`) — Docker exposes them on `0.0.0.0` by default, i.e. reachable
-   from the LAN.
+1. The collector listens on all interfaces (`0.0.0.0`) in
+   `otel-collector/config.yaml`, not just `127.0.0.1`.
+2. `docker-compose.yml` publishes it on host port **5317** (gRPC) and
+   **4318** (HTTP) — Docker exposes them on `0.0.0.0` by default, i.e.
+   reachable from the LAN. These two host ports are the only ones a KIO uses.
 
 Only one thing is left: **opening the inbound port on the firewall.** This is
 the most common cause of "No data."
@@ -136,10 +133,9 @@ If the machines are on different networks and you have a real static/public
 IP, you can **forward** port `5317` to the central machine on your router
 (port forwarding). But this **opens the port to the public internet**.
 
-> ⚠️ This package listens **without authentication (insecure)** by default.
-> Opening 5317 directly to the internet means anyone can send fake metrics.
-> If you're opening it to the public internet, apply the TLS + Bearer token
-> steps in §4 **first**. §3c (VPN) is generally safer and less work — it works
+> ⚠️ The collector requires a Bearer token but does **not** use TLS by default,
+> so the token and the data travel in cleartext. Before opening 5317 to the
+> public internet, enable TLS (§4) **first**. §3c (VPN) is generally safer and less work — it works
 > without opening any port to the internet.
 
 ### 3c. Tailscale / ZeroTier (VPN) — recommended for different networks ✅
@@ -181,14 +177,15 @@ Two ways to add a KIO owner:
 
 ## 4. Security / TLS (production or internet-facing setups)
 
-The default setup runs **without authentication**, adequate for tests within a
-trusted network (same LAN or VPN) — just like the local setup. If you're
-routing traffic over an untrusted network (§3b) or moving to production:
+The default setup authenticates every export with a Bearer token
+(`bearertokenauth`, already enabled) but does not encrypt — adequate within a
+trusted network (same LAN or VPN). If you're routing traffic over an untrusted
+network (§3b) or moving to production:
 
-1. Add a `bearertokenauth` extension to the **central collector** and enable
-   TLS on the OTLP receiver (`otel-collector/config.yaml`).
-2. On the **remote KIO**, change the endpoint to `https://...:5317` and add
-   the token:
+1. Enable TLS on the OTLP receiver of the **central collector**
+   (`otel-collector/config.yaml`).
+2. On the **remote KIO**, change the endpoint to `https://...:5317` (keep the
+   token):
    ```
    OTEL_EXPORTER_OTLP_ENDPOINT=https://<central-address>:5317
    OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <TOKEN>
@@ -227,11 +224,13 @@ got stuck:
 ```bash
 cd with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:5317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>" \
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://<central-address>:5317 python check_connectivity.py
 ```
 
-If it succeeds, `kio-preflight` (or whatever `KIO_ID` you gave it) appears in
-Grafana → **KIO Detail** → the `KIO` dropdown within ~30-60 seconds.
+If it succeeds, `kio-preflight` (or whatever `KIO_ID` you gave it) appears
+within ~30-60 seconds in Grafana on **AI4SWENG — KIO*N* Detail** (if the id is `kioN`) or on
+**AI4SWENG — Others (Unlisted KIOs)** (any other id), and on Overview.
 
 ---
 
@@ -240,7 +239,7 @@ Grafana → **KIO Detail** → the `KIO` dropdown within ~30-60 seconds.
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `check_connectivity.py` **[1/2] FAIL** | Wrong IP / firewall closed / different network | §2 (firewall), §2c (correct address), §3 (same network/VPN) |
-| **[1/2] OK but [2/2] FAIL** | Port is open but the collector rejects the export (e.g. TLS/auth required) | §4 (TLS + token), or check the endpoint scheme (`http` vs `https`) |
+| **[1/2] OK but [2/2] FAIL** | Port is open but the collector rejects the export — usually a missing/wrong Bearer token | Set `OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>"`; check the endpoint scheme (`http` vs `https`, §4) |
 | TCP succeeds, still "No data" in Grafana | Endpoint set to `:4318` (HTTP), client uses gRPC | Change the port to **5317** |
 | Worked for a while, then dropped | The central machine's LAN IP changed via DHCP | §3a static IP / DHCP reservation |
 | KIO appears but the series looks scrambled | Two sources sending the same `kio.id` | Use a unique `kio.id` (see INTEGRATION.md / README) |

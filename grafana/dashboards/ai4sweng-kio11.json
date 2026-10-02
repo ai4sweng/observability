@@ -1247,7 +1247,7 @@
     },
     {
       "id": 22,
-      "title": "Son trace'ler ($kio_id)",
+      "title": "Recent traces ($kio_id)",
       "type": "table",
       "datasource": {
         "type": "tempo",
@@ -1851,7 +1851,7 @@
     },
     {
       "id": 41,
-      "title": "Verimlilik (tok/W)",
+      "title": "Efficiency (tok/W)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -2121,7 +2121,7 @@
     },
     {
       "id": 47,
-      "title": "Ortalama tok/s: Simulated vs Real",
+      "title": "Average tok/s: Simulated vs Real",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",
@@ -2174,7 +2174,7 @@
     },
     {
       "id": 48,
-      "title": "Ortalama gecikme (ms): Simulated vs Real",
+      "title": "Average latency (ms): Simulated vs Real",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",

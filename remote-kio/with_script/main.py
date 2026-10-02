@@ -5,7 +5,7 @@ A tiny demo KIO that pushes real telemetry to the AI4SWENG central platform.
 It is NOT doing real work — it just loops, and on every tick it emits the seven
 mandatory metrics (via a `kio.request(...)` block), a heartbeat (in the
 background), and one log line. Point it at the platform, run it, and watch your
-kio.id fill up the Grafana "KIO Detail" dashboard live.
+kio.id fill up its Grafana dashboard live (KIO<N> Detail, or Others for other ids).
 
     cp .env.example .env      # then edit KIO_ID + the endpoint/token
     pip install -r requirements.txt

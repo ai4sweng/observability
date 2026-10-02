@@ -55,9 +55,10 @@ RETITLE = {
         "Model Comparison & Data Source",
 }
 
-# kio_id label values per KIO number. KIO2 has both the reserved real-module
-# identity and the simulator; every other KIO uses the plain id.
-KIO_LABELS: dict[int, list[str]] = {2: ["kio2-sim", "kio2"]}
+# kio_id label values per KIO number. KIO2 and KIO7 have both a simulator (listed
+# first, the default) and the reserved real-module id; every other KIO uses the
+# plain id.
+KIO_LABELS: dict[int, list[str]] = {2: ["kio2-sim", "kio2"], 7: ["kio7-sim", "kio7"]}
 
 
 def kio_label_values(n: int) -> list[str]:

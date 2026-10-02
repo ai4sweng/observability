@@ -26,7 +26,7 @@
           "query": "label_values(kio_heartbeat, kio_id)",
           "refId": "kio_id_variable"
         },
-        "regex": "/^(?!kio1$|kio2$|kio2-sim$|kio3$|kio4$|kio5$|kio6$|kio7$|kio8$|kio9$|kio10$|kio11$|kio12$|kio13$).*$/",
+        "regex": "/^(?!kio1$|kio2$|kio2-sim$|kio3$|kio4$|kio5$|kio6$|kio7$|kio7-sim$|kio8$|kio9$|kio10$|kio11$|kio12$|kio13$).*$/",
         "refresh": 2,
         "sort": 1,
         "label": "KIO",
@@ -1027,7 +1027,7 @@
     },
     {
       "id": 22,
-      "title": "Son trace'ler ($kio_id)",
+      "title": "Recent traces ($kio_id)",
       "type": "table",
       "datasource": {
         "type": "tempo",
@@ -1631,7 +1631,7 @@
     },
     {
       "id": 41,
-      "title": "Verimlilik (tok/W)",
+      "title": "Efficiency (tok/W)",
       "type": "gauge",
       "datasource": {
         "type": "prometheus",
@@ -1901,7 +1901,7 @@
     },
     {
       "id": 47,
-      "title": "Ortalama tok/s: Simulated vs Real",
+      "title": "Average tok/s: Simulated vs Real",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",
@@ -1954,7 +1954,7 @@
     },
     {
       "id": 48,
-      "title": "Ortalama gecikme (ms): Simulated vs Real",
+      "title": "Average latency (ms): Simulated vs Real",
       "type": "barchart",
       "datasource": {
         "type": "prometheus",

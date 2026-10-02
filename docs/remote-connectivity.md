@@ -4,7 +4,7 @@ Part of the [AI4SWENG Observability Stack](../README.md) documentation. See the
 [documentation index](README.md) for the full set of guides.
 
 > **⚠️ Current status: everything running in this repo today is a simulator.**
-> `kio2-sim`, `kio3`, `kio4`, `kio7`, `kio8` and `kio13` (`kio-simulator/`) emit
+> `kio2-sim` and `kio7-sim` (`kio-simulator/`) emit
 > synthetic, randomly-generated telemetry that follows the exact same contract
 > a real KIO must follow — they exist to prove the platform works and to give
 > every dashboard panel something to show, not to represent real KIO output.
@@ -177,9 +177,6 @@ sends it only if it applies to that KIO's role:
   metric names: [Real Project KPIs (D1.1)](kpis.md).
 - **Langfuse traces** (prompt/completion/cost) — a second, fully optional
   stream, independent of OTel. See [Langfuse](langfuse.md).
-- **NATS-driven dispatch** — only relevant if a KIO wants to be triggerable by
-  the central `POST /workflow/run` call; a completely separate concern from
-  telemetry (that task-dispatch layer belongs to KIO1, not this platform).
 
 ## 4. Runnable examples & step-by-step setup
 
@@ -209,11 +206,13 @@ Grafana" problems are network problems, not code problems:
 ```bash
 cd remote-kio/with_script
 pip install -r requirements.txt
-OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:5317 python check_connectivity.py
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>" \
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://<platform-host>:5317 python check_connectivity.py
 ```
 
-A `PASS` means the network path and auth are good; watch your `KIO_ID` appear
-in Grafana → **KIO Detail** within ~30–60 seconds. A `FAIL` is almost always
+A `PASS` means the network path and auth are good; within ~30–60 seconds your
+`KIO_ID` appears in Grafana on **AI4SWENG — KIO*N* Detail** (if it is `kioN`)
+or on **AI4SWENG — Others (Unlisted KIOs)** (any other id). A `FAIL` is almost always
 the firewall or the wrong address — see §5.
 
 **Not using Python, or writing a real integration by hand?** The contract in
@@ -222,7 +221,7 @@ Rust and more. Configure an OTLP exporter at `OTEL_EXPORTER_OTLP_ENDPOINT`,
 load the resource attributes, create the 7 mandatory instruments with the
 exact names/types/units in §3.2, and tick the heartbeat every 60s. The
 normative reference implementation (appendix, `MeterProvider` setup) is in
-**[`docs/Observability_v2.2.docx`](https://ai4seceu.sharepoint.com/:f:/s/AI4SwEng134/IgCtKA3X92K5T7XYr7gvzTIKAXhV17nbktjaGPy9_BZ26rM?e=WKBQQB)**.
+the **Integration Guide v2.3** ([`docs/report/Observability_v2.3.docx`](report/Observability_v2.3.docx)).
 
 ## 5. Networking (firewall, static IP, Tailscale)
 
@@ -243,18 +242,11 @@ different networks), and adding TLS + Bearer auth for untrusted networks.
    data shows up there automatically), and (if using Langfuse) at least one
    trace visible there. A KIO isn't considered onboarded until both are
    visible.
-5. **Ask the platform team for a per-KIO detail dashboard.** Each
-   `AI4SWENG — KIO*N* Detail` dashboard is wired to one specific `kio.id`,
-   hardcoded as that dashboard's `kio_id` template variable (not discovered
-   dynamically) — see `grafana/dashboards/ai4sweng-kio*.json`. Sending data
-   under a `kio.id` nobody created a dashboard for still lands in Overview,
-   but has **no drill-down page** (no per-KIO logs/traces/gauge view) until
-   the platform team copies an existing `ai4sweng-kioN.json`, points its
-   `kio_id` variable at your value, and adds it to
-   `grafana/provisioning/dashboards/`.
-6. *(Optional)* register with the Workflow API/Planner (§3.4, last bullet) —
-   only if the KIO should be triggerable centrally.
+5. **Find your dashboard.** `kio1`…`kio13` each already have an
+   `AI4SWENG — KIO*N* Detail` dashboard. Any other `kio.id` appears on
+   `AI4SWENG — Others (Unlisted KIOs)`. A dedicated page for a new id is added
+   via `KIO_LABELS` in `scripts/generate_kio_dashboards.py` (re-run the
+   script; output goes to `grafana/dashboards/`).
 
-This is a completely separate concern from the Planner/NATS orchestration
-layer (which belongs to KIO1, not this platform) — sending contract-compliant
-telemetry never requires registering there.
+Sending contract-compliant telemetry needs nothing beyond these steps — no
+registration anywhere else.

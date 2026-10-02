@@ -15,10 +15,9 @@ Mandatory set, all carrying `kio_id`:
 - `kio_session_active_count` (up/down counter)
 - `kio_heartbeat` (counter; ticks every 60s — a KIO silent >120s is "stale", enforced
   by a real Grafana alert rule, see `grafana/provisioning/alerting/rules.yml`, plus a
-  visual "Stale KIO Check" table on the Overview dashboard — not just a manual check
-  anymore)
+  visual "Stale KIO Check" table on the Overview dashboard)
 
-Optional self-service metrics (contract rule G7, meeting requirements):
+Optional self-service metrics (contract rule G7):
 
 - `kio_llm_tokens_per_second` (histogram)
 - `kio_llm_energy_joules` (counter — GPU energy during token generation)
@@ -172,15 +171,14 @@ visible via `/api/metrics/catalog?family=kpi`. See also the
 
 Free-form strings (LLM output snippets, analysis notes, failure summaries) are sent as
 **OTLP logs** and stored in **VictoriaLogs**, since VictoriaMetrics can only hold
-numeric series. They show up in the log panel on the KIO Detail dashboard. Query them
-directly with LogsQL, e.g. `kio.id:kio2` or `_msg:~"coverage"`.
+numeric series. They show up in the log-stream panel of each KIO*N* Detail dashboard.
+Query them directly with LogsQL, e.g. `kio.id:kio2-sim` or `_msg:~"coverage"`.
 
 ## Traces
 
 Each request's `kio.request` trace (with its `prepare_prompt` / `repo_scan` /
-`llm_call` / `postprocess` children) is exported to **Tempo**. The KIO Detail
-dashboard exposes it two ways: a TraceQL-backed table of recent traces for the
-selected KIO, and a waterfall panel that renders the full span sequence once you
+`llm_call` / `postprocess` children) is exported to **Tempo**. Each KIO*N* Detail
+dashboard exposes it two ways: a TraceQL-backed table of that KIO's recent traces, and a waterfall panel that renders the full span sequence once you
 paste a Trace ID from that table into the `trace_id` variable. If the waterfall
 panel ever comes up empty, the same Trace ID can always be opened via
 **Explore → Tempo** in Grafana as a fallback.
