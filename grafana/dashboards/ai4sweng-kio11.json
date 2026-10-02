@@ -2408,7 +2408,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "histogram_quantile(0.50, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le)(rate(kio_tat_detected_crash_count_bucket{kio_id=\"$kio_id\"}[5m])))",
           "legendFormat": "p50",
           "refId": "A",
           "range": true
@@ -2418,7 +2418,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "histogram_quantile(0.95, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le)(rate(kio_tat_detected_crash_count_bucket{kio_id=\"$kio_id\"}[5m])))",
           "legendFormat": "p95",
           "refId": "B",
           "range": true
@@ -2428,7 +2428,7 @@
             "type": "prometheus",
             "uid": "victoriametrics"
           },
-          "expr": "histogram_quantile(0.99, sum by (le)(rate(kio_request_duration_ms_bucket{kio_id=\"$kio_id\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le)(rate(kio_tat_detected_crash_count_bucket{kio_id=\"$kio_id\"}[5m])))",
           "legendFormat": "p99",
           "refId": "C",
           "range": true
