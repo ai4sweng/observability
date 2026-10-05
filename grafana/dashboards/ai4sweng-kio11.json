@@ -2286,7 +2286,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "percent",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 15,
@@ -2361,7 +2361,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ms",
+          "unit": "percent",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 15,
@@ -2436,7 +2436,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ms",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 15,
